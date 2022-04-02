@@ -1,42 +1,23 @@
 package com.gigi.puppy.service;
 
 import com.gigi.puppy.model.Puppy;
-import com.gigi.puppy.repository.PuppyRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
+import com.gigi.puppy.model.Race;
+import org.springframework.web.bind.annotation.RequestMapping;
 
-import java.util.List;
+import java.util.Set;
 
-@Service
-public class PuppyService {
-    @Autowired
-    PuppyRepository puppyRepository;
+public interface PuppyService {
 
     // CREATE
-    public Puppy createPuppy(Puppy puppy) {
-        return puppyRepository.save(puppy);
-    }
+    @RequestMapping("/create")
+    Puppy createPuppy(Puppy puppy, Set<Race> races);
 
     // READ
-    public List<Puppy> getPuppy() {
-        return puppyRepository.findAll();
-    }
+    Iterable<Puppy> getPuppy();
 
     // DELETE
-    public void deletePuppy(Long puppyId) {
-        puppyRepository.deleteById(puppyId);
-    }
+    void deletePuppy(Long puppyId);
 
     // UPDATE
-    public Puppy updatePuppy(Long puppyId, Puppy puppyDetails) {
-        Puppy puppy = puppyRepository.findById(puppyId).get();
-        puppy.setName(puppyDetails.getName());
-        puppy.setBirthdate(puppyDetails.getBirthdate());
-        puppy.setGender(puppyDetails.getGender());
-        puppy.setImage(puppyDetails.getImage());
-        puppy.setRaces(puppyDetails.getRaces());
-
-        return puppyRepository.save(puppy);
-    }
-    
+    Puppy updatePuppy(Long puppyId, Puppy puppyDetails);
 }

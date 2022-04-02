@@ -2,14 +2,14 @@ package com.gigi.puppy.controller;
 
 
 import com.gigi.puppy.model.Puppy;
+import com.gigi.puppy.model.PuppyRace;
+import com.gigi.puppy.model.Race;
+import com.gigi.puppy.repository.PuppyRepository;
 import com.gigi.puppy.service.PuppyService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.Set;
 
 @RestController
 @RequestMapping("api")
@@ -18,12 +18,13 @@ public class PuppyController {
     PuppyService puppyService;
 
     @RequestMapping(value="/puppys", method=RequestMethod.POST)
-    public Puppy createPuppy(@RequestBody Puppy puppy) {
-        return puppyService.createPuppy(puppy);
+    public Puppy createPuppy(@RequestBody PuppyRace puppyRace) {
+        Puppy puppy = puppyService.createPuppy(puppyRace.getPuppy(), puppyRace.getRace());
+        return puppy;
     }
 
     @RequestMapping(value="/puppys", method=RequestMethod.GET)
-    public List<Puppy> readPuppys() {
+    public Iterable<Puppy> readPuppys() {
         return puppyService.getPuppy();
     }
 

@@ -1,11 +1,10 @@
 package com.gigi.puppy.model;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+
 import javax.persistence.*;
 
-import org.springframework.boot.autoconfigure.domain.EntityScan;
-
-import java.util.ArrayList;
-import java.util.Date;
+import java.util.*;
 
 @Entity
 @Table(name = "puppy")
@@ -14,28 +13,41 @@ public class Puppy {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "puppy_id")
-    private long id;
+    private Long id;
     @Column(name = "puppy_name")
     private String name;
-    @Column(name = "puppy_birthdate")
-    private Date birthdate;
+    @Column(name = "puppy_birth_date")
+    @JsonFormat
+    private Date birthDate;
     @Column(name = "puppy_gender")
     private String gender;
     @Column(name = "puppy_image")
     private String image;
-    @Column(name = "puppy_races")
-    private ArrayList races;
+
+    @ManyToMany
+    @JoinTable(name = "puppy_race",
+            joinColumns = @JoinColumn(name = "puppy_id"),
+            inverseJoinColumns = @JoinColumn(name = "race_id"))
+    private Set<Race> race = new HashSet<>();
 
     public Puppy() {
     }
 
-    public Puppy(long id, String name, Date birthdate, String gender, String image, ArrayList races) {
+    public Puppy(long id, String name, Date birthDate, String gender, String image) {
         this.id = id;
         this.name = name;
-        this.birthdate = birthdate;
+        this.birthDate = birthDate;
         this.gender = gender;
         this.image = image;
-        this.races = races;
+    }
+
+    public Puppy(long id, String name, Date birthDate, String gender, String image, Set<Race> race) {
+        this.id = id;
+        this.name = name;
+        this.birthDate = birthDate;
+        this.gender = gender;
+        this.image = image;
+        this.race = race;
     }
 
     /**
@@ -49,7 +61,7 @@ public class Puppy {
      @Column(name = "puppy_id")
 
      */
-    public long getId() {
+    public Long getId() {
         return this.id;
     }
 
@@ -94,18 +106,18 @@ public class Puppy {
      * @return birthdate @Column(name = "puppy_birthdate")
 
      */
-    public Date getBirthdate() {
-        return this.birthdate;
+    public Date getBirthDate() {
+        return this.birthDate;
     }
 
     /**
      * set field @Column(name = "puppy_birthdate")
      *
-     * @param birthdate @Column(name = "puppy_birthdate")
+     * @param birthDate @Column(name = "puppy_birthdate")
 
      */
-    public void setBirthdate(Date birthdate) {
-        this.birthdate = birthdate;
+    public void setBirthDate(Date birthDate) {
+        this.birthDate = birthDate;
     }
 
     /**
@@ -151,20 +163,19 @@ public class Puppy {
     /**
      * get field @Column(name = "puppy_races")
      *
-     * @return races @Column(name = "puppy_races")
-
+     * @return race @Column(name = "puppy_races")
      */
-    public ArrayList getRaces() {
-        return this.races;
+    public Set<Race> getRace() {
+        return this.race;
     }
 
     /**
      * set field @Column(name = "puppy_races")
      *
-     * @param races @Column(name = "puppy_races")
+     * @param race @Column(name = "puppy_races")
 
      */
-    public void setRaces(ArrayList races) {
-        this.races = races;
+    public void setRace(Set<Race> race) {
+        this.race = race;
     }
 }
