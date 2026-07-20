@@ -133,11 +133,36 @@
 
   .ember { position:fixed; bottom:-10px; width:5px; height:5px; border-radius:50%; background:var(--ember); opacity:.5; pointer-events:none; animation:rise linear infinite; box-shadow:0 0 6px var(--ember); }
   @keyframes rise { to { transform:translateY(-102dvh) translateX(20px); opacity:0; } }
+  /* ---- Juice / game-feel ---- */
+  .brandbar { position:relative; }
+  .mutebtn { position:absolute; right:12px; top:8px; background:none; border:0; font-size:18px; cursor:pointer; opacity:.85; }
+  .flt { position:absolute; font-weight:900; font-variant-numeric:tabular-nums; text-shadow:0 1px 4px #000; --dx:0px; --rot:0deg; animation:flt .85s cubic-bezier(.2,.7,.3,1) forwards; will-change:transform,opacity; z-index:5; }
+  .flt.crit { filter:drop-shadow(0 0 9px var(--gold)); }
+  @keyframes flt { 0%{opacity:0;transform:translate(-50%,0) scale(.5)} 14%{opacity:1;transform:translate(calc(-50% + var(--dx)*.3),-12px) scale(1.3) rotate(var(--rot))} 100%{opacity:0;transform:translate(calc(-50% + var(--dx)),-64px) scale(1) rotate(var(--rot))} }
+  .mob { position:relative; z-index:1; }
+  @keyframes hit { 0%{transform:scale(1)} 30%{transform:scale(1.2,.8) rotate(-5deg)} 60%{transform:scale(.9,1.1) rotate(3deg)} 100%{transform:scale(1)} }
+  .mobglow { position:absolute; left:50%; top:40%; width:150px; height:150px; margin:-75px 0 0 -75px; border-radius:50%; background:radial-gradient(circle,rgba(255,120,90,.25),transparent 66%); pointer-events:none; z-index:0; animation:glowpulse 2.3s ease-in-out infinite; }
+  @keyframes glowpulse { 0%,100%{opacity:.45;transform:scale(.9)} 50%{opacity:.85;transform:scale(1.1)} }
+  .spark { position:absolute; width:7px; height:7px; border-radius:50%; pointer-events:none; z-index:4; box-shadow:0 0 6px currentColor; animation:spark .5s ease-out forwards; }
+  @keyframes spark { 0%{opacity:1;transform:translate(-50%,-50%) scale(1)} 100%{opacity:0;transform:translate(calc(-50% + var(--sx)),calc(-50% + var(--sy))) scale(.2)} }
+  .ring { position:absolute; border:3px solid var(--xp); border-radius:50%; width:22px; height:22px; margin:-11px 0 0 -11px; pointer-events:none; z-index:3; animation:ring .42s ease-out forwards; }
+  @keyframes ring { 0%{opacity:.9;transform:scale(.3)} 100%{opacity:0;transform:scale(2.8)} }
+  .ghost { position:absolute; left:50%; top:40%; transform:translate(-50%,-50%); font-size:76px; pointer-events:none; z-index:2; animation:ghost .5s ease-out forwards; }
+  @keyframes ghost { 0%{opacity:1;transform:translate(-50%,-50%) scale(1) rotate(0)} 100%{opacity:0;transform:translate(-50%,-95%) scale(1.7) rotate(20deg)} }
+  .coin { position:fixed; z-index:60; font-size:17px; pointer-events:none; will-change:transform,opacity; animation:coinfly .62s cubic-bezier(.4,0,.5,1) forwards; }
+  @keyframes coinfly { 0%{opacity:1;transform:translate(-50%,-50%)} 30%{opacity:1;transform:translate(calc(-50% + var(--cx1)),calc(-50% + var(--cy1)))} 100%{opacity:.15;transform:translate(calc(-50% + var(--cx2)),calc(-50% + var(--cy2))) scale(.5)} }
+  .leveltoast { position:absolute; left:0; right:0; top:30%; text-align:center; z-index:9; pointer-events:none; font-family:var(--serif); font-size:29px; font-weight:700; color:var(--gold); text-shadow:0 2px 14px #000,0 0 20px var(--goldDim); animation:ltoast 1.2s ease-out forwards; }
+  @keyframes ltoast { 0%{opacity:0;transform:translateY(16px) scale(.6)} 22%{opacity:1;transform:translateY(0) scale(1.12)} 78%{opacity:1} 100%{opacity:0;transform:translateY(-24px) scale(1)} }
+  .curbox.bump,.cnt.bump { animation:bump .32s ease; } .buy.flash { animation:flashg .5s ease; }
+  @keyframes bump { 0%,100%{transform:scale(1)} 42%{transform:scale(1.2)} }
+  @keyframes flashg { 0%{background:var(--card)} 25%{background:rgba(93,255,176,.3)} 100%{background:var(--card)} }
+  .buffpill { animation:buffpulse 1.2s ease-in-out infinite; }
+  @keyframes buffpulse { 0%,100%{filter:brightness(1);box-shadow:0 0 0 rgba(255,204,77,0)} 50%{filter:brightness(1.15);box-shadow:0 0 14px rgba(255,204,77,.6)} }
   @media (prefers-reduced-motion:reduce){ *{animation:none!important;transition:none!important} .ember{display:none} }
 </style>
 
 <div class="phone">
-  <div class="brandbar">⚔️ Habit<b>Quest</b> <span class="tag">· fantasy</span></div>
+  <div class="brandbar">⚔️ Habit<b>Quest</b> <span class="tag">· fantasy</span><button id="mute" class="mutebtn">🔊</button></div>
   <div class="cur" id="cur"></div>
   <div class="screen" id="screen"></div>
   <div class="nav" id="nav"></div>
@@ -232,6 +257,50 @@ function save(){S.lastActive=Date.now();localStorage.setItem('habitquest-demo2',
 
 const buffOn=()=>S.buffUntil>Date.now();
 
+// ============ Juice : audio + haptique + effets ============
+const SND=(()=>{
+  let ctx, on=(localStorage.getItem('hq-snd')!=='0');
+  const AC=()=>ctx||(ctx=new (window.AudioContext||window.webkitAudioContext)());
+  function tone(f,dur,type,vol,to){ if(!on)return; try{const c=AC(); if(c.state==='suspended')c.resume();
+    const o=c.createOscillator(),g=c.createGain(); o.type=type; o.frequency.setValueAtTime(f,c.currentTime);
+    if(to)o.frequency.exponentialRampToValueAtTime(to,c.currentTime+dur);
+    g.gain.setValueAtTime(vol,c.currentTime); g.gain.exponentialRampToValueAtTime(.0001,c.currentTime+dur);
+    o.connect(g).connect(c.destination); o.start(); o.stop(c.currentTime+dur);}catch(e){} }
+  return {
+    hit(){tone(200+Math.random()*50,.06,'square',.04);},
+    crit(){tone(520,.12,'sawtooth',.06,940);},
+    coin(){tone(880,.07,'triangle',.05,1400);},
+    kill(){tone(180,.16,'square',.05,70);},
+    boss(){tone(80,.5,'sawtooth',.08,38); setTimeout(()=>tone(240,.3,'square',.05,120),60);},
+    buy(){tone(600,.08,'triangle',.06,960);},
+    level(){tone(523,.1,'triangle',.06);setTimeout(()=>tone(659,.1,'triangle',.06),80);setTimeout(()=>tone(784,.16,'triangle',.06),160);},
+    unlock(){try{const c=AC();if(c.state==='suspended')c.resume();}catch(e){}},
+    toggle(){on=!on;localStorage.setItem('hq-snd',on?'1':'0');return on;}, isOn(){return on;}
+  };
+})();
+function haptic(p){ if(navigator.vibrate)try{navigator.vibrate(p);}catch(e){} }
+function bump(el){ if(!el)return; el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); }
+function spawnSparks(n,color){
+  const layer=document.getElementById('floats'); if(!layer)return;
+  for(let i=0;i<n;i++){ const s=document.createElement('div'); s.className='spark'; const a=Math.random()*6.283,r=28+Math.random()*46;
+    s.style.setProperty('--sx',(Math.cos(a)*r).toFixed(1)+'px'); s.style.setProperty('--sy',(Math.sin(a)*r).toFixed(1)+'px');
+    s.style.left='50%'; s.style.top='40%'; s.style.color=color; s.style.background=color; layer.appendChild(s); setTimeout(()=>s.remove(),520); }
+}
+function tapRing(x){ const layer=document.getElementById('floats'); if(!layer)return; const r=document.createElement('div'); r.className='ring'; r.style.left=(x!=null?x:50)+'%'; r.style.top='40%'; layer.appendChild(r); setTimeout(()=>r.remove(),430); }
+function ghostMob(em){ const ar=document.querySelector('.arena'); if(!ar)return; const g=document.createElement('div'); g.className='ghost'; g.textContent=em; ar.appendChild(g); setTimeout(()=>g.remove(),500); }
+function levelToast(lvl){ const ar=document.querySelector('.arena'); if(!ar)return; const t=document.createElement('div'); t.className='leveltoast'; t.textContent='⭐ NIVEAU '+lvl; ar.appendChild(t); setTimeout(()=>t.remove(),1200); }
+function coinFly(n){
+  const mob=document.getElementById('mob'), gb=document.getElementById('goldbox'); if(!mob||!gb)return;
+  const f=mob.getBoundingClientRect(), to=gb.getBoundingClientRect();
+  const sx=f.left+f.width/2, sy=f.top+f.height/2, tx=to.left+to.width/2, ty=to.top+to.height/2;
+  for(let i=0;i<n;i++){ const c=document.createElement('div'); c.className='coin'; c.textContent='🪙';
+    c.style.left=sx+'px'; c.style.top=sy+'px';
+    c.style.setProperty('--cx1',(Math.random()*70-35).toFixed(0)+'px'); c.style.setProperty('--cy1',(-32-Math.random()*34).toFixed(0)+'px');
+    c.style.setProperty('--cx2',(tx-sx).toFixed(0)+'px'); c.style.setProperty('--cy2',(ty-sy).toFixed(0)+'px');
+    c.style.animationDelay=(i*0.04).toFixed(2)+'s'; document.body.appendChild(c); setTimeout(()=>c.remove(),700+i*40); }
+  setTimeout(()=>{bump(gb);SND.coin();},300);
+}
+
 // valeurs dérivées
 function D(){
   const c=CLASSES[S.cls]||CLASSES.guerrier, T=S.tal, b=buffOn()?1.5:1;
@@ -277,8 +346,8 @@ function go(t){tab=t;render();}
 function renderCur(){
   const d=D();
   document.getElementById('cur').innerHTML=
-    `<div class="curbox"><span class="ic">💰</span><div><div class="v" style="color:var(--gold)">${fmt(S.gold)}</div><div class="s">+${fmt(d.goldSec)}/s</div></div></div>
-     <div class="curbox"><span class="ic">💎</span><div><div class="v" style="color:var(--gem)">${fmt(S.gems)}</div><div class="s">gemmes</div></div></div>
+    `<div class="curbox" id="goldbox"><span class="ic">💰</span><div><div class="v" style="color:var(--gold)">${fmt(S.gold)}</div><div class="s">+${fmt(d.goldSec)}/s</div></div></div>
+     <div class="curbox" id="gemsbox"><span class="ic">💎</span><div><div class="v" style="color:var(--gem)">${fmt(S.gems)}</div><div class="s">gemmes</div></div></div>
      ${buffOn()?`<div class="curbox" style="flex:0 0 auto"><span class="buffpill">✨ ×1,5</span></div>`:''}`;
 }
 
@@ -292,6 +361,7 @@ function renderDungeon(){
   screen.innerHTML=headerHTML('Donjon')+
     `<div class="card">
       <div class="arena">
+        <div class="mobglow"></div>
         <div class="floatlayer" id="floats"></div>
         <div class="mob" id="mob">${mobEmoji(S.floor,S.mi)}</div>
         <div class="mobname" id="mobnm" style="${boss?'color:var(--gold)':''}">${boss?'⚜ BOSS ⚜':'Monstre '+(S.mi+1)}</div>
@@ -340,7 +410,7 @@ function renderCompanions(){
   }).join('');
   box.querySelectorAll('[data-c]').forEach(el=>el.onclick=()=>{
     const cp=COMPANIONS.find(c=>c.id===el.dataset.c), amt=Math.max(1,amountFor(cp)), cost=bulkCost(cp,amt);
-    if(S.gold>=cost){S.gold-=cost;S.comp[cp.id]=(S.comp[cp.id]||0)+amt;save();renderCompanions();}
+    if(S.gold>=cost){S.gold-=cost;S.comp[cp.id]=(S.comp[cp.id]||0)+amt;save();renderCompanions();SND.buy();haptic(9);bump(document.getElementById('goldbox'));const row=document.querySelector('[data-c="'+cp.id+'"]');if(row){row.classList.remove('flash');void row.offsetWidth;row.classList.add('flash');}}
   });
 }
 function updateDungeon(full){
@@ -363,15 +433,22 @@ function pushLog(s){S.log.unshift(s);if(S.log.length>26)S.log.pop();}
 function spawnFloat(text,color,crit,x){
   const layer=document.getElementById('floats'); if(!layer)return;
   const s=document.createElement('div'); s.className='flt'+(crit?' crit':''); s.textContent=text; s.style.color=color;
-  s.style.left=(x!=null?x:35+Math.random()*30)+'%'; s.style.top=(20+Math.random()*20)+'%'; s.style.fontSize=(crit?26:16)+'px';
-  layer.appendChild(s); setTimeout(()=>s.remove(),820);
+  s.style.left=(x!=null?x:35+Math.random()*30)+'%'; s.style.top=(24+Math.random()*16)+'%';
+  s.style.fontSize=(crit?28:16)+'px';
+  s.style.setProperty('--dx',(Math.random()*44-22).toFixed(0)+'px');
+  s.style.setProperty('--rot',(Math.random()*16-8).toFixed(0)+'deg');
+  layer.appendChild(s); setTimeout(()=>s.remove(),860);
 }
 function onTapMob(e){
+  SND.unlock();
   const d=D(); const crit=Math.random()*100<d.crit; const amount=d.clickDmg*(crit?CRIT_MULT:1);
-  const rect=e.currentTarget.getBoundingClientRect(), lay=document.getElementById('floats').getBoundingClientRect();
-  const x=((e.clientX||rect.left+rect.width/2)-lay.left)/lay.width*100;
-  spawnFloat((crit?'✦':'')+fmt(amount),crit?'var(--gold)':'var(--xp)',crit,x);
+  const lay=document.getElementById('floats').getBoundingClientRect();
+  const cx=(e.clientX!=null?e.clientX:lay.left+lay.width/2);
+  const x=Math.max(8,Math.min(92,(cx-lay.left)/lay.width*100));
+  spawnFloat((crit?'✦ ':'')+fmt(amount),crit?'var(--gold)':'var(--xp)',crit,x);
+  tapRing(x); spawnSparks(crit?11:5,crit?'#ffcc4d':'#7ce0ff');
   const m=document.getElementById('mob'); m.classList.remove('hit'); void m.offsetWidth; m.classList.add('hit');
+  if(crit){SND.crit();haptic(18);} else {SND.hit();haptic(6);}
   damageMonster(amount);
 }
 let killFx=0;
@@ -381,18 +458,20 @@ function damageMonster(amount){
   else updateDungeon(false);
 }
 function killMonster(){
-  const d=D(),boss=isBoss(S.mi);
+  const d=D(),boss=isBoss(S.mi),oldEm=mobEmoji(S.floor,S.mi),oldLvl=S.level;
   const g=Math.round(goldPerKill(S.floor,S.mi)*d.goldMult);
   S.gold+=g; S.xp+=xpPerKill(S.floor,S.mi); S.kills++;
-  const nl=levelFromXp(S.xp); if(nl>S.level){S.gems+=(nl-S.level);S.level=nl;pushLog('⭐ Niveau '+nl+' ! +'+(nl-(nl-1))+' 💎');}
-  spawnFloat('+'+fmt(g)+'💰','var(--gold)',false,50);
+  const nl=levelFromXp(S.xp); if(nl>oldLvl){S.gems+=(nl-oldLvl);S.level=nl;pushLog('⭐ Niveau '+nl+' atteint ! +'+(nl-oldLvl)+' 💎');}
+  spawnFloat('+'+fmt(g)+' 💰','var(--gold)',false,50);
+  ghostMob(oldEm); spawnSparks(boss?20:9,boss?'#ffcc4d':'#ff5d7a'); coinFly(boss?9:4);
   if(boss){
     const gem=1+Math.floor(S.floor/2); S.gems+=gem;
     pushLog('👑 Boss étage '+S.floor+' vaincu ! +'+gem+' 💎, descente étage '+(S.floor+1)+'.');
     S.floor++; S.mi=0;
     const ar=document.querySelector('.arena'); if(ar){ar.classList.remove('shake');void ar.offsetWidth;ar.classList.add('shake');}
-    spawnFloat('+'+gem+'💎','var(--gem)',true,50);
-  } else { S.mi++; }
+    spawnFloat('+'+gem+' 💎','var(--gem)',true,50); SND.boss(); haptic([30,40,70]); bump(document.getElementById('gemsbox'));
+  } else { S.mi++; SND.kill(); haptic(12); }
+  if(nl>oldLvl){ levelToast(S.level); SND.level(); haptic([10,30,10]); }
   S.mhp=monsterMaxHp(S.floor,S.mi); if(S.hp<d.maxHp)S.hp=Math.min(d.maxHp,S.hp+d.maxHp*0.15);
   save(); updateDungeon(true);
 }
@@ -467,7 +546,7 @@ function renderTalents(){
       <div style="flex:1"><div class="nm">${t.nm} <small>Niv. ${lvl}/${t.max}</small></div><div class="ds">${t.ds}</div></div>
       <div class="right"><div class="cost" style="color:${maxed?'var(--success)':can?'var(--gem)':'var(--faint)'}">${maxed?'MAX':'💎'+fmt(cost)}</div></div>
     </div>`;}).join('');
-  box.querySelectorAll('[data-t]').forEach(el=>el.onclick=()=>{const t=TALENTS.find(x=>x.id===el.dataset.t),lvl=S.tal[t.id]||0,cost=talCost(t,lvl);if(lvl<t.max&&S.gems>=cost){S.gems-=cost;S.tal[t.id]=lvl+1;save();renderTalents();renderCur();}});
+  box.querySelectorAll('[data-t]').forEach(el=>el.onclick=()=>{const t=TALENTS.find(x=>x.id===el.dataset.t),lvl=S.tal[t.id]||0,cost=talCost(t,lvl);if(lvl<t.max&&S.gems>=cost){S.gems-=cost;S.tal[t.id]=lvl+1;save();renderTalents();renderCur();SND.buy();haptic(9);bump(document.getElementById('gemsbox'));}});
 }
 
 // ============ HÉROS ============
@@ -500,7 +579,7 @@ function renderHero(){
     if(confirm('Changer de classe coûte 5 💎. Continuer ?')){if(S.gems>=5){S.gems-=5;S.cls=el.dataset.cl;save();renderHero();renderCur();}else alert('Pas assez de gemmes (5 💎).');}
   });
   document.getElementById('forge').innerHTML=UPG.map(u=>{const cost=upCost(u.k),can=S.gold>=cost;return `<div class="buy ${can?'can':'no'}" data-u="${u.k}" style="${can?'border-color:'+u.col:''}"><span class="em">${u.em}</span><div style="flex:1"><div class="nm">${u.nm} <small>Niv. ${S.up[u.k]}</small></div><div class="ds">${u.ds}</div></div><div class="right"><div class="cost" style="color:${can?'var(--gold)':'var(--faint)'}">💰${fmt(cost)}</div></div></div>`;}).join('');
-  document.querySelectorAll('[data-u]').forEach(el=>el.onclick=()=>{const k=el.dataset.u,cost=upCost(k);if(S.gold>=cost){S.gold-=cost;S.up[k]++;save();renderHero();}});
+  document.querySelectorAll('[data-u]').forEach(el=>el.onclick=()=>{const k=el.dataset.u,cost=upCost(k);if(S.gold>=cost){S.gold-=cost;S.up[k]++;save();renderHero();SND.buy();haptic(9);}});
   document.getElementById('reset').onclick=()=>{if(confirm('Effacer toute la progression ?')){S=fresh();save();go('dungeon');}};
 }
 
@@ -528,6 +607,11 @@ setInterval(()=>{
 
 // ============ Démarrage ============
 render();
+(function(){
+  const mb=document.getElementById('mute');
+  if(mb){ mb.textContent=SND.isOn()?'🔊':'🔇'; mb.onclick=()=>{const on=SND.toggle();mb.textContent=on?'🔊':'🔇';SND.unlock();}; }
+  window.addEventListener('pointerdown',()=>SND.unlock(),{once:true});
+})();
 if(!S.cls){
   const ov=document.createElement('div');ov.className='overlay';
   ov.innerHTML=`<div class="big">🦸</div><h2>Choisis ta classe</h2><div class="sub" style="margin:6px 0 16px">Tu pourras en changer plus tard (5 💎).</div><div class="classgrid" id="pick" style="width:100%;max-width:340px"></div>`;
