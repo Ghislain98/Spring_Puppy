@@ -10,7 +10,7 @@ import {
   Easing,
 } from 'react-native';
 import { colors, radius, font, spacing } from '../theme';
-import { Card, SectionTitle, Chip } from '../components/ui';
+import { Card, SectionTitle, Chip, ProgressBar } from '../components/ui';
 import { CATEGORIES, categoryMeta, presetsByCategory } from '../game/config';
 import { Category } from '../game/types';
 import { useGame } from '../game/store';
@@ -20,6 +20,7 @@ export default function TodayScreen() {
   const streak = useGame((s) => s.streak);
   const level = useGame((s) => s.level);
   const floor = useGame((s) => s.floor);
+  const dailyGoal = useGame((s) => s.dailyGoal);
   const logHabit = useGame((s) => s.logHabit);
 
   const [openCat, setOpenCat] = useState<Category | null>(null);
@@ -98,6 +99,18 @@ export default function TodayScreen() {
             <Summary value={`+${todayXp}`} label="XP" color={colors.xp} />
             <Summary value={`+${todayGold}`} label="or" color={colors.gold} />
           </View>
+          {dailyGoal > 0 && (
+            <View style={{ marginTop: 16 }}>
+              <View style={styles.goalHead}>
+                <Text style={styles.goalLabel}>Objectif du jour</Text>
+                <Text style={styles.goalCount}>
+                  {Math.min(todayLog.length, dailyGoal)}/{dailyGoal}
+                  {todayLog.length >= dailyGoal ? '  ✅' : ''}
+                </Text>
+              </View>
+              <ProgressBar value={todayLog.length} max={dailyGoal} color={colors.success} height={10} />
+            </View>
+          )}
         </Card>
 
         {/* Journal du jour */}
@@ -153,7 +166,8 @@ export default function TodayScreen() {
 
 function PresetPicker({ category, onPick }: { category: Category; onPick: (id: string) => void }) {
   const meta = categoryMeta(category);
-  const presets = presetsByCategory(category);
+  const customHabits = useGame((s) => s.customHabits);
+  const presets = [...presetsByCategory(category), ...customHabits.filter((h) => h.category === category)];
   return (
     <View>
       <View style={styles.sheetHandle} />
@@ -228,6 +242,9 @@ const styles = StyleSheet.create({
   catLabel: { fontWeight: '800', fontSize: font.small, marginTop: 6 },
   catBoost: { color: colors.textFaint, fontSize: font.tiny, marginTop: 2 },
   summaryRow: { flexDirection: 'row' },
+  goalHead: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 },
+  goalLabel: { color: colors.textMuted, fontSize: font.small, fontWeight: '700' },
+  goalCount: { color: colors.success, fontSize: font.small, fontWeight: '800' },
   empty: { color: colors.textMuted, fontSize: font.body, lineHeight: 22, textAlign: 'center', paddingVertical: 10 },
   logCard: { flexDirection: 'row', alignItems: 'center', marginBottom: 10, paddingVertical: 12 },
   logEmoji: { fontSize: 26, marginRight: 12 },

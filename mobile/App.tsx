@@ -18,13 +18,16 @@ import { OfflineResult } from './src/game/engine';
 import TodayScreen from './src/screens/TodayScreen';
 import DungeonScreen from './src/screens/DungeonScreen';
 import HeroScreen from './src/screens/HeroScreen';
+import SettingsScreen from './src/screens/SettingsScreen';
+import { scheduleDailyReminder } from './src/game/notifications';
 
-type TabKey = 'today' | 'dungeon' | 'hero';
+type TabKey = 'today' | 'dungeon' | 'hero' | 'settings';
 
 const TABS: { key: TabKey; label: string; emoji: string }[] = [
   { key: 'today', label: 'Aujourd’hui', emoji: '📅' },
   { key: 'dungeon', label: 'Donjon', emoji: '🏰' },
   { key: 'hero', label: 'Héros', emoji: '🦸' },
+  { key: 'settings', label: 'Réglages', emoji: '⚙️' },
 ];
 
 export default function App() {
@@ -34,10 +37,12 @@ export default function App() {
   const init = useGame((s) => s.init);
   const tick = useGame((s) => s.tick);
 
-  // Démarrage : reset quotidien + gains hors-ligne.
+  // Démarrage : reset quotidien + gains hors-ligne + re-programmation du rappel.
   useEffect(() => {
     const res = init();
     if (res && (res.gold > 0 || res.xp > 0)) setOffline(res);
+    const { notificationsEnabled, reminderHour } = useGame.getState();
+    if (notificationsEnabled) scheduleDailyReminder(reminderHour);
   }, [init]);
 
   // Boucle de combat idle (app au premier plan).
@@ -70,6 +75,7 @@ export default function App() {
         {tab === 'today' && <TodayScreen />}
         {tab === 'dungeon' && <DungeonScreen />}
         {tab === 'hero' && <HeroScreen />}
+        {tab === 'settings' && <SettingsScreen />}
       </View>
 
       {/* Barre d'onglets */}

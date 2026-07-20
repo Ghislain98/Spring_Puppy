@@ -71,6 +71,12 @@ export interface GameState {
   streak: number;
   lastHabitDate: string | null;
 
+  // Personnalisation (toutes optionnelles)
+  customHabits: HabitPreset[]; // habitudes créées par l'utilisateur
+  dailyGoal: number; // objectif d'habitudes/jour (0 = désactivé)
+  notificationsEnabled: boolean; // rappel quotidien opt-in
+  reminderHour: number; // heure du rappel (0-23)
+
   // Stats à vie
   totalHabits: number;
   bestFloor: number;

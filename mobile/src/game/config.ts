@@ -77,6 +77,22 @@ export function presetById(id: string): HabitPreset | undefined {
   return HABIT_PRESETS.find((h) => h.id === id);
 }
 
+// --- Intensités pour les habitudes personnalisées (récompenses standardisées) ---
+export type Intensity = 'facile' | 'moyen' | 'difficile';
+
+export const INTENSITIES: { key: Intensity; label: string; xp: number; gold: number; statGain: number }[] = [
+  { key: 'facile', label: 'Facile', xp: 20, gold: 12, statGain: 2 },
+  { key: 'moyen', label: 'Moyen', xp: 40, gold: 25, statGain: 4 },
+  { key: 'difficile', label: 'Difficile', xp: 65, gold: 42, statGain: 6 },
+];
+
+export function intensity(key: Intensity) {
+  return INTENSITIES.find((i) => i.key === key)!;
+}
+
+// Emojis proposés à la création d'une habitude perso.
+export const EMOJI_CHOICES = ['⭐', '🥗', '🏃', '🧘', '💊', '📖', '💧', '☀️', '🚭', '🧠', '🦷', '🚴', '🏊', '🌿'];
+
 // --- Constantes de jeu ---
 export const GAME = {
   MONSTERS_PER_FLOOR: 8, // le 8e est un boss

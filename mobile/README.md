@@ -27,11 +27,24 @@ descend vite dans le donjon → plus il génère d'or → plus tu forges d'amél
 
 ## 🗺️ Écrans
 
-- **Aujourd'hui** — le prompt d'ajout, le bilan du jour, le streak 🔥 et le journal.
+- **Aujourd'hui** — le prompt d'ajout, le bilan du jour, l'objectif quotidien
+  (optionnel), le streak 🔥 et le journal.
 - **Donjon** — l'arène de combat idle en direct : PV du monstre / du héros, DPS,
   étages, boss (tous les 8 monstres 🐉) et journal de combat.
 - **Héros** — statistiques de combat + **Forge** pour dépenser l'or (attaque,
-  armure, régén., critique) et bouton de réinitialisation.
+  armure, régén., critique).
+- **Réglages** — tout est **optionnel** : objectif quotidien, rappel push opt-in,
+  création d'habitudes personnalisées, réinitialisation.
+
+## ✨ Personnalisation (100 % optionnelle)
+
+L'app est complète telle quelle. Si tu le souhaites, tu peux :
+
+- **Créer tes propres habitudes** (nom, catégorie, icône, difficulté) — elles
+  s'ajoutent au prompt à côté des habitudes par défaut.
+- **Fixer un objectif quotidien** (0 = désactivé) affiché dans le bilan du jour.
+- **Activer un rappel quotidien** (notification locale opt-in) à l'heure de ton
+  choix — jamais imposé, désactivé par défaut.
 
 ## 🌙 Progression hors-ligne
 
@@ -48,6 +61,16 @@ npx expo start          # puis scanner le QR code avec l'app Expo Go
 # ou
 npm run android         # émulateur Android
 npm run ios             # simulateur iOS (macOS requis)
+```
+
+> Après `npm install`, il est recommandé de lancer `npx expo install --check`
+> pour aligner les versions natives (notamment `expo-notifications`) avec le SDK.
+
+## ✅ Qualité
+
+```bash
+npm run typecheck       # tsc --noEmit
+npm test                # tests unitaires du moteur (Jest)
 ```
 
 ## 🧱 Architecture
@@ -72,10 +95,11 @@ mobile/
 
 ## 🛠️ Feuille de route vers la commercialisation
 
-- [ ] Notifications push (« ton héros t'attend », rappel de streak)
+- [x] Habitudes personnalisées et objectif quotidien optionnels
+- [x] Notifications locales opt-in (rappel quotidien)
+- [x] Tests unitaires sur `engine.ts`
 - [ ] Comptes + synchro cloud (Supabase / Firebase)
-- [ ] Habitudes personnalisées et objectifs quotidiens
+- [ ] Intégration Apple Santé / Google Fit (pas & sommeil automatiques)
+      — nécessite un *development build* (hors Expo Go)
 - [ ] Contenu de donjon : biomes, équipement, compétences actives
 - [ ] Monétisation : cosmétiques, boosts, premium sans pub
-- [ ] Intégration Apple Santé / Google Fit (pas & sommeil automatiques)
-- [ ] Tests unitaires sur `engine.ts` et `store.ts`

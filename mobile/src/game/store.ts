@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { GameState, Stat, DungeonLogEntry, LoggedHabit } from './types';
+import { GameState, Stat, DungeonLogEntry, LoggedHabit, HabitPreset } from './types';
 import {
   GAME,
   presetById,
@@ -59,6 +59,10 @@ function initialState(): GameState {
     dungeonLog: [makeLog('loot', "Ton héros entre dans le donjon…")],
     streak: 0,
     lastHabitDate: null,
+    customHabits: [],
+    dailyGoal: 0,
+    notificationsEnabled: false,
+    reminderHour: 20,
     totalHabits: 0,
     bestFloor: 1,
     lastActive: Date.now(),
@@ -72,6 +76,10 @@ export interface GameActions {
   buyUpgrade: (stat: Stat) => boolean;
   tick: () => void;
   resetGame: () => void;
+  addCustomHabit: (h: Omit<HabitPreset, 'id'>) => void;
+  removeCustomHabit: (id: string) => void;
+  setDailyGoal: (n: number) => void;
+  setNotifications: (enabled: boolean, hour: number) => void;
 }
 
 export type Store = GameState & GameActions;
@@ -125,9 +133,9 @@ export const useGame = create<Store>()(
       },
 
       logHabit: (presetId: string) => {
-        const preset = presetById(presetId);
-        if (!preset) return null;
         const s = get();
+        const preset = presetById(presetId) || s.customHabits.find((h: HabitPreset) => h.id === presetId);
+        if (!preset) return null;
 
         // Assure le bon jour.
         const today = dayKey();
@@ -260,11 +268,38 @@ export const useGame = create<Store>()(
       },
 
       resetGame: () => set({ ...initialState() }),
+
+      addCustomHabit: (h) => {
+        const s = get();
+        const habit: HabitPreset = { ...h, id: `custom_${Date.now()}` };
+        set({ customHabits: [...s.customHabits, habit] });
+      },
+
+      removeCustomHabit: (id) => {
+        const s = get();
+        set({ customHabits: s.customHabits.filter((h: HabitPreset) => h.id !== id) });
+      },
+
+      setDailyGoal: (n) => set({ dailyGoal: Math.max(0, Math.floor(n)) }),
+
+      setNotifications: (enabled, hour) =>
+        set({ notificationsEnabled: enabled, reminderHour: Math.max(0, Math.min(23, hour)) }),
     }),
     {
       name: 'habitquest-save-v1',
       storage: createJSONStorage(() => AsyncStorage),
-      partialize: ({ init, logHabit, buyUpgrade, tick, resetGame, ...rest }: any) => rest,
+      partialize: ({
+        init,
+        logHabit,
+        buyUpgrade,
+        tick,
+        resetGame,
+        addCustomHabit,
+        removeCustomHabit,
+        setDailyGoal,
+        setNotifications,
+        ...rest
+      }: any) => rest,
     },
   ),
 );

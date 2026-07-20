@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
 import { colors, radius, font, spacing } from '../theme';
 import { Card, SectionTitle, ProgressBar, Stat } from '../components/ui';
 import { useGame } from '../game/store';
@@ -29,7 +29,6 @@ export default function HeroScreen() {
   const totalHabits = useGame((s) => s.totalHabits);
   const streak = useGame((s) => s.streak);
   const buyUpgrade = useGame((s) => s.buyUpgrade);
-  const resetGame = useGame((s) => s.resetGame);
   const upgrades = useGame((s) => s.upgrades);
   const state = useGame();
 
@@ -43,13 +42,6 @@ export default function HeroScreen() {
   const nextFloor = xpForLevel(level + 1);
   const intoLevel = xp - curFloor;
   const levelSpan = nextFloor - curFloor;
-
-  const confirmReset = () => {
-    Alert.alert('Recommencer ?', 'Cela efface toute ta progression. Action irréversible.', [
-      { text: 'Annuler', style: 'cancel' },
-      { text: 'Tout effacer', style: 'destructive', onPress: () => resetGame() },
-    ]);
-  };
 
   return (
     <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
@@ -115,10 +107,6 @@ export default function HeroScreen() {
           </Pressable>
         );
       })}
-
-      <Pressable onPress={confirmReset} style={styles.reset}>
-        <Text style={styles.resetText}>Réinitialiser la progression</Text>
-      </Pressable>
       <View style={{ height: 24 }} />
     </ScrollView>
   );
