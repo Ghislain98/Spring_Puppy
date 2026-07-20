@@ -1,0 +1,53 @@
+name: Build Android APK
+
+# Tout tourne sur les serveurs GitHub — rien n'est installé sur ta machine.
+# Se déclenche automatiquement à chaque push de l'app sur ta branche, et se
+# lance aussi à la main (onglet Actions → Run workflow, si sur la branche par
+# défaut). L'APK est téléchargeable dans la section "Artifacts" du run terminé.
+on:
+  push:
+    branches: ["claude/health-gamification-mobile-app-12xo48"]
+    paths: ["mobile/**", ".github/workflows/build-android.yml"]
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Setup Java (JDK 17)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install JS dependencies
+        working-directory: mobile
+        run: npm ci
+
+      - name: Generate native Android project
+        working-directory: mobile
+        run: npx expo prebuild --platform android --no-install
+
+      - name: Build debug APK
+        working-directory: mobile/android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: HabitQuest-android-apk
+          path: mobile/android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error

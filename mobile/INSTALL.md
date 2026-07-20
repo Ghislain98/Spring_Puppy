@@ -14,14 +14,29 @@ app, hors-ligne (c'est un seul fichier autonome).
 
 C'est le même jeu que l'app native (mêmes mécaniques et équilibrage).
 
-## 📱 Vraie app native (APK Android / build iOS) — nécessite un accès Expo
+## 🥇 APK Android SANS rien installer sur ton PC (GitHub Actions)
+
+Idéal si ton seul ordinateur est celui du boulot : **tout se passe dans le
+navigateur**, le build tourne sur les serveurs de GitHub, rien sur ta machine,
+aucun compte externe.
+
+1. Sur GitHub, ouvre le dépôt → onglet **Actions**.
+2. Workflow **« Build Android APK »** → **Run workflow** → choisis ta branche → **Run**.
+3. Attends ~10-15 min. Ouvre le run terminé.
+4. Section **Artifacts** en bas → télécharge **HabitQuest-android-apk** (.zip).
+5. Sur ton téléphone Android : dézippe, ouvre le `.apk`, autorise « installer
+   depuis cette source » → l'app s'installe. 🎉
+
+> APK **debug** (signé avec la clé de debug) : parfait pour tester, aucune
+> boutique ni compte requis. Pour une version « release » signée, voir EAS.
+
+## 📱 Via EAS Build (APK/iOS signés) — compte Expo perso
 
 > ⚠️ Impossible depuis l'environnement cloud de Claude Code : `api.expo.dev` et
-> le SDK Android (`dl.google.com`) y sont bloqués par la politique réseau. Il
-> faut le lancer depuis n'importe quel ordinateur (ou un CI qui a accès à Expo).
+> le SDK Android (`dl.google.com`) y sont bloqués par la politique réseau.
 
 Le projet est **déjà configuré** (`eas.json`, `app.json` avec les identifiants
-d'app). Une fois sur un ordinateur :
+d'app). Sur un ordinateur (idéalement perso) :
 
 ```bash
 cd mobile
@@ -51,5 +66,6 @@ npx expo start        # scanne le QR code avec l'app Expo Go
 | Objectif | Besoin | Commande / geste |
 |---|---|---|
 | Jouer maintenant sur mobile | rien | Ouvrir le HTML → *Ajouter à l'écran d'accueil* |
-| APK Android installable | un PC + compte Expo | `eas build -p android --profile preview` |
+| **APK Android (rien sur ton PC)** | **navigateur GitHub** | **Actions → Build Android APK → Run** |
+| APK/iOS signés | compte Expo perso | `eas build -p android --profile preview` |
 | Dev en direct | un PC + Expo Go | `npx expo start` |
