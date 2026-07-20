@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, SafeAreaView, StatusBar, Platform, AppState, AppStateStatus, Modal } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { View, Text, StyleSheet, Pressable, SafeAreaView, StatusBar, Platform, AppState, AppStateStatus, Modal, Animated, Easing } from 'react-native';
 import { colors, radius, font } from './src/theme';
 import { useGame } from './src/game/store';
 import { GAME, CLASSES } from './src/game/config';
+import { ACHIEVEMENTS } from './src/game/achievements';
 import { OfflineResult, fmt } from './src/game/engine';
 import { scheduleDailyReminder } from './src/game/notifications';
 import CurrencyBar from './src/components/CurrencyBar';
@@ -28,6 +29,9 @@ export default function App() {
   const setClass = useGame((s) => s.setClass);
   const init = useGame((s) => s.init);
   const tick = useGame((s) => s.tick);
+  const checkAchievements = useGame((s) => s.checkAchievements);
+  const unlockId = useGame((s) => s.unlockQueue[0]);
+  const popUnlock = useGame((s) => s.popUnlock);
 
   useEffect(() => {
     const res = init();
@@ -37,9 +41,9 @@ export default function App() {
   }, [init]);
 
   useEffect(() => {
-    const id = setInterval(() => tick(), GAME.TICK_MS);
+    const id = setInterval(() => { tick(); checkAchievements(); }, GAME.TICK_MS);
     return () => clearInterval(id);
-  }, [tick]);
+  }, [tick, checkAchievements]);
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (n: AppStateStatus) => {
@@ -79,6 +83,9 @@ export default function App() {
         })}
       </View>
 
+      {/* Toast de succès débloqué */}
+      {unlockId && <AchievementToast key={unlockId} id={unlockId} onDone={popUnlock} />}
+
       {/* Choix de classe au premier lancement */}
       <Modal visible={!cls} transparent animationType="fade">
         <View style={styles.overlay}>
@@ -114,8 +121,35 @@ export default function App() {
   );
 }
 
+function AchievementToast({ id, onDone }: { id: string; onDone: () => void }) {
+  const a = ACHIEVEMENTS.find((x) => x.id === id);
+  const p = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.sequence([
+      Animated.timing(p, { toValue: 1, duration: 260, easing: Easing.out(Easing.back(1.4)), useNativeDriver: true }),
+      Animated.delay(1900),
+      Animated.timing(p, { toValue: 0, duration: 240, useNativeDriver: true }),
+    ]).start(() => onDone());
+  }, [id]);
+  if (!a) return null;
+  const translateY = p.interpolate({ inputRange: [0, 1], outputRange: [-90, 0] });
+  const reward = a.reliques ? `+${a.reliques} 🏵️` : `+${a.gems ?? 0} 💎`;
+  return (
+    <Animated.View pointerEvents="none" style={[styles.toast, { opacity: p, transform: [{ translateY }] }]}>
+      <Text style={{ fontSize: 30 }}>{a.emoji}</Text>
+      <View style={{ flex: 1 }}>
+        <Text style={styles.toastKicker}>🏆 Succès débloqué · {reward}</Text>
+        <Text style={styles.toastName}>{a.name}</Text>
+      </View>
+    </Animated.View>
+  );
+}
+
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg, paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 },
+  toast: { position: 'absolute', top: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) + 8 : 44, left: 14, right: 14, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.cardAlt, borderWidth: 1.5, borderColor: colors.gold, borderRadius: radius.md, padding: 12, zIndex: 100, shadowColor: '#000', shadowOpacity: 0.4, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 8 },
+  toastKicker: { color: colors.gold, fontSize: font.tiny, fontWeight: '800' },
+  toastName: { color: colors.text, fontSize: font.body, fontWeight: '900', marginTop: 1 },
   brand: { alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
   brandTxt: { color: colors.text, fontSize: font.h3, fontWeight: '900', letterSpacing: 0.5 },
   tag: { color: colors.textFaint, fontSize: font.tiny, fontWeight: '700' },

@@ -4,6 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { GameState, Stat, ClassId, VoieId, ClaimEntry } from './types';
 import { GAME, COMPANIONS, TALENTS, VOIES, BODY_STEP, levelFromXp } from './config';
+import { evaluate } from './achievements';
 import {
   derive, monsterMaxHp, monsterAtk, goldPerKill, xpPerKill, isBoss,
   compCost, talCost, upgradeCost, simulateOffline, reliquesGain, OfflineResult,
@@ -31,6 +32,7 @@ function initialState(): GameState {
     body: null,
     dungeonLog: ['✨ Ton héros pénètre dans le donjon…'],
     totalDmg: 0, kills: 0, bestFloor: 1,
+    unlocked: [], unlockQueue: [],
     notificationsEnabled: false, reminderHour: 20,
     lastActive: Date.now(),
   };
@@ -52,6 +54,8 @@ export interface Actions {
   weighIn: (w: number) => WeighResult | null;
   setNotifications: (enabled: boolean, hour: number) => void;
   prestige: () => number;
+  checkAchievements: () => void;
+  popUnlock: () => void;
   resetGame: () => void;
 }
 export type Store = GameState & Actions;
@@ -278,13 +282,32 @@ export const useGame = create<Store>()(
           return gain;
         },
 
+        // Débloque les succès atteints, crédite leurs récompenses, file les toasts.
+        checkAchievements: () => {
+          const s = get();
+          const r = evaluate(s);
+          if (r.ids.length === 0) return;
+          set({
+            unlocked: [...s.unlocked, ...r.ids],
+            unlockQueue: [...s.unlockQueue, ...r.ids],
+            gems: s.gems + r.gems,
+            reliques: s.reliques + r.reliques,
+          });
+        },
+
+        popUnlock: () => {
+          const s = get();
+          if (s.unlockQueue.length === 0) return;
+          set({ unlockQueue: s.unlockQueue.slice(1) });
+        },
+
         resetGame: () => set({ ...initialState() }),
       };
     },
     {
       name: 'habitquest-rn-v2',
       storage: createJSONStorage(() => AsyncStorage),
-      partialize: ({ init, tick, tapMonster, buyUpgrade, buyCompanion, buyTalent, setClass, claimCheckin, setVoie, weighIn, setNotifications, prestige, resetGame, ...rest }: any) => rest,
+      partialize: ({ init, tick, tapMonster, buyUpgrade, buyCompanion, buyTalent, setClass, claimCheckin, setVoie, weighIn, setNotifications, prestige, checkAchievements, popUnlock, resetGame, ...rest }: any) => rest,
     },
   ),
 );

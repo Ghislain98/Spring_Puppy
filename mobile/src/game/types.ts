@@ -91,6 +91,10 @@ export interface GameState {
   kills: number;
   bestFloor: number;
 
+  // Succès
+  unlocked: string[]; // ids des succès débloqués
+  unlockQueue: string[]; // ids en attente d'affichage (toast)
+
   // Réglages
   notificationsEnabled: boolean;
   reminderHour: number;

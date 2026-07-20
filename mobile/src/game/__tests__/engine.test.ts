@@ -11,6 +11,7 @@ function makeState(over: Partial<GameState> = {}): GameState {
     floor: 1, monsterIndex: 0, monsterHp: 30, heroHp: 60,
     todayDate: '2026-01-01', todayLog: [], streak: 0, lastCheckinDate: null, buffUntil: 0,
     body: null, dungeonLog: [], totalDmg: 0, kills: 0, bestFloor: 1,
+    unlocked: [], unlockQueue: [],
     notificationsEnabled: false, reminderHour: 20, lastActive: 0,
     ...over,
   };

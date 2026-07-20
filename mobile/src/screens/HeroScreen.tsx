@@ -1,9 +1,10 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable, Switch, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, Pressable, Switch, Alert, Modal } from 'react-native';
 import { colors, radius, font, spacing } from '../theme';
 import { Card } from '../components/ui';
 import { useGame } from '../game/store';
 import { CLASSES, FORGE, xpForLevel } from '../game/config';
+import { ACHIEVEMENTS } from '../game/achievements';
 import { derive, fmt, upgradeCost, reliquesGain } from '../game/engine';
 import { haptics } from '../game/fx';
 import { scheduleDailyReminder, cancelDailyReminder } from '../game/notifications';
@@ -38,6 +39,7 @@ export default function HeroScreen() {
     } else { await cancelDailyReminder(); setNotifications(false, s.reminderHour); }
   };
 
+  const [showAch, setShowAch] = useState(false);
   const prestigeGain = reliquesGain(s.floor);
   const doPrestige = () => {
     if (prestigeGain <= 0) return;
@@ -107,6 +109,12 @@ export default function HeroScreen() {
         );
       })}
 
+      <Text style={styles.section}>🏆 Succès</Text>
+      <Pressable onPress={() => setShowAch(true)} style={styles.achBtn}>
+        <Text style={styles.achBtnTxt}>Voir les succès</Text>
+        <Text style={styles.achCount}>{s.unlocked.length}/{ACHIEVEMENTS.length}</Text>
+      </Pressable>
+
       <Text style={styles.section}>🌟 Renaissance</Text>
       <Card>
         <Text style={styles.buyDs}>
@@ -143,6 +151,34 @@ export default function HeroScreen() {
         <Text style={styles.reset}>Réinitialiser la progression</Text>
       </Pressable>
       <View style={{ height: 20 }} />
+
+      <Modal visible={showAch} animationType="slide" transparent onRequestClose={() => setShowAch(false)}>
+        <View style={styles.achBackdrop}>
+          <View style={styles.achSheet}>
+            <View style={styles.achHead}>
+              <Text style={styles.achTitle}>🏆 Succès · {s.unlocked.length}/{ACHIEVEMENTS.length}</Text>
+              <Pressable onPress={() => setShowAch(false)} hitSlop={10}><Text style={{ color: colors.textMuted, fontSize: 22 }}>✕</Text></Pressable>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {ACHIEVEMENTS.map((a) => {
+                const got = s.unlocked.includes(a.id);
+                const reward = a.reliques ? `+${a.reliques} 🏵️` : `+${a.gems ?? 0} 💎`;
+                return (
+                  <View key={a.id} style={[styles.achRow, { opacity: got ? 1 : 0.55 }]}>
+                    <Text style={{ fontSize: 26, width: 34, textAlign: 'center' }}>{got ? a.emoji : '🔒'}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.achName}>{a.name}</Text>
+                      <Text style={styles.achDesc}>{a.desc}</Text>
+                    </View>
+                    <Text style={[styles.achReward, { color: got ? colors.success : colors.textFaint }]}>{got ? '✓' : reward}</Text>
+                  </View>
+                );
+              })}
+              <View style={{ height: 16 }} />
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -178,6 +214,17 @@ const styles = StyleSheet.create({
   small: { color: colors.textFaint, fontSize: font.tiny, fontWeight: '700' },
   buyDs: { color: colors.textMuted, fontSize: font.small, marginTop: 2 },
   cost: { fontWeight: '900', fontSize: font.small },
+  achBtn: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: 14 },
+  achBtnTxt: { color: colors.text, fontSize: font.body, fontWeight: '700' },
+  achCount: { color: colors.gold, fontSize: font.body, fontWeight: '900' },
+  achBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  achSheet: { backgroundColor: colors.bgElevated, borderTopLeftRadius: radius.lg, borderTopRightRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: 16, maxHeight: '82%' },
+  achHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  achTitle: { color: colors.text, fontSize: font.h3, fontWeight: '900' },
+  achRow: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, padding: 11, marginBottom: 8 },
+  achName: { color: colors.text, fontSize: font.small, fontWeight: '800' },
+  achDesc: { color: colors.textMuted, fontSize: font.tiny, marginTop: 1 },
+  achReward: { fontSize: font.small, fontWeight: '900' },
   prestigeBtn: { marginTop: 14, backgroundColor: colors.cardAlt, borderWidth: 1.5, borderColor: colors.gold, borderRadius: radius.pill, paddingVertical: 13, alignItems: 'center' },
   prestigeTxt: { color: colors.gold, fontWeight: '900', fontSize: font.body },
   rowBetween: { flexDirection: 'row', alignItems: 'center' },
