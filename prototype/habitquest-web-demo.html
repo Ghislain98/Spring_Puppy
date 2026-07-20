@@ -1,0 +1,549 @@
+<title>HabitQuest — prototype jouable</title>
+<style>
+  :root {
+    --bg:#0e0b1a; --bgEl:#181330; --card:#1f1940; --cardAlt:#272052;
+    --border:#3a2f6e; --glow:#6a4bff; --text:#f5f3ff; --muted:#b3abdd; --faint:#7c74ab;
+    --gold:#ffcc4d; --goldDim:#c99a2e; --xp:#7ce0ff; --hp:#ff5d7a; --regen:#5dffb0;
+    --gem:#63e6ff; --ember:#ff7a3c;
+    --sport:#fb923c; --nutrition:#4ade80; --sommeil:#818cf8; --success:#4ade80;
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body { margin:0; padding:0; }
+  body {
+    background:
+      radial-gradient(900px 500px at 50% -12%, #2a1c5e 0%, transparent 55%),
+      radial-gradient(700px 500px at 50% 115%, #3a1330 0%, transparent 55%),
+      var(--bg);
+    color:var(--text); font-family:var(--sans);
+    min-height:100dvh; display:flex; justify-content:center; overflow-x:hidden;
+  }
+  .phone {
+    width:100%; max-width:470px; min-height:100dvh; position:relative;
+    display:flex; flex-direction:column;
+    border-left:1px solid var(--border); border-right:1px solid var(--border);
+  }
+  .brandbar {
+    text-align:center; padding:11px; border-bottom:1px solid var(--border);
+    font-family:var(--serif); font-weight:700; letter-spacing:.5px; font-size:19px; flex:0 0 auto;
+    background:linear-gradient(180deg,rgba(106,75,255,.14),transparent);
+  }
+  .brandbar b { color:var(--gold); }
+  .brandbar .tag { font-family:var(--sans); color:var(--faint); font-size:10px; font-weight:600; letter-spacing:.5px; text-transform:uppercase; }
+
+  /* barre de monnaies toujours visible */
+  .cur { display:flex; gap:8px; padding:9px 12px; border-bottom:1px solid var(--border); background:var(--bgEl); flex:0 0 auto; }
+  .curbox { flex:1; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:7px 10px; display:flex; align-items:center; gap:8px; }
+  .curbox .ic { font-size:19px; }
+  .curbox .v { font-weight:900; font-size:16px; font-variant-numeric:tabular-nums; line-height:1; }
+  .curbox .s { color:var(--faint); font-size:10px; font-weight:700; font-variant-numeric:tabular-nums; }
+
+  .screen { flex:1 1 auto; overflow-y:auto; padding:14px 14px 92px; }
+  .nav { position:sticky; bottom:0; flex:0 0 auto; display:flex; background:var(--bgEl); border-top:1px solid var(--border); padding:7px 0 max(7px,env(safe-area-inset-bottom)); }
+  .nav button { flex:1; background:none; border:0; color:var(--faint); font-size:10.5px; font-weight:700; padding:3px 0; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:2px; }
+  .nav button .ic { font-size:20px; opacity:.5; }
+  .nav button.active { color:var(--gold); }
+  .nav button.active .ic { opacity:1; filter:drop-shadow(0 0 6px var(--gold)); }
+
+  h1 { font-family:var(--serif); font-size:26px; font-weight:700; margin:0; }
+  .sub { color:var(--muted); font-size:12.5px; margin-top:2px; }
+  .header { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px; gap:10px; }
+  .streak { display:flex; align-items:center; gap:4px; background:var(--card); border:1px solid var(--border); border-radius:999px; padding:6px 11px; white-space:nowrap; }
+  .streak b { color:var(--gold); font-size:16px; font-weight:900; font-variant-numeric:tabular-nums; }
+  .buffpill { background:linear-gradient(90deg,var(--gold),var(--ember)); color:#2a1c00; border-radius:999px; padding:5px 10px; font-size:11px; font-weight:900; }
+
+  .card { background:var(--card); border:1px solid var(--border); border-radius:18px; padding:15px; margin-bottom:12px; }
+  .section { font-family:var(--serif); color:var(--gold); font-size:14px; font-weight:700; letter-spacing:.4px; margin:6px 0 9px; display:flex; align-items:center; gap:8px; }
+  .section::before,.section::after { content:""; flex:1; height:1px; background:linear-gradient(90deg,transparent,var(--border),transparent); }
+  .section span { flex:0 0 auto; }
+  .bar { width:100%; height:12px; background:#0c0920; border:1px solid var(--border); border-radius:999px; overflow:hidden; }
+  .bar > i { display:block; height:100%; border-radius:999px; transition:width .18s linear; }
+  .num { font-variant-numeric:tabular-nums; }
+  .btn-gold { background:linear-gradient(180deg,#ffe08a,var(--gold)); color:#2a1c00; border:0; border-radius:999px; font-weight:900; font-size:15px; padding:15px 22px; cursor:pointer; width:100%; box-shadow:0 2px 0 var(--goldDim); }
+  .btn-gold:disabled { opacity:.4; box-shadow:none; }
+  .link { background:none; border:0; color:var(--muted); text-decoration:underline; font-size:13px; cursor:pointer; }
+
+  /* Donjon */
+  .arena { position:relative; text-align:center; padding:8px 0 2px; }
+  .floatlayer { position:absolute; inset:0; pointer-events:none; overflow:visible; }
+  .flt { position:absolute; font-weight:900; font-variant-numeric:tabular-nums; animation:flt .8s ease-out forwards; text-shadow:0 1px 3px #000; }
+  .flt.crit { font-size:26px; }
+  @keyframes flt { 0%{opacity:1;transform:translateY(0) scale(.8)} 20%{transform:translateY(-6px) scale(1.1)} 100%{opacity:0;transform:translateY(-52px) scale(1)} }
+  .mob { font-size:76px; line-height:1; cursor:pointer; user-select:none; animation:bob 2.4s ease-in-out infinite; display:inline-block; }
+  @keyframes bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+  .mob:active { transform:scale(.9); }
+  .mob.hit { animation:hit .18s; }
+  @keyframes hit { 0%{transform:scale(1)} 50%{transform:scale(.86) rotate(-3deg)} 100%{transform:scale(1)} }
+  .shake { animation:shake .4s; }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-8px)} 40%{transform:translateX(8px)} 60%{transform:translateX(-5px)} 80%{transform:translateX(5px)} }
+  .mobname { font-family:var(--serif); font-size:17px; font-weight:700; margin-top:2px; }
+  .tapipill { color:var(--faint); font-size:11px; margin-top:2px; }
+  .cstats { display:flex; margin-top:14px; gap:6px; }
+  .cstat { flex:1; text-align:center; background:var(--bgEl); border:1px solid var(--border); border-radius:12px; padding:8px 2px; }
+  .cstat b { font-size:15px; font-weight:800; font-variant-numeric:tabular-nums; display:block; }
+  .cstat span { color:var(--faint); font-size:10px; }
+
+  .buy { display:flex; align-items:center; gap:11px; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:11px 12px; margin-bottom:8px; cursor:pointer; transition:border-color .15s; }
+  .buy.can { border-color:var(--gold); }
+  .buy.no { opacity:.65; }
+  .buy .em { font-size:27px; width:34px; text-align:center; }
+  .buy .nm { font-weight:800; font-size:14.5px; }
+  .buy .nm small { color:var(--faint); font-weight:700; font-size:11px; }
+  .buy .ds { color:var(--muted); font-size:12px; margin-top:1px; }
+  .buy .right { text-align:right; white-space:nowrap; }
+  .buy .cnt { font-family:var(--serif); font-size:20px; font-weight:700; color:var(--gold); font-variant-numeric:tabular-nums; }
+  .buy .cost { font-size:12.5px; font-weight:900; font-variant-numeric:tabular-nums; }
+  .amtsel { display:flex; gap:6px; margin-bottom:10px; }
+  .amtsel button { flex:1; background:var(--bgEl); border:1px solid var(--border); color:var(--muted); border-radius:10px; padding:7px; font-weight:800; font-size:12px; cursor:pointer; }
+  .amtsel button.on { background:var(--gold); color:#2a1c00; border-color:var(--gold); }
+
+  /* check-in */
+  .dots { display:flex; gap:7px; justify-content:center; margin-bottom:16px; }
+  .dots i { width:24px; height:6px; border-radius:3px; background:var(--border); }
+  .dots i.act { background:var(--gold); } .dots i.done { background:var(--success); }
+  .catBanner { display:flex; align-items:center; gap:12px; border:1.5px solid; border-radius:18px; padding:15px; margin-bottom:14px; background:var(--card); }
+  .catBanner .em { font-size:32px; } .catBanner .t { font-family:var(--serif); font-size:20px; font-weight:700; } .catBanner .tag { color:var(--muted); font-size:12.5px; margin-top:2px; }
+  .itemHead { display:flex; align-items:center; gap:8px; margin-bottom:11px; } .itemHead .lbl { font-weight:700; font-size:14.5px; }
+  .opts { display:flex; gap:7px; }
+  .opt,.toggle { flex:1; text-align:center; padding:11px 5px; border-radius:13px; border:1.5px solid var(--border); background:var(--bgEl); color:var(--muted); font-weight:800; font-size:12.5px; cursor:pointer; }
+  .opt.sel,.toggle.sel { color:#0e0b1a; }
+  .navbar { position:absolute; left:0; right:0; bottom:0; display:flex; gap:10px; padding:13px 14px; background:var(--bg); border-top:1px solid var(--border); }
+  .navbar .back { flex:1; background:none; border:1.5px solid var(--border); color:var(--muted); border-radius:999px; font-weight:800; font-size:15px; cursor:pointer; padding:14px; }
+  .navbar .next { flex:2; }
+  .recap { display:flex; align-items:center; gap:9px; background:var(--card); border:1px solid var(--border); border-radius:13px; padding:9px 11px; margin-bottom:7px; }
+  .recap .lbl { flex:1; font-size:12.5px; font-weight:600; } .recap .p { font-weight:800; font-size:12.5px; font-variant-numeric:tabular-nums; }
+  .stat3 { display:flex; } .stat3 > div { flex:1; text-align:center; } .stat3 b { font-size:20px; font-weight:800; font-variant-numeric:tabular-nums; } .stat3 span { display:block; color:var(--faint); font-size:11px; margin-top:2px; }
+
+  /* héros / classes */
+  .classgrid { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+  .classcard { background:var(--card); border:1.5px solid var(--border); border-radius:15px; padding:13px; cursor:pointer; text-align:center; }
+  .classcard.sel { border-color:var(--gold); background:var(--cardAlt); }
+  .classcard .em { font-size:34px; } .classcard .nm { font-family:var(--serif); font-weight:700; font-size:16px; margin-top:4px; } .classcard .ds { color:var(--muted); font-size:11.5px; margin-top:3px; line-height:1.35; }
+  .goldpill { background:var(--card); border:1px solid var(--goldDim); border-radius:999px; padding:7px 13px; color:var(--gold); font-weight:900; font-variant-numeric:tabular-nums; }
+
+  .log { }
+  .logline { display:flex; gap:8px; align-items:baseline; padding:6px 0; border-bottom:1px solid var(--border); font-size:12.5px; color:var(--muted); }
+  .logline .i { width:18px; text-align:center; }
+
+  .overlay { position:absolute; inset:0; background:rgba(6,4,16,.82); z-index:30; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:26px; text-align:center; backdrop-filter:blur(2px); }
+  .overlay .big { font-size:64px; animation:pop .5s ease; } @keyframes pop { 0%{transform:scale(.4);opacity:0} 60%{transform:scale(1.15)} 100%{transform:scale(1)} }
+  .overlay h2 { font-family:var(--serif); font-size:25px; margin:12px 0 0; }
+  .celebRow { display:flex; gap:22px; margin:20px 0; } .celebRow div { text-align:center; } .celebRow b { font-size:28px; font-weight:900; font-variant-numeric:tabular-nums; } .celebRow span { display:block; color:var(--faint); font-size:12px; }
+
+  .ember { position:fixed; bottom:-10px; width:5px; height:5px; border-radius:50%; background:var(--ember); opacity:.5; pointer-events:none; animation:rise linear infinite; box-shadow:0 0 6px var(--ember); }
+  @keyframes rise { to { transform:translateY(-102dvh) translateX(20px); opacity:0; } }
+  @media (prefers-reduced-motion:reduce){ *{animation:none!important;transition:none!important} .ember{display:none} }
+</style>
+
+<div class="phone">
+  <div class="brandbar">⚔️ Habit<b>Quest</b> <span class="tag">· fantasy</span></div>
+  <div class="cur" id="cur"></div>
+  <div class="screen" id="screen"></div>
+  <div class="nav" id="nav"></div>
+</div>
+
+<script>
+// ============ Constantes de jeu ============
+const MPF=8, CRIT_MULT=2;
+const BASE={atk:4,maxHp:60,regen:2,crit:3};
+const UP_GAIN={atk:3,maxHp:20,regen:2,crit:2,click:3};
+const UP_BASE={atk:50,maxHp:40,regen:60,crit:120,click:80};
+
+const CLASSES={
+  guerrier:{name:'Guerrier',em:'⚔️',hp:1.35,dmg:1.15,gold:1,crit:0,click:1,regen:1,ds:'Robuste. +35% PV, +15% dégâts.'},
+  mage:{name:'Mage',em:'🔮',hp:0.85,dmg:1.20,gold:1,crit:6,click:2.2,regen:1,ds:'Fragile mais foudroyant. Clic ×2,2, +6% crit.'},
+  rodeur:{name:'Rôdeur',em:'🏹',hp:1.0,dmg:1.0,gold:1.25,crit:12,click:1.6,regen:1,ds:'Cupide et précis. +25% or, +12% crit.'},
+  paladin:{name:'Paladin',em:'🛡️',hp:1.3,dmg:1.0,gold:1.1,crit:0,click:1,regen:2.6,ds:'Increvable. +30% PV, régén ×2,6.'},
+};
+
+const COMPANIONS=[
+  {id:'torche',nm:'Porteur de torche',em:'🔥',rate:1,base:15},
+  {id:'marchand',nm:'Marchand ambulant',em:'🎒',rate:9,base:120},
+  {id:'forgeron',nm:'Forgeron nain',em:'⚒️',rate:55,base:1300},
+  {id:'sorciere',nm:'Sorcière',em:'🧙',rate:300,base:14000},
+  {id:'golem',nm:'Golem porteur',em:'🗿',rate:1650,base:160000},
+  {id:'dragon',nm:'Dragon apprivoisé',em:'🐲',rate:9000,base:2000000},
+];
+
+const TALENTS=[
+  {id:'force',nm:'Force brute',em:'💪',ds:'+25% dégâts / niv',base:2,max:25},
+  {id:'cupidite',nm:'Cupidité',em:'🪙',ds:'+25% or / niv',base:2,max:25},
+  {id:'precision',nm:'Précision',em:'🎯',ds:'+5% critique / niv',base:3,max:12},
+  {id:'frappe',nm:'Frappe véloce',em:'👊',ds:'+120% dégâts de clic / niv',base:2,max:20},
+  {id:'tresorier',nm:'Trésorier',em:'📈',ds:'+20% or/sec / niv',base:3,max:25},
+  {id:'souffle',nm:'Second souffle',em:'🌙',ds:'+2h de gains hors-ligne / niv',base:5,max:8},
+];
+
+const CATS={
+  sport:{label:'Sport',em:'💪',color:'var(--sport)',tag:"L'effort forge la puissance d'attaque",stat:'atk'},
+  nutrition:{label:'Nutrition',em:'🥗',color:'var(--nutrition)',tag:'Bien manger renforce la vitalité',stat:'maxHp'},
+  sommeil:{label:'Sommeil',em:'😴',color:'var(--sommeil)',tag:'Un bon repos accélère la régénération',stat:'regen'},
+};
+const ORDER=['sport','nutrition','sommeil'];
+const ITEMS=[
+  {id:'spo',cat:'sport',label:"Tu t'es entraîné ?",em:'🏋️',kind:'choice',options:[{id:'n',label:'Non',xp:0,gold:0,g:0},{id:'l',label:'Léger',xp:30,gold:18,g:3},{id:'m',label:'Modéré',xp:55,gold:35,g:5},{id:'i',label:'Intense',xp:85,gold:55,g:8}]},
+  {id:'cal',cat:'nutrition',label:'Objectif calories ?',em:'🎯',kind:'toggle',xp:40,gold:25,g:5},
+  {id:'pro',cat:'nutrition',label:'Assez de protéines ?',em:'🍗',kind:'toggle',xp:25,gold:15,g:3},
+  {id:'veg',cat:'nutrition',label:'Légumes / fibres ?',em:'🥦',kind:'toggle',xp:25,gold:15,g:3},
+  {id:'fru',cat:'nutrition',label:'Fruits ?',em:'🍎',kind:'toggle',xp:20,gold:12,g:2},
+  {id:'water',cat:'nutrition',label:"Combien d'eau ?",em:'💧',kind:'choice',options:[{id:'n',label:'<1L',xp:0,gold:0,g:0},{id:'a',label:'1L',xp:15,gold:8,g:2},{id:'b',label:'1,5L',xp:25,gold:15,g:3},{id:'c',label:'2L+',xp:35,gold:20,g:4}]},
+  {id:'sleep',cat:'sommeil',label:'Combien de sommeil ?',em:'🛌',kind:'choice',options:[{id:'a',label:'<6h',xp:10,gold:5,g:1},{id:'b',label:'6–7h',xp:30,gold:18,g:2},{id:'c',label:'7–8h',xp:50,gold:30,g:4},{id:'d',label:'8h+',xp:60,gold:38,g:5}]},
+];
+
+const MOBS=['👺','🦇','🕷️','🐍','🧟','👹','🦂','🐗'];
+const mobEmoji=(f,i)=> i>=MPF-1?'🐉':MOBS[(f+i)%MOBS.length];
+const isBoss=i=> i>=MPF-1;
+const xpForLevel=l=>Math.floor(50*(l-1)*l);
+const levelFromXp=xp=>{let l=1;while(xpForLevel(l+1)<=xp)l++;return l;};
+const monsterMaxHp=(f,i)=>Math.ceil(30*Math.pow(1.35,f-1)*(1+i*0.12)*(isBoss(i)?4:1));
+const monsterAtk=(f,i)=>Math.ceil(3*Math.pow(1.28,f-1)*(isBoss(i)?2.2:1));
+const goldPerKill=(f,i)=>Math.ceil(6*Math.pow(1.3,f-1)*(isBoss(i)?6:1));
+const xpPerKill=(f,i)=>Math.ceil(8*Math.pow(1.25,f-1)*(isBoss(i)?5:1));
+const compCost=(cp,count)=>Math.ceil(cp.base*Math.pow(1.15,count));
+const talCost=(t,lvl)=>Math.ceil(t.base*Math.pow(1.6,lvl));
+const upCost=(st)=>Math.ceil(UP_BASE[st]*Math.pow(1.18,S.up[st]||0));
+
+function fmt(n){
+  n=Math.floor(n);
+  if(n<1000) return ''+n;
+  const u=['K','M','B','T','Qa','Qi','Sx'];
+  let i=-1; while(n>=1000&&i<u.length-1){n/=1000;i++;}
+  return n.toFixed(n<10?2:n<100?1:0)+u[i];
+}
+function todayKey(){const d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();}
+
+// ============ État ============
+function fresh(){return{
+  gold:0,gems:0,xp:0,level:1,cls:null,
+  habit:{atk:0,maxHp:0,regen:0,crit:0},
+  up:{atk:0,maxHp:0,regen:0,crit:0,click:0},
+  tal:{},comp:{},
+  floor:1,mi:0,mhp:monsterMaxHp(1,0),hp:BASE.maxHp,
+  streak:0,lastCheckin:null,buffUntil:0,
+  totalDmg:0,kills:0,log:['✨ Ton héros pénètre dans le donjon…'],
+  lastActive:Date.now(),
+};}
+let S; try{S=JSON.parse(localStorage.getItem('habitquest-demo2'))||fresh();}catch(e){S=fresh();}
+S=Object.assign(fresh(),S);
+S.habit=Object.assign({atk:0,maxHp:0,regen:0,crit:0},S.habit);
+S.up=Object.assign({atk:0,maxHp:0,regen:0,crit:0,click:0},S.up);
+function save(){S.lastActive=Date.now();localStorage.setItem('habitquest-demo2',JSON.stringify(S));}
+
+const buffOn=()=>S.buffUntil>Date.now();
+
+// valeurs dérivées
+function D(){
+  const c=CLASSES[S.cls]||CLASSES.guerrier, T=S.tal, b=buffOn()?1.5:1;
+  const dmgMult=c.dmg*(1+0.25*(T.force||0))*b;
+  const goldMult=c.gold*(1+0.25*(T.cupidite||0))*b;
+  const crit=Math.min(75,BASE.crit+c.crit+5*(T.precision||0)+(S.up.crit||0)*UP_GAIN.crit);
+  const critF=1+(crit/100)*(CRIT_MULT-1);
+  const atk=BASE.atk+S.habit.atk+(S.up.atk||0)*UP_GAIN.atk;
+  const maxHp=(BASE.maxHp+S.habit.maxHp+(S.up.maxHp||0)*UP_GAIN.maxHp)*c.hp;
+  const regen=(BASE.regen+S.habit.regen+(S.up.regen||0)*UP_GAIN.regen)*c.regen;
+  const dps=atk*critF*dmgMult;
+  const clickBase=2+S.level+(S.up.click||0)*3;
+  const clickDmg=clickBase*dmgMult*c.click*(1+1.2*(T.frappe||0));
+  const compMult=(1+0.2*(T.tresorier||0))*goldMult;
+  const goldSec=COMPANIONS.reduce((a,cp)=>a+(S.comp[cp.id]||0)*cp.rate,0)*compMult;
+  const offCap=(8+2*(T.souffle||0))*3600;
+  return{c,dmgMult,goldMult,crit,critF,atk,maxHp,regen,dps,clickDmg,goldSec,offCap};
+}
+
+// gains hors-ligne
+let offlineMsg=null;
+(function(){
+  const el=(Date.now()-(S.lastActive||Date.now()))/1000;
+  if(el>60){
+    const d=D(), cap=Math.min(el,d.offCap);
+    const kps=d.dps/monsterMaxHp(S.floor,0);
+    const g=Math.floor((kps*goldPerKill(S.floor,0)*d.goldMult + d.goldSec)*cap);
+    const x=Math.floor(kps*xpPerKill(S.floor,0)*cap);
+    if(g>0||x>0){S.gold+=g;S.xp+=x;S.level=levelFromXp(S.xp);offlineMsg={g,x,min:Math.floor(cap/60)};}
+  }
+})();
+
+// ============ Navigation ============
+let tab='dungeon';
+const screen=document.getElementById('screen');
+const NAV=[{k:'dungeon',ic:'🏰',l:'Donjon'},{k:'checkin',ic:'✅',l:'Check-in'},{k:'talents',ic:'🌟',l:'Talents'},{k:'hero',ic:'🦸',l:'Héros'}];
+function renderNav(){
+  document.getElementById('nav').innerHTML=NAV.map(n=>`<button class="${tab===n.k?'active':''}" data-tab="${n.k}"><span class="ic">${n.ic}</span>${n.l}</button>`).join('');
+  document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>go(b.dataset.tab));
+}
+function go(t){tab=t;render();}
+
+function renderCur(){
+  const d=D();
+  document.getElementById('cur').innerHTML=
+    `<div class="curbox"><span class="ic">💰</span><div><div class="v" style="color:var(--gold)">${fmt(S.gold)}</div><div class="s">+${fmt(d.goldSec)}/s</div></div></div>
+     <div class="curbox"><span class="ic">💎</span><div><div class="v" style="color:var(--gem)">${fmt(S.gems)}</div><div class="s">gemmes</div></div></div>
+     ${buffOn()?`<div class="curbox" style="flex:0 0 auto"><span class="buffpill">✨ ×1,5</span></div>`:''}`;
+}
+
+function headerHTML(title,right){
+  return `<div class="header"><div><h1>${title}</h1><div class="sub">Niv. ${S.level} · Étage ${S.floor} · ${(CLASSES[S.cls]||CLASSES.guerrier).em} ${(CLASSES[S.cls]||CLASSES.guerrier).name}</div></div>${right||`<div class="streak">🔥<b>${S.streak}</b></div>`}</div>`;
+}
+
+// ============ DONJON ============
+function renderDungeon(){
+  const boss=isBoss(S.mi);
+  screen.innerHTML=headerHTML('Donjon')+
+    `<div class="card">
+      <div class="arena">
+        <div class="floatlayer" id="floats"></div>
+        <div class="mob" id="mob">${mobEmoji(S.floor,S.mi)}</div>
+        <div class="mobname" id="mobnm" style="${boss?'color:var(--gold)':''}">${boss?'⚜ BOSS ⚜':'Monstre '+(S.mi+1)}</div>
+        <div class="tapipill">👆 Tape le monstre pour frapper</div>
+        <div style="height:8px"></div>
+        <div class="bar" id="mbarw"><i id="mbar" style="background:${boss?'linear-gradient(90deg,var(--gold),var(--ember))':'var(--hp)'}"></i></div>
+        <div class="cstats">
+          <div class="cstat"><b id="c-dps" style="color:var(--hp)"></b><span>DPS</span></div>
+          <div class="cstat"><b id="c-click" style="color:var(--xp)"></b><span>Dégâts/clic</span></div>
+          <div class="cstat"><b id="c-gs" style="color:var(--gold)"></b><span>Or/sec</span></div>
+          <div class="cstat"><b id="c-left" style="color:var(--text)"></b><span>Reste</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="padding:11px 13px"><div class="bar" style="height:9px"><i id="hbar" style="background:var(--regen)"></i></div><div class="s" id="hlbl" style="color:var(--muted);font-size:11px;margin-top:5px;font-variant-numeric:tabular-nums"></div></div>
+    <div class="section"><span>⚒️ Compagnons · or/sec</span></div>
+    <div class="amtsel" id="amtsel"></div>
+    <div id="companions"></div>
+    <div class="section"><span>📜 Journal</span></div>
+    <div class="log" id="log"></div>`;
+  document.getElementById('mob').onclick=onTapMob;
+  renderAmt(); renderCompanions();
+  updateDungeon(true);
+}
+let buyAmt=1;
+function renderAmt(){
+  const el=document.getElementById('amtsel'); if(!el)return;
+  el.innerHTML=[1,10,'max'].map(a=>`<button class="${buyAmt===a?'on':''}" data-a="${a}">×${a}</button>`).join('');
+  el.querySelectorAll('button').forEach(b=>b.onclick=()=>{buyAmt=isNaN(+b.dataset.a)?'max':+b.dataset.a;renderAmt();renderCompanions();});
+}
+function amountFor(cp){
+  const have=S.comp[cp.id]||0;
+  if(buyAmt==='max'){let n=0,g=S.gold,c=compCost(cp,have);while(g>=c&&n<10000){g-=c;n++;c=compCost(cp,have+n);}return Math.max(0,n);}
+  return buyAmt;
+}
+function bulkCost(cp,amt){let c=0,have=S.comp[cp.id]||0;for(let k=0;k<amt;k++)c+=compCost(cp,have+k);return c;}
+function renderCompanions(){
+  const box=document.getElementById('companions'); if(!box)return;
+  box.innerHTML=COMPANIONS.map(cp=>{
+    const have=S.comp[cp.id]||0, amt=Math.max(1,amountFor(cp)), cost=bulkCost(cp,amt), can=S.gold>=cost;
+    return `<div class="buy ${can?'can':'no'}" data-c="${cp.id}">
+      <span class="em">${cp.em}</span>
+      <div style="flex:1"><div class="nm">${cp.nm} <small>${fmt(cp.rate)}/s ch.</small></div><div class="ds">produit ${fmt((S.comp[cp.id]||0)*cp.rate)}/s</div></div>
+      <div class="right"><div class="cnt">${have}</div><div class="cost" style="color:${can?'var(--gold)':'var(--faint)'}">💰${fmt(cost)} ${buyAmt!==1?`<span style="color:var(--faint)">×${amt}</span>`:''}</div></div>
+    </div>`;
+  }).join('');
+  box.querySelectorAll('[data-c]').forEach(el=>el.onclick=()=>{
+    const cp=COMPANIONS.find(c=>c.id===el.dataset.c), amt=Math.max(1,amountFor(cp)), cost=bulkCost(cp,amt);
+    if(S.gold>=cost){S.gold-=cost;S.comp[cp.id]=(S.comp[cp.id]||0)+amt;save();renderCompanions();}
+  });
+}
+function updateDungeon(full){
+  if(tab!=='dungeon')return;
+  const d=D(),boss=isBoss(S.mi),mMax=monsterMaxHp(S.floor,S.mi);
+  const set=(id,v)=>{const e=document.getElementById(id);if(e)e.textContent=v;};
+  const setw=(id,v)=>{const e=document.getElementById(id);if(e)e.style.width=Math.max(0,Math.min(100,v))+'%';};
+  setw('mbar',S.mhp/mMax*100);
+  setw('hbar',S.hp/d.maxHp*100);
+  set('hlbl','PV héros '+Math.max(0,Math.ceil(S.hp))+'/'+Math.ceil(d.maxHp));
+  set('c-dps',fmt(d.dps)); set('c-click',fmt(d.clickDmg)); set('c-gs',fmt(d.goldSec)); set('c-left',(MPF-S.mi));
+  if(full){
+    set('mob',mobEmoji(S.floor,S.mi));
+    const nm=document.getElementById('mobnm'); if(nm){nm.textContent=boss?'⚜ BOSS ⚜':'Monstre '+(S.mi+1);nm.style.color=boss?'var(--gold)':'';}
+    const mb=document.getElementById('mbar'); if(mb)mb.style.background=boss?'linear-gradient(90deg,var(--gold),var(--ember))':'var(--hp)';
+    const lg=document.getElementById('log'); if(lg)lg.innerHTML=S.log.map(t=>`<div class="logline"><span class="i">${t[0]}</span><span>${t.slice(2)}</span></div>`).join('');
+  }
+}
+function pushLog(s){S.log.unshift(s);if(S.log.length>26)S.log.pop();}
+function spawnFloat(text,color,crit,x){
+  const layer=document.getElementById('floats'); if(!layer)return;
+  const s=document.createElement('div'); s.className='flt'+(crit?' crit':''); s.textContent=text; s.style.color=color;
+  s.style.left=(x!=null?x:35+Math.random()*30)+'%'; s.style.top=(20+Math.random()*20)+'%'; s.style.fontSize=(crit?26:16)+'px';
+  layer.appendChild(s); setTimeout(()=>s.remove(),820);
+}
+function onTapMob(e){
+  const d=D(); const crit=Math.random()*100<d.crit; const amount=d.clickDmg*(crit?CRIT_MULT:1);
+  const rect=e.currentTarget.getBoundingClientRect(), lay=document.getElementById('floats').getBoundingClientRect();
+  const x=((e.clientX||rect.left+rect.width/2)-lay.left)/lay.width*100;
+  spawnFloat((crit?'✦':'')+fmt(amount),crit?'var(--gold)':'var(--xp)',crit,x);
+  const m=document.getElementById('mob'); m.classList.remove('hit'); void m.offsetWidth; m.classList.add('hit');
+  damageMonster(amount);
+}
+let killFx=0;
+function damageMonster(amount){
+  S.mhp-=amount; S.totalDmg+=amount;
+  if(S.mhp<=0) killMonster();
+  else updateDungeon(false);
+}
+function killMonster(){
+  const d=D(),boss=isBoss(S.mi);
+  const g=Math.round(goldPerKill(S.floor,S.mi)*d.goldMult);
+  S.gold+=g; S.xp+=xpPerKill(S.floor,S.mi); S.kills++;
+  const nl=levelFromXp(S.xp); if(nl>S.level){S.gems+=(nl-S.level);S.level=nl;pushLog('⭐ Niveau '+nl+' ! +'+(nl-(nl-1))+' 💎');}
+  spawnFloat('+'+fmt(g)+'💰','var(--gold)',false,50);
+  if(boss){
+    const gem=1+Math.floor(S.floor/2); S.gems+=gem;
+    pushLog('👑 Boss étage '+S.floor+' vaincu ! +'+gem+' 💎, descente étage '+(S.floor+1)+'.');
+    S.floor++; S.mi=0;
+    const ar=document.querySelector('.arena'); if(ar){ar.classList.remove('shake');void ar.offsetWidth;ar.classList.add('shake');}
+    spawnFloat('+'+gem+'💎','var(--gem)',true,50);
+  } else { S.mi++; }
+  S.mhp=monsterMaxHp(S.floor,S.mi); if(S.hp<d.maxHp)S.hp=Math.min(d.maxHp,S.hp+d.maxHp*0.15);
+  save(); updateDungeon(true);
+}
+
+// ============ CHECK-IN ============
+let step=0,answers={};
+const itemsOf=cat=>ITEMS.filter(i=>i.cat===cat);
+function entries(){const out=[];ITEMS.forEach(it=>{const a=answers[it.id];if(it.kind==='toggle'){if(a)out.push({cat:it.cat,label:it.label,em:it.em,xp:it.xp,gold:it.gold,g:it.g});}else{const o=it.options.find(o=>o.id===a);if(o&&(o.xp||o.gold))out.push({cat:it.cat,label:it.label+' '+o.label,em:it.em,xp:o.xp,gold:o.gold,g:o.g});}});return out;}
+function renderCheckin(){
+  if(S.lastCheckin===todayKey()){
+    screen.innerHTML=headerHTML('Check-in du jour')+
+      `<div class="card" style="text-align:center"><div style="font-size:42px">✅</div>
+        <div style="font-family:var(--serif);font-size:20px;font-weight:700;margin-top:6px">Check-in terminé</div>
+        <div class="sub">Bénédiction active : <b style="color:var(--gold)">×1,5 or & dégâts</b> aujourd'hui.</div>
+        <button class="btn-gold" style="margin-top:14px" onclick="go('dungeon')">Retour au donjon ⚔️</button></div>
+      <button class="link" id="replay">Rejouer le check-in (démo)</button>`;
+    document.getElementById('replay').onclick=()=>{S.lastCheckin=null;step=0;answers={};save();render();};
+    return;
+  }
+  const isSum=step>=ORDER.length; let body;
+  if(!isSum){
+    const cat=ORDER[step],c=CATS[cat];
+    body=`<div class="catBanner" style="border-color:${c.color}"><span class="em">${c.em}</span><div><div class="t" style="color:${c.color}">${c.label}</div><div class="tag">${c.tag}</div></div></div>`+
+      itemsOf(cat).map(it=>{let ctl;
+        if(it.kind==='toggle'){const sel=answers[it.id]?'sel':'';const bg=answers[it.id]?`style="background:${c.color};border-color:${c.color}"`:'';ctl=`<div class="toggle ${sel}" ${bg} data-t="${it.id}">${answers[it.id]?'✓ Fait':'À cocher'}</div>`;}
+        else{ctl=`<div class="opts">`+it.options.map(o=>{const sel=answers[it.id]===o.id?'sel':'';const bg=answers[it.id]===o.id?`style="background:${c.color};border-color:${c.color}"`:'';return `<div class="opt ${sel}" ${bg} data-o="${it.id}|${o.id}">${o.label}</div>`;}).join('')+`</div>`;}
+        return `<div class="card"><div class="itemHead"><span>${it.em}</span><span class="lbl">${it.label}</span></div>${ctl}</div>`;}).join('');
+  }else{
+    const es=entries(),tx=es.reduce((a,e)=>a+e.xp,0),tg=es.reduce((a,e)=>a+e.gold,0);
+    body=`<div style="font-family:var(--serif);font-size:21px;font-weight:700;margin-bottom:10px">Tes récompenses</div>
+      <div class="card"><div class="stat3"><div><b style="color:var(--xp)">+${tx}</b><span>XP</span></div><div><b style="color:var(--gold)">+${tg}</b><span>or</span></div><div><b style="color:var(--gem)">+3</b><span>gemmes</span></div></div></div>`+
+      (es.length===0?`<div class="card sub" style="text-align:center;line-height:1.5">Rien de coché. Reviens en arrière et sélectionne au moins une action healthy 💪</div>`:
+        es.map(e=>`<div class="recap"><span>${e.em}</span><span class="lbl">${e.label}</span><span class="p" style="color:${CATS[e.cat].color}">+${e.g}</span><span class="p" style="color:var(--xp)">+${e.xp}</span><span class="p" style="color:var(--gold)">+${e.gold}</span></div>`).join(''));
+  }
+  const dots=[...ORDER,'r'].map((_,i)=>`<i class="${i===step?'act':i<step?'done':''}"></i>`).join('');
+  const nextLbl=isSum?'Récupérer ⚔️':(step===ORDER.length-1?'Mes récompenses →':'Suivant →');
+  screen.innerHTML=headerHTML('Check-in du jour')+`<div class="dots">${dots}</div>`+body+
+    `<div style="height:84px"></div><div class="navbar">${step>0?'<button class="back" id="back">Précédent</button>':'<div style="flex:1"></div>'}<button class="btn-gold next" id="next" ${isSum&&entries().length===0?'disabled':''}>${nextLbl}</button></div>`;
+  document.querySelectorAll('[data-t]').forEach(el=>el.onclick=()=>{answers[el.dataset.t]=!answers[el.dataset.t];renderCheckin();});
+  document.querySelectorAll('[data-o]').forEach(el=>el.onclick=()=>{const[i,o]=el.dataset.o.split('|');answers[i]=o;renderCheckin();});
+  const bk=document.getElementById('back'); if(bk)bk.onclick=()=>{step--;renderCheckin();};
+  document.getElementById('next').onclick=()=>{
+    if(!isSum){step++;renderCheckin();return;}
+    const es=entries(); if(!es.length)return;
+    const tx=es.reduce((a,e)=>a+e.xp,0),tg=es.reduce((a,e)=>a+e.gold,0);
+    es.forEach(e=>{S.habit[CATS[e.cat].stat]+=e.g;if(CATS[e.cat].stat==='maxHp')S.hp+=e.g;});
+    S.xp+=tx;S.gold+=tg;S.gems+=3;S.level=levelFromXp(S.xp);S.streak++;S.lastCheckin=todayKey();
+    S.buffUntil=Date.now()+24*3600*1000; save();
+    celebrate(tx,tg);
+  };
+}
+function celebrate(tx,tg){
+  const ov=document.createElement('div');ov.className='overlay';
+  ov.innerHTML=`<div class="big">⚔️</div><h2>Récompenses encaissées !</h2>
+    <div class="celebRow"><div><b style="color:var(--xp)">+${tx}</b><span>XP</span></div><div><b style="color:var(--gold)">+${tg}</b><span>or</span></div><div><b style="color:var(--gem)">+3</b><span>💎</span></div></div>
+    <div class="sub" style="margin-bottom:6px">Bénédiction du jour : <b style="color:var(--gold)">×1,5 or & dégâts</b> pendant 24h.</div>
+    <div class="sub" style="margin-bottom:20px">🔥 Streak ${S.streak} jours</div>
+    <button class="btn-gold" style="max-width:260px" id="godg">Partir au donjon ⚔️</button>`;
+  document.querySelector('.phone').appendChild(ov);
+  document.getElementById('godg').onclick=()=>{ov.remove();go('dungeon');};
+}
+
+// ============ TALENTS ============
+function renderTalents(){
+  screen.innerHTML=headerHTML('Talents',`<div class="goldpill">💎 ${fmt(S.gems)}</div>`)+
+    `<div class="card sub" style="line-height:1.5">Dépense tes <b style="color:var(--gem)">gemmes</b> (gagnées aux boss, montées de niveau et check-ins) pour des bonus <b>permanents</b>.</div>
+     <div id="tallist"></div>`;
+  const box=document.getElementById('tallist');
+  box.innerHTML=TALENTS.map(t=>{const lvl=S.tal[t.id]||0,maxed=lvl>=t.max,cost=talCost(t,lvl),can=!maxed&&S.gems>=cost;
+    return `<div class="buy ${can?'can':'no'}" data-t="${t.id}">
+      <span class="em">${t.em}</span>
+      <div style="flex:1"><div class="nm">${t.nm} <small>Niv. ${lvl}/${t.max}</small></div><div class="ds">${t.ds}</div></div>
+      <div class="right"><div class="cost" style="color:${maxed?'var(--success)':can?'var(--gem)':'var(--faint)'}">${maxed?'MAX':'💎'+fmt(cost)}</div></div>
+    </div>`;}).join('');
+  box.querySelectorAll('[data-t]').forEach(el=>el.onclick=()=>{const t=TALENTS.find(x=>x.id===el.dataset.t),lvl=S.tal[t.id]||0,cost=talCost(t,lvl);if(lvl<t.max&&S.gems>=cost){S.gems-=cost;S.tal[t.id]=lvl+1;save();renderTalents();renderCur();}});
+}
+
+// ============ HÉROS ============
+function renderHero(){
+  const d=D(),cur=xpForLevel(S.level),nxt=xpForLevel(S.level+1);
+  const UPG=[{k:'atk',em:'⚔️',nm:'Aiguiser la lame',ds:'+3 attaque',col:'var(--hp)'},{k:'click',em:'🗡️',nm:'Dague affûtée',ds:'+3 dégâts de clic',col:'var(--xp)'},{k:'maxHp',em:'🛡️',nm:"Armure",ds:'+20 PV max',col:'var(--regen)'},{k:'regen',em:'🧪',nm:'Élixir de régén.',ds:'+2 régén./s',col:'var(--sommeil)'},{k:'crit',em:'🎯',nm:"Œil du chasseur",ds:'+2% critique',col:'var(--gold)'}];
+  screen.innerHTML=`<div class="header"><h1>Héros</h1><div class="goldpill">💰 ${fmt(S.gold)}</div></div>
+    <div class="card" style="text-align:center"><div style="font-size:52px">${d.c.em}</div>
+      <div style="font-family:var(--serif);font-size:20px;font-weight:700;margin-top:4px">Niveau ${S.level} · ${d.c.name}</div>
+      <div class="sub num">${fmt(S.xp-cur)} / ${fmt(nxt-cur)} XP</div>
+      <div class="bar" style="margin-top:7px;height:9px"><i style="background:var(--xp);width:${Math.min(100,(S.xp-cur)/(nxt-cur)*100)}%"></i></div></div>
+    <div class="section"><span>Statistiques</span></div>
+    <div class="card"><div class="stat3">
+      <div><b style="color:var(--hp)">${fmt(d.dps)}</b><span>DPS</span></div>
+      <div><b style="color:var(--xp)">${fmt(d.clickDmg)}</b><span>Dégâts/clic</span></div>
+      <div><b style="color:var(--gold)">${fmt(d.goldSec)}</b><span>Or/sec</span></div></div>
+      <div class="stat3" style="margin-top:12px">
+      <div><b style="color:var(--regen)">${Math.round(d.maxHp)}</b><span>PV max</span></div>
+      <div><b style="color:var(--gold)">${Math.round(d.crit)}%</b><span>Critique</span></div>
+      <div><b style="color:var(--muted)">${fmt(S.totalDmg)}</b><span>Dégâts cumulés</span></div></div></div>
+    <div class="section"><span>⚔️ Classe</span></div>
+    <div class="classgrid" id="classgrid"></div>
+    <div class="section"><span>🔨 Forge · dépense ton or</span></div>
+    <div id="forge"></div>
+    <button class="link" id="reset" style="display:block;margin:12px auto">Réinitialiser (démo)</button>`;
+  document.getElementById('classgrid').innerHTML=Object.entries(CLASSES).map(([id,c])=>`<div class="classcard ${S.cls===id?'sel':''}" data-cl="${id}"><div class="em">${c.em}</div><div class="nm">${c.name}</div><div class="ds">${c.ds}</div></div>`).join('');
+  document.querySelectorAll('[data-cl]').forEach(el=>el.onclick=()=>{
+    if(S.cls===el.dataset.cl)return;
+    if(!S.cls){S.cls=el.dataset.cl;save();renderHero();return;}
+    if(confirm('Changer de classe coûte 5 💎. Continuer ?')){if(S.gems>=5){S.gems-=5;S.cls=el.dataset.cl;save();renderHero();renderCur();}else alert('Pas assez de gemmes (5 💎).');}
+  });
+  document.getElementById('forge').innerHTML=UPG.map(u=>{const cost=upCost(u.k),can=S.gold>=cost;return `<div class="buy ${can?'can':'no'}" data-u="${u.k}" style="${can?'border-color:'+u.col:''}"><span class="em">${u.em}</span><div style="flex:1"><div class="nm">${u.nm} <small>Niv. ${S.up[u.k]}</small></div><div class="ds">${u.ds}</div></div><div class="right"><div class="cost" style="color:${can?'var(--gold)':'var(--faint)'}">💰${fmt(cost)}</div></div></div>`;}).join('');
+  document.querySelectorAll('[data-u]').forEach(el=>el.onclick=()=>{const k=el.dataset.u,cost=upCost(k);if(S.gold>=cost){S.gold-=cost;S.up[k]++;save();renderHero();}});
+  document.getElementById('reset').onclick=()=>{if(confirm('Effacer toute la progression ?')){S=fresh();save();go('dungeon');}};
+}
+
+function render(){renderNav();renderCur();
+  if(tab==='dungeon')renderDungeon();else if(tab==='checkin')renderCheckin();else if(tab==='talents')renderTalents();else renderHero();}
+
+// ============ Boucle idle (100ms) ============
+let autoAcc=0, floatAcc=0;
+setInterval(()=>{
+  const d=D(),dt=0.1;
+  S.gold+=d.goldSec*dt;
+  // combat auto
+  let hp=Math.min(d.maxHp,S.hp+d.regen*dt)-monsterAtk(S.floor,S.mi)*dt;
+  if(hp<=0){S.hp=d.maxHp;S.mhp=monsterMaxHp(S.floor,S.mi);pushLog('💀 Héros terrassé étage '+S.floor+', il se relève !');save();updateDungeon(true);}
+  else{S.hp=hp; autoAcc+=d.dps*dt;
+    // applique les dégâts auto en continu, floats périodiques
+    S.mhp-=d.dps*dt; S.totalDmg+=d.dps*dt;
+    floatAcc+=dt;
+    if(floatAcc>=0.5){ if(tab==='dungeon')spawnFloat(fmt(d.dps*0.5),'var(--hp)',false); floatAcc=0; }
+    if(S.mhp<=0)killMonster(); else updateDungeon(false);
+  }
+  if(tab!=='dungeon')renderCur();
+  if(!S._t||Date.now()-S._t>4000){S._t=Date.now();save();}
+},100);
+
+// ============ Démarrage ============
+render();
+if(!S.cls){
+  const ov=document.createElement('div');ov.className='overlay';
+  ov.innerHTML=`<div class="big">🦸</div><h2>Choisis ta classe</h2><div class="sub" style="margin:6px 0 16px">Tu pourras en changer plus tard (5 💎).</div><div class="classgrid" id="pick" style="width:100%;max-width:340px"></div>`;
+  document.querySelector('.phone').appendChild(ov);
+  document.getElementById('pick').innerHTML=Object.entries(CLASSES).map(([id,c])=>`<div class="classcard" data-p="${id}"><div class="em">${c.em}</div><div class="nm">${c.name}</div><div class="ds">${c.ds}</div></div>`).join('');
+  ov.querySelectorAll('[data-p]').forEach(el=>el.onclick=()=>{S.cls=el.dataset.p;save();ov.remove();render();});
+}
+if(offlineMsg){
+  const lbl=offlineMsg.min>=60?Math.floor(offlineMsg.min/60)+'h'+String(offlineMsg.min%60).padStart(2,'0'):offlineMsg.min+' min';
+  const ov=document.createElement('div');ov.className='overlay';
+  ov.innerHTML=`<div class="big">🌙</div><h2>Pendant ton absence</h2><div class="sub" style="margin-top:4px">Le donjon a continué de rapporter (${lbl}).</div>
+    <div class="celebRow"><div><b style="color:var(--gold)">+${fmt(offlineMsg.g)}</b><span>or</span></div><div><b style="color:var(--xp)">+${fmt(offlineMsg.x)}</b><span>XP</span></div></div>
+    <button class="btn-gold" style="max-width:220px" id="ok">Récupérer</button>`;
+  document.querySelector('.phone').appendChild(ov);
+  document.getElementById('ok').onclick=()=>ov.remove();
+}
+// braises d'ambiance
+for(let i=0;i<10;i++){const e=document.createElement('div');e.className='ember';e.style.left=(Math.random()*100)+'%';e.style.animationDuration=(6+Math.random()*7)+'s';e.style.animationDelay=(-Math.random()*10)+'s';document.body.appendChild(e);}
+</script>
