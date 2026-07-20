@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, Pressable, Animated, Easing } from 
 import { colors, radius, font, spacing } from '../theme';
 import { Card, ProgressBar } from '../components/ui';
 import { useGame } from '../game/store';
-import { GAME, COMPANIONS } from '../game/config';
+import { GAME, COMPANIONS, biomeName } from '../game/config';
 import { derive, fmt, monsterMaxHp, isBoss, compCost } from '../game/engine';
 import { haptics } from '../game/fx';
 
@@ -113,7 +113,7 @@ export default function DungeonScreen() {
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>Donjon</Text>
-          <Text style={styles.sub}>Étage {s.floor} · record {s.bestFloor}</Text>
+          <Text style={styles.sub}>Étage {s.floor} · {biomeName(s.floor)}</Text>
         </View>
         <View style={styles.floorBadge}><Text style={styles.floorNum}>{s.floor}</Text><Text style={styles.floorLbl}>étage</Text></View>
       </View>

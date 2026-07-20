@@ -1,10 +1,10 @@
-import { derive, fmt, monsterMaxHp, monsterAtk, goldPerKill, isBoss, upgradeCost, compCost, talCost, simulateOffline } from '../engine';
+import { derive, fmt, monsterMaxHp, monsterAtk, goldPerKill, isBoss, upgradeCost, compCost, talCost, simulateOffline, reliquesGain } from '../engine';
 import { GAME, xpForLevel, levelFromXp } from '../config';
 import { GameState } from '../types';
 
 function makeState(over: Partial<GameState> = {}): GameState {
   return {
-    gold: 0, gems: 0, xp: 0, level: 1, cls: 'guerrier',
+    gold: 0, gems: 0, reliques: 0, xp: 0, level: 1, cls: 'guerrier',
     habitStats: { atk: 0, maxHp: 0, regen: 0, crit: 0, click: 0 },
     upgrades: { atk: 0, maxHp: 0, regen: 0, crit: 0, click: 0 },
     talents: {}, companions: {},
@@ -49,6 +49,16 @@ describe('stats dérivées', () => {
     const plain = derive(makeState());
     const buffed = derive(makeState({ buffUntil: Date.now() + 100000 }));
     expect(buffed.dps).toBeGreaterThan(plain.dps);
+  });
+  it('les reliques (prestige) boostent dégâts et or', () => {
+    const plain = derive(makeState());
+    const reborn = derive(makeState({ reliques: 10 }));
+    expect(reborn.dps).toBeGreaterThan(plain.dps);
+    expect(reborn.goldMult).toBeGreaterThan(plain.goldMult);
+  });
+  it('le gain de reliques augmente avec l’étage', () => {
+    expect(reliquesGain(4)).toBe(0);
+    expect(reliquesGain(20)).toBeGreaterThan(reliquesGain(10));
   });
   it('les paliers d’objectif donnent un bonus permanent', () => {
     const b = (chapters: number) => derive(makeState({

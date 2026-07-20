@@ -36,6 +36,11 @@ export default function CurrencyBar() {
           <Text style={styles.s}>gemmes</Text>
         </View>
       </Animated.View>
+      {s.reliques > 0 && (
+        <View style={[styles.box, styles.pillBox]}>
+          <Text style={[styles.pill, { backgroundColor: colors.card, color: colors.gold, borderWidth: 1, borderColor: colors.goldDim }]}>🏵️ {fmt(s.reliques)}</Text>
+        </View>
+      )}
       {buffOn(s) && (
         <View style={[styles.box, styles.pillBox]}>
           <Text style={[styles.pill, { backgroundColor: colors.gold }]}>✨ ×1,5</Text>

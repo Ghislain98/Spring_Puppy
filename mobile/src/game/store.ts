@@ -6,7 +6,7 @@ import { GameState, Stat, ClassId, VoieId, ClaimEntry } from './types';
 import { GAME, COMPANIONS, TALENTS, VOIES, BODY_STEP, levelFromXp } from './config';
 import {
   derive, monsterMaxHp, monsterAtk, goldPerKill, xpPerKill, isBoss,
-  compCost, talCost, upgradeCost, simulateOffline, OfflineResult,
+  compCost, talCost, upgradeCost, simulateOffline, reliquesGain, OfflineResult,
 } from './engine';
 
 // ---- Helpers date ----
@@ -22,7 +22,7 @@ function prevDayKey(key: string): string {
 
 function initialState(): GameState {
   return {
-    gold: 0, gems: 0, xp: 0, level: 1, cls: null,
+    gold: 0, gems: 0, reliques: 0, xp: 0, level: 1, cls: null,
     habitStats: { atk: 0, maxHp: 0, regen: 0, crit: 0, click: 0 },
     upgrades: { atk: 0, maxHp: 0, regen: 0, crit: 0, click: 0 },
     talents: {}, companions: {},
@@ -51,6 +51,7 @@ export interface Actions {
   setVoie: (voie: VoieId, weight: number) => void;
   weighIn: (w: number) => WeighResult | null;
   setNotifications: (enabled: boolean, hour: number) => void;
+  prestige: () => number;
   resetGame: () => void;
 }
 export type Store = GameState & Actions;
@@ -260,13 +261,30 @@ export const useGame = create<Store>()(
         setNotifications: (enabled, hour) =>
           set({ notificationsEnabled: enabled, reminderHour: Math.max(0, Math.min(23, hour)) }),
 
+        // Renaissance : réinitialise la run (or, compagnons, forge, étage) contre
+        // des Reliques permanentes. Conserve gemmes, talents, classe, objectif,
+        // streak et les stats gagnées via les vraies habitudes.
+        prestige: () => {
+          const s = get();
+          const gain = reliquesGain(s.floor);
+          if (gain <= 0) return 0;
+          set({
+            reliques: s.reliques + gain,
+            gold: 0, companions: {},
+            upgrades: { atk: 0, maxHp: 0, regen: 0, crit: 0, click: 0 },
+            floor: 1, monsterIndex: 0, monsterHp: monsterMaxHp(1, 0), heroHp: 1e9,
+            dungeonLog: pushLog(s.dungeonLog, `🌟 Renaissance ! +${gain} reliques. Ton héros repart plus fort.`),
+          });
+          return gain;
+        },
+
         resetGame: () => set({ ...initialState() }),
       };
     },
     {
       name: 'habitquest-rn-v2',
       storage: createJSONStorage(() => AsyncStorage),
-      partialize: ({ init, tick, tapMonster, buyUpgrade, buyCompanion, buyTalent, setClass, claimCheckin, setVoie, weighIn, setNotifications, resetGame, ...rest }: any) => rest,
+      partialize: ({ init, tick, tapMonster, buyUpgrade, buyCompanion, buyTalent, setClass, claimCheckin, setVoie, weighIn, setNotifications, prestige, resetGame, ...rest }: any) => rest,
     },
   ),
 );

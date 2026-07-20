@@ -4,7 +4,7 @@ import { colors, radius, font, spacing } from '../theme';
 import { Card } from '../components/ui';
 import { useGame } from '../game/store';
 import { CLASSES, FORGE, xpForLevel } from '../game/config';
-import { derive, fmt, upgradeCost } from '../game/engine';
+import { derive, fmt, upgradeCost, reliquesGain } from '../game/engine';
 import { haptics } from '../game/fx';
 import { scheduleDailyReminder, cancelDailyReminder } from '../game/notifications';
 
@@ -12,6 +12,7 @@ export default function HeroScreen() {
   const s = useGame();
   const buyUpgrade = useGame((st) => st.buyUpgrade);
   const setClass = useGame((st) => st.setClass);
+  const prestige = useGame((st) => st.prestige);
   const setNotifications = useGame((st) => st.setNotifications);
   const resetGame = useGame((st) => st.resetGame);
   const d = derive(s);
@@ -35,6 +36,15 @@ export default function HeroScreen() {
       if (!ok) { Alert.alert('Notifications refusées', 'Autorise les notifications dans les réglages du téléphone.'); return; }
       setNotifications(true, s.reminderHour);
     } else { await cancelDailyReminder(); setNotifications(false, s.reminderHour); }
+  };
+
+  const prestigeGain = reliquesGain(s.floor);
+  const doPrestige = () => {
+    if (prestigeGain <= 0) return;
+    Alert.alert('Renaissance ?', `Tu réinitialises ta run et gagnes ${prestigeGain} 🏵️ reliques permanentes (+${4 * prestigeGain}% dégâts & or).`, [
+      { text: 'Annuler', style: 'cancel' },
+      { text: 'Renaître', onPress: () => { if (prestige() > 0) haptics.boss(); } },
+    ]);
   };
 
   const confirmReset = () => Alert.alert('Recommencer ?', 'Efface toute la progression.', [
@@ -97,6 +107,27 @@ export default function HeroScreen() {
         );
       })}
 
+      <Text style={styles.section}>🌟 Renaissance</Text>
+      <Card>
+        <Text style={styles.buyDs}>
+          Recommence la run du donjon (or, compagnons, forge, étage) contre des{' '}
+          <Text style={{ color: colors.gold, fontWeight: '800' }}>Reliques</Text> permanentes : +4% dégâts & or chacune.
+          Tu gardes gemmes, talents, classe, objectif et streak.
+        </Text>
+        <View style={[styles.grid, { marginTop: 12 }]}>
+          <Stat label="Reliques" value={`🏵️ ${s.reliques}`} color={colors.gold} />
+          <Stat label="Bonus actuel" value={`+${4 * s.reliques}%`} color={colors.regen} />
+          <Stat label="Gain si tu renais" value={`+${prestigeGain}`} color={colors.xp} />
+        </View>
+        <Pressable
+          onPress={doPrestige}
+          disabled={prestigeGain <= 0}
+          style={[styles.prestigeBtn, prestigeGain <= 0 && { opacity: 0.4 }]}
+        >
+          <Text style={styles.prestigeTxt}>{prestigeGain > 0 ? `Renaître (+${prestigeGain} 🏵️)` : 'Atteins l’étage 5 pour renaître'}</Text>
+        </Pressable>
+      </Card>
+
       <Text style={styles.section}>🔔 Rappel quotidien</Text>
       <Card>
         <View style={styles.rowBetween}>
@@ -147,6 +178,8 @@ const styles = StyleSheet.create({
   small: { color: colors.textFaint, fontSize: font.tiny, fontWeight: '700' },
   buyDs: { color: colors.textMuted, fontSize: font.small, marginTop: 2 },
   cost: { fontWeight: '900', fontSize: font.small },
+  prestigeBtn: { marginTop: 14, backgroundColor: colors.cardAlt, borderWidth: 1.5, borderColor: colors.gold, borderRadius: radius.pill, paddingVertical: 13, alignItems: 'center' },
+  prestigeTxt: { color: colors.gold, fontWeight: '900', fontSize: font.body },
   rowBetween: { flexDirection: 'row', alignItems: 'center' },
   rowTitle: { color: colors.text, fontSize: font.body, fontWeight: '700' },
   reset: { color: colors.textFaint, fontSize: font.small, textDecorationLine: 'underline' },

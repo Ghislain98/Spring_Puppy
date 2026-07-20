@@ -128,6 +128,15 @@ export const VOIES: Record<VoieId, VoieMeta> = {
 };
 export const BODY_STEP = 1.0; // kg par palier
 
+// ---- Biomes (zones nommées tous les 5 étages) ----
+export const BIOMES = [
+  'Cryptes moisies', 'Caverne des Braises', 'Forêt Hantée', 'Cavernes de Glace',
+  'Ruines Maudites', 'Marais des Ombres', 'Nécropole', "Antre du Dragon",
+];
+export function biomeName(floor: number): string {
+  return BIOMES[Math.floor((floor - 1) / 5) % BIOMES.length];
+}
+
 // ---- Constantes ----
 export const GAME = {
   MPF: 8,

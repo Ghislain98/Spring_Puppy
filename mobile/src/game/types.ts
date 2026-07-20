@@ -60,6 +60,7 @@ export interface BodyGoal {
 export interface GameState {
   gold: number;
   gems: number;
+  reliques: number; // monnaie de prestige (Renaissance)
   xp: number;
   level: number;
   cls: ClassId | null;

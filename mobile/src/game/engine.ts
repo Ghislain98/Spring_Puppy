@@ -33,6 +33,9 @@ export const talCost = (base: number, lvl: number): number => Math.ceil(base * M
 export const upgradeCost = (s: GameState, stat: Stat): number =>
   Math.ceil(UP_BASE[stat] * Math.pow(1.18, s.upgrades[stat] || 0));
 
+// Reliques gagnées en faisant Renaissance depuis l'étage courant.
+export const reliquesGain = (floor: number): number => Math.floor(Math.pow(Math.max(0, floor) / 5, 1.5));
+
 export const buffOn = (s: GameState): boolean => s.buffUntil > Date.now();
 export const elanOn = (s: GameState): boolean => !!(s.body && s.body.elanUntil > Date.now());
 
@@ -62,8 +65,9 @@ export function derive(s: GameState): Derived {
   else if (voie === 'force') { vHp = 1 + 0.05 * ch; vDmg = 1 + 0.03 * ch; }
   else if (voie === 'equilibre') { vGold = 1 + 0.04 * ch; vDmg = 1 + 0.01 * ch; }
 
-  const dmgMult = c.dmg * (1 + 0.25 * (T.force || 0)) * b * vDmg;
-  const goldMult = c.gold * (1 + 0.25 * (T.cupidite || 0)) * b * vGold;
+  const pres = 1 + 0.04 * (s.reliques || 0); // bonus permanent de prestige
+  const dmgMult = c.dmg * (1 + 0.25 * (T.force || 0)) * b * vDmg * pres;
+  const goldMult = c.gold * (1 + 0.25 * (T.cupidite || 0)) * b * vGold * pres;
   const crit = Math.min(75, BASE.crit + c.crit + 5 * (T.precision || 0) + (s.upgrades.crit || 0) * UP_GAIN.crit + vCrit);
   const critF = 1 + (crit / 100) * (CRIT_MULT - 1);
   const atk = BASE.atk + s.habitStats.atk + (s.upgrades.atk || 0) * UP_GAIN.atk;
