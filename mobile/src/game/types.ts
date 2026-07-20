@@ -1,22 +1,33 @@
-// Types partagés du jeu.
+// Modèle de jeu — idle-RPG fantasy alimenté par les habitudes santé.
 
-export type Category = 'nutrition' | 'sport' | 'sommeil';
+export type Category = 'sport' | 'nutrition' | 'sommeil';
+export type Stat = 'atk' | 'maxHp' | 'regen' | 'crit' | 'click';
+export type ClassId = 'guerrier' | 'mage' | 'rodeur' | 'paladin';
+export type VoieId = 'agilite' | 'force' | 'equilibre';
+export type BodyDir = 'perte' | 'prise' | 'maintien';
 
-export type Stat = 'atk' | 'maxHp' | 'regen' | 'crit';
-
-// Un modèle d'habitude proposé à l'utilisateur (bouton dans une catégorie).
-export interface HabitPreset {
+// Récompense de base d'un item de check-in.
+export interface CheckReward {
+  xp: number;
+  gold: number;
+  statGain: number;
+}
+export interface CheckOption extends CheckReward {
+  id: string;
+  label: string;
+}
+export interface CheckItem {
   id: string;
   category: Category;
   label: string;
   emoji: string;
-  xp: number;
-  gold: number;
-  stat: Stat; // stat du héros que cette habitude renforce
-  statGain: number; // gain permanent de la stat par log
+  stat: Stat;
+  kind: 'toggle' | 'choice';
+  reward?: CheckReward;
+  options?: CheckOption[];
 }
 
-// Une récompense sélectionnée pendant le check-in, prête à être encaissée.
+// Une récompense sélectionnée pendant le check-in, prête à encaisser.
 export interface ClaimEntry {
   category: Category;
   label: string;
@@ -27,70 +38,61 @@ export interface ClaimEntry {
   statGain: number;
 }
 
-// Une habitude enregistrée dans le journal.
-export interface LoggedHabit {
-  presetId: string;
-  category: Category;
-  label: string;
-  emoji: string;
-  xp: number;
-  gold: number;
-  ts: number; // timestamp du log
-}
-
-// Niveaux achetés pour chaque amélioration de forge.
-export interface Upgrades {
-  atk: number;
-  maxHp: number;
-  regen: number;
-  crit: number;
-}
-
-// Une ligne du journal de combat du donjon.
-export interface DungeonLogEntry {
-  id: string;
+export interface WeighIn {
   ts: number;
-  kind: 'kill' | 'boss' | 'defeat' | 'loot' | 'offline';
-  text: string;
+  w: number;
+}
+
+export interface BodyGoal {
+  voie: VoieId;
+  dir: BodyDir;
+  weight: number;
+  start: number;
+  anchor: number;
+  target: number;
+  chapter: number;
+  chapters: number; // paliers franchis (bonus permanent)
+  history: WeighIn[];
+  lastWeighIn: number;
+  elanUntil: number;
 }
 
 export interface GameState {
-  // Progression / monnaies
   gold: number;
-  xp: number; // xp total cumulé
+  gems: number;
+  xp: number;
   level: number;
+  cls: ClassId | null;
 
-  // Stats permanentes gagnées via les habitudes (par stat)
-  habitStats: Record<Stat, number>;
+  habitStats: Record<Stat, number>; // gains permanents via check-in
+  upgrades: Record<Stat, number>; // forge (or)
+  talents: Record<string, number>; // gemmes
+  companions: Record<string, number>; // or/sec
 
-  // Améliorations achetées avec l'or
-  upgrades: Upgrades;
-
-  // État du donjon (idle)
   floor: number;
-  monsterIndex: number; // 0..MONSTERS_PER_FLOOR-1 (dernier = boss)
+  monsterIndex: number;
   monsterHp: number;
   heroHp: number;
 
-  // Journal
-  todayDate: string; // 'YYYY-MM-DD'
-  todayLog: LoggedHabit[];
-  history: Record<string, number>; // date -> nombre d'habitudes ce jour-là
-  dungeonLog: DungeonLogEntry[];
-
-  // Rétention
+  // Check-in
+  todayDate: string;
+  todayLog: { emoji: string; label: string; xp: number; gold: number; ts: number }[];
   streak: number;
-  lastCheckinDate: string | null; // dernier jour où le check-in a été validé
+  lastCheckinDate: string | null;
+  buffUntil: number; // Bénédiction ×1,5 (check-in)
 
-  // Personnalisation (toutes optionnelles)
-  customHabits: HabitPreset[]; // items perso ajoutés au check-in
-  notificationsEnabled: boolean; // rappel quotidien opt-in
-  reminderHour: number; // heure du rappel (0-23)
+  // Objectif corporel (infini)
+  body: BodyGoal | null;
 
-  // Stats à vie
-  totalHabits: number;
+  // Journal & stats
+  dungeonLog: string[];
+  totalDmg: number;
+  kills: number;
   bestFloor: number;
 
-  // Idle
-  lastActive: number; // timestamp du dernier tick sauvegardé
+  // Réglages
+  notificationsEnabled: boolean;
+  reminderHour: number;
+
+  lastActive: number;
 }

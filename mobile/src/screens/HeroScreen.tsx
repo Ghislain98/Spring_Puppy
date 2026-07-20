@@ -1,158 +1,152 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, Switch, Alert } from 'react-native';
 import { colors, radius, font, spacing } from '../theme';
-import { Card, SectionTitle, ProgressBar, Stat } from '../components/ui';
+import { Card } from '../components/ui';
 import { useGame } from '../game/store';
-import { effectiveStat, heroDps, upgradeCost } from '../game/engine';
-import { xpForLevel } from '../game/config';
-import { Stat as StatKey } from '../game/types';
-
-interface UpgradeDef {
-  key: StatKey;
-  emoji: string;
-  name: string;
-  desc: string;
-  color: string;
-}
-
-const UPGRADES: UpgradeDef[] = [
-  { key: 'atk', emoji: '⚔️', name: 'Aiguiser la lame', desc: '+3 attaque', color: colors.hp },
-  { key: 'maxHp', emoji: '🛡️', name: 'Renforcer l’armure', desc: '+20 PV max', color: colors.regen },
-  { key: 'regen', emoji: '🧪', name: 'Élixir de régén.', desc: '+2 régén./s', color: colors.sommeil },
-  { key: 'crit', emoji: '🎯', name: 'Œil du chasseur', desc: '+2% critique', color: colors.gold },
-];
+import { CLASSES, FORGE, xpForLevel } from '../game/config';
+import { derive, fmt, upgradeCost } from '../game/engine';
+import { scheduleDailyReminder, cancelDailyReminder } from '../game/notifications';
 
 export default function HeroScreen() {
-  const gold = useGame((s) => s.gold);
-  const level = useGame((s) => s.level);
-  const xp = useGame((s) => s.xp);
-  const totalHabits = useGame((s) => s.totalHabits);
-  const streak = useGame((s) => s.streak);
-  const buyUpgrade = useGame((s) => s.buyUpgrade);
-  const upgrades = useGame((s) => s.upgrades);
-  const state = useGame();
+  const s = useGame();
+  const buyUpgrade = useGame((st) => st.buyUpgrade);
+  const setClass = useGame((st) => st.setClass);
+  const setNotifications = useGame((st) => st.setNotifications);
+  const resetGame = useGame((st) => st.resetGame);
+  const d = derive(s);
+  const c = CLASSES[s.cls || 'guerrier'];
+  const cur = xpForLevel(s.level), nxt = xpForLevel(s.level + 1);
 
-  const dps = heroDps(state);
-  const atk = effectiveStat(state, 'atk');
-  const maxHp = effectiveStat(state, 'maxHp');
-  const regen = effectiveStat(state, 'regen');
-  const crit = Math.min(75, effectiveStat(state, 'crit'));
+  const pickClass = (id: keyof typeof CLASSES) => {
+    if (s.cls === id) return;
+    if (s.cls && s.gems < 5) { Alert.alert('Pas assez de gemmes', 'Changer de classe coûte 5 💎.'); return; }
+    if (s.cls) {
+      Alert.alert('Changer de classe ?', 'Coût : 5 💎.', [
+        { text: 'Annuler', style: 'cancel' },
+        { text: 'Changer', onPress: () => setClass(id) },
+      ]);
+    } else setClass(id);
+  };
 
-  const curFloor = xpForLevel(level);
-  const nextFloor = xpForLevel(level + 1);
-  const intoLevel = xp - curFloor;
-  const levelSpan = nextFloor - curFloor;
+  const toggleNotif = async (v: boolean) => {
+    if (v) {
+      const ok = await scheduleDailyReminder(s.reminderHour);
+      if (!ok) { Alert.alert('Notifications refusées', 'Autorise les notifications dans les réglages du téléphone.'); return; }
+      setNotifications(true, s.reminderHour);
+    } else { await cancelDailyReminder(); setNotifications(false, s.reminderHour); }
+  };
+
+  const confirmReset = () => Alert.alert('Recommencer ?', 'Efface toute la progression.', [
+    { text: 'Annuler', style: 'cancel' },
+    { text: 'Tout effacer', style: 'destructive', onPress: () => resetGame() },
+  ]);
 
   return (
     <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
       <View style={styles.header}>
         <Text style={styles.title}>Héros</Text>
-        <View style={styles.goldBadge}>
-          <Text style={styles.goldText}>💰 {gold}</Text>
-        </View>
+        <View style={styles.pill}><Text style={styles.pillTxt}>💰 {fmt(s.gold)}</Text></View>
       </View>
 
-      {/* Carte identité */}
-      <Card style={{ marginBottom: spacing(4), alignItems: 'center' }}>
-        <Text style={styles.avatar}>🦸</Text>
-        <Text style={styles.level}>Niveau {level}</Text>
-        <Text style={styles.xpText}>
-          {intoLevel} / {levelSpan} XP
-        </Text>
-        <View style={{ width: '100%', marginTop: 8 }}>
-          <ProgressBar value={intoLevel} max={levelSpan} color={colors.xp} height={10} />
+      <Card style={{ alignItems: 'center' }}>
+        <Text style={{ fontSize: 52 }}>{c.emoji}</Text>
+        <Text style={styles.level}>Niveau {s.level} · {c.name}</Text>
+        <Text style={styles.sub}>{fmt(s.xp - cur)} / {fmt(nxt - cur)} XP</Text>
+        <View style={styles.xpbar}><View style={[styles.xpfill, { width: `${Math.min(100, ((s.xp - cur) / (nxt - cur)) * 100)}%` }]} /></View>
+      </Card>
+
+      <Text style={styles.section}>Statistiques</Text>
+      <Card>
+        <View style={styles.grid}>
+          <Stat label="DPS" value={fmt(d.dps)} color={colors.hp} />
+          <Stat label="Dégâts/clic" value={fmt(d.clickDmg)} color={colors.xp} />
+          <Stat label="Or/sec" value={fmt(d.goldSec)} color={colors.gold} />
+        </View>
+        <View style={[styles.grid, { marginTop: 14 }]}>
+          <Stat label="PV max" value={String(Math.round(d.maxHp))} color={colors.regen} />
+          <Stat label="Critique" value={`${Math.round(d.crit)}%`} color={colors.gold} />
+          <Stat label="Dégâts cumulés" value={fmt(s.totalDmg)} color={colors.textMuted} />
         </View>
       </Card>
 
-      {/* Stats */}
-      <SectionTitle>Statistiques de combat</SectionTitle>
-      <Card style={{ marginBottom: spacing(4) }}>
-        <View style={styles.statGrid}>
-          <Stat label="Attaque" value={atk.toFixed(0)} color={colors.hp} />
-          <Stat label="PV max" value={maxHp.toFixed(0)} color={colors.regen} />
-          <Stat label="Régén./s" value={regen.toFixed(0)} color={colors.sommeil} />
-        </View>
-        <View style={[styles.statGrid, { marginTop: 16 }]}>
-          <Stat label="Critique" value={`${crit.toFixed(0)}%`} color={colors.gold} />
-          <Stat label="DPS" value={dps.toFixed(0)} color={colors.text} />
-          <Stat label="Habitudes" value={String(totalHabits)} color={colors.textMuted} />
-        </View>
-      </Card>
+      <Text style={styles.section}>⚔️ Classe</Text>
+      <View style={styles.classGrid}>
+        {Object.values(CLASSES).map((cl) => (
+          <Pressable key={cl.id} onPress={() => pickClass(cl.id)} style={[styles.classCard, s.cls === cl.id && { borderColor: colors.gold, backgroundColor: colors.cardAlt }]}>
+            <Text style={{ fontSize: 32 }}>{cl.emoji}</Text>
+            <Text style={styles.className}>{cl.name}</Text>
+            <Text style={styles.classDesc}>{cl.desc}</Text>
+          </Pressable>
+        ))}
+      </View>
 
-      {/* Forge */}
-      <SectionTitle>Forge · dépense ton or</SectionTitle>
-      {UPGRADES.map((u) => {
-        const cost = upgradeCost(state, u.key);
-        const lvl = upgrades[u.key];
-        const afford = gold >= cost;
+      <Text style={styles.section}>🔨 Forge · dépense ton or</Text>
+      {FORGE.map((u) => {
+        const cost = upgradeCost(s, u.key);
+        const can = s.gold >= cost;
         return (
-          <Pressable
-            key={u.key}
-            onPress={() => afford && buyUpgrade(u.key)}
-            style={({ pressed }) => [
-              styles.upgrade,
-              { opacity: pressed && afford ? 0.7 : 1, borderColor: afford ? u.color : colors.border },
-            ]}
-          >
-            <Text style={styles.upEmoji}>{u.emoji}</Text>
+          <Pressable key={u.key} onPress={() => buyUpgrade(u.key)} style={[styles.buy, { borderColor: can ? u.color : colors.border, opacity: can ? 1 : 0.7 }]}>
+            <Text style={styles.buyEm}>{u.emoji}</Text>
             <View style={{ flex: 1 }}>
-              <Text style={styles.upName}>
-                {u.name} <Text style={styles.upLvl}>Niv. {lvl}</Text>
-              </Text>
-              <Text style={styles.upDesc}>{u.desc}</Text>
+              <Text style={styles.buyNm}>{u.name} <Text style={styles.small}>Niv. {s.upgrades[u.key]}</Text></Text>
+              <Text style={styles.buyDs}>{u.desc}</Text>
             </View>
-            <View style={[styles.costPill, { backgroundColor: afford ? colors.gold : colors.bgElevated }]}>
-              <Text style={[styles.costText, { color: afford ? '#2a1c00' : colors.textFaint }]}>💰 {cost}</Text>
-            </View>
+            <Text style={[styles.cost, { color: can ? colors.gold : colors.textFaint }]}>💰{fmt(cost)}</Text>
           </Pressable>
         );
       })}
-      <View style={{ height: 24 }} />
+
+      <Text style={styles.section}>🔔 Rappel quotidien</Text>
+      <Card>
+        <View style={styles.rowBetween}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.rowTitle}>Notifications</Text>
+            <Text style={styles.buyDs}>Un rappel doux (opt-in) pour ton check-in.</Text>
+          </View>
+          <Switch value={s.notificationsEnabled} onValueChange={toggleNotif} trackColor={{ true: colors.gold, false: colors.border }} thumbColor={colors.text} />
+        </View>
+      </Card>
+
+      <Pressable onPress={confirmReset} style={{ alignItems: 'center', paddingVertical: 14 }}>
+        <Text style={styles.reset}>Réinitialiser la progression</Text>
+      </Pressable>
+      <View style={{ height: 20 }} />
     </ScrollView>
   );
 }
 
+function Stat({ label, value, color }: { label: string; value: string; color: string }) {
+  return (
+    <View style={{ flex: 1, alignItems: 'center' }}>
+      <Text style={{ color, fontSize: font.h3, fontWeight: '800' }}>{value}</Text>
+      <Text style={{ color: colors.textFaint, fontSize: font.tiny, marginTop: 2 }}>{label}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  container: { padding: 16, paddingTop: 8 },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: spacing(4),
-  },
+  container: { padding: 14 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   title: { color: colors.text, fontSize: font.h1, fontWeight: '900' },
-  goldBadge: {
-    backgroundColor: colors.card,
-    borderRadius: radius.pill,
-    borderWidth: 1,
-    borderColor: colors.goldDim,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  goldText: { color: colors.gold, fontWeight: '900', fontSize: font.body },
-  avatar: { fontSize: 60 },
-  level: { color: colors.text, fontSize: font.h2, fontWeight: '900', marginTop: 6 },
-  xpText: { color: colors.textMuted, fontSize: font.small, marginTop: 2 },
-  statGrid: { flexDirection: 'row' },
-  upgrade: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.card,
-    borderRadius: radius.md,
-    borderWidth: 1.5,
-    padding: 14,
-    marginBottom: 10,
-  },
-  upEmoji: { fontSize: 28, marginRight: 14 },
-  upName: { color: colors.text, fontSize: font.body, fontWeight: '800' },
-  upLvl: { color: colors.textFaint, fontSize: font.tiny, fontWeight: '700' },
-  upDesc: { color: colors.textMuted, fontSize: font.small, marginTop: 2 },
-  costPill: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.pill },
-  costText: { fontWeight: '900', fontSize: font.small },
-  reset: {
-    marginTop: 16,
-    alignItems: 'center',
-    paddingVertical: 12,
-  },
-  resetText: { color: colors.textFaint, fontSize: font.small, textDecorationLine: 'underline' },
+  pill: { backgroundColor: colors.card, borderWidth: 1, borderColor: colors.goldDim, borderRadius: radius.pill, paddingHorizontal: 14, paddingVertical: 7 },
+  pillTxt: { color: colors.gold, fontWeight: '900', fontSize: font.body },
+  level: { color: colors.text, fontSize: font.h3, fontWeight: '900', marginTop: 4 },
+  sub: { color: colors.textMuted, fontSize: font.small, marginTop: 2 },
+  xpbar: { width: '100%', height: 9, backgroundColor: colors.bgElevated, borderRadius: radius.pill, marginTop: 8, overflow: 'hidden' },
+  xpfill: { height: '100%', backgroundColor: colors.xp, borderRadius: radius.pill },
+  section: { color: colors.gold, fontSize: font.small, fontWeight: '800', marginTop: spacing(4), marginBottom: 8 },
+  grid: { flexDirection: 'row' },
+  classGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 9 },
+  classCard: { width: '47.5%', backgroundColor: colors.card, borderWidth: 1.5, borderColor: colors.border, borderRadius: 15, padding: 13, alignItems: 'center' },
+  className: { fontSize: font.body, fontWeight: '800', color: colors.text, marginTop: 4 },
+  classDesc: { color: colors.textMuted, fontSize: font.tiny, marginTop: 3, textAlign: 'center', lineHeight: 15 },
+  buy: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.card, borderWidth: 1.5, borderRadius: 14, padding: 13, marginBottom: 10 },
+  buyEm: { fontSize: 26, width: 30, textAlign: 'center' },
+  buyNm: { color: colors.text, fontWeight: '800', fontSize: font.body },
+  small: { color: colors.textFaint, fontSize: font.tiny, fontWeight: '700' },
+  buyDs: { color: colors.textMuted, fontSize: font.small, marginTop: 2 },
+  cost: { fontWeight: '900', fontSize: font.small },
+  rowBetween: { flexDirection: 'row', alignItems: 'center' },
+  rowTitle: { color: colors.text, fontSize: font.body, fontWeight: '700' },
+  reset: { color: colors.textFaint, fontSize: font.small, textDecorationLine: 'underline' },
 });

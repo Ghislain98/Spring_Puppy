@@ -1,70 +1,49 @@
 # ⚔️ HabitQuest
 
-Gamifie tes habitudes de vie saine (**nutrition, sport, sommeil**) pour alimenter
-un **RPG donjon-crawler idle**. Chaque bonne habitude te rapporte de l'XP et de
-l'or, et renforce en permanence ton héros — qui explore le donjon tout seul, même
+Idle-RPG fantasy alimenté par tes **habitudes de vie saine**. Ton check-in
+quotidien (sport / nutrition / sommeil) et ton **objectif corporel** (perte /
+prise / maintien) forgent un héros qui explore un donjon en continu — même
 application fermée.
 
-> App mobile **Expo / React Native + TypeScript**, 100 % locale (aucun serveur
-> requis pour cette V1). Cross-platform iOS + Android.
+> App **Expo / React Native + TypeScript**, cross-platform iOS + Android,
+> 100 % locale (aucun serveur requis pour cette version).
 
-## 🎮 Le concept
+## 🎮 Boucles de jeu
 
-À l'ouverture, l'app te demande **« Que veux-tu ajouter ? »** parmi trois
-catégories. Logger une habitude déclenche trois effets :
+- **Donjon idle** — le héros auto-combat ; **tape le monstre** pour des dégâts de
+  clic (avec critiques et dégâts flottants). Étages, boss tous les 8 monstres,
+  journal de combat.
+- **Compagnons** — générateurs d'**or/sec** à acheter (×1 / ×10 / max), coûts
+  exponentiels (le cœur « cookie clicker »).
+- **Check-in quotidien** — 3 étapes rapides → XP, or, **gemmes** + une
+  **Bénédiction ×1,5 or & dégâts (24h)**.
+- **Objectif corporel (infini)** — choisis une **Voie** (Agilité/perte,
+  Force/prise, Équilibre/maintien) ; chaque pesée récompense la régularité, un
+  palier atteint génère l'objectif suivant sans fin + un bonus **permanent**.
+  Buff **Élan ×2** quand ça va dans le bon sens. Jamais de punition.
+- **Classes** (Guerrier / Mage / Rôdeur / Paladin) et **Talents** permanents
+  payés en gemmes.
 
-| Catégorie   | Renforce la stat | Effet RPG                     |
-|-------------|------------------|-------------------------------|
-| 🥗 Nutrition | PV max           | Le héros encaisse plus         |
-| 💪 Sport     | Attaque          | Le héros tape plus fort        |
-| 😴 Sommeil   | Régénération     | Le héros récupère plus vite    |
+## 💰 Monnaies
 
-Chaque log donne aussi de l'**XP** (niveau du héros) et de l'**or** (monnaie).
-
-La **boucle idle** : plus tu es healthy → plus ton héros est fort → plus il
-descend vite dans le donjon → plus il génère d'or → plus tu forges d'améliorations
-→ plus tu vas profond. Tes habitudes sont le carburant du jeu.
+- **Or** — combat + compagnons ; dépensé à la Forge et pour les compagnons.
+- **Gemmes** — boss, montées de niveau, check-ins, paliers d'objectif ; dépensées
+  en Talents et changement de classe.
 
 ## 🗺️ Écrans
 
-- **Aujourd'hui** — le prompt d'ajout, le bilan du jour, l'objectif quotidien
-  (optionnel), le streak 🔥 et le journal.
-- **Donjon** — l'arène de combat idle en direct : PV du monstre / du héros, DPS,
-  étages, boss (tous les 8 monstres 🐉) et journal de combat.
-- **Héros** — statistiques de combat + **Forge** pour dépenser l'or (attaque,
-  armure, régén., critique).
-- **Réglages** — tout est **optionnel** : objectif quotidien, rappel push opt-in,
-  création d'habitudes personnalisées, réinitialisation.
-
-## ✨ Personnalisation (100 % optionnelle)
-
-L'app est complète telle quelle. Si tu le souhaites, tu peux :
-
-- **Créer tes propres habitudes** (nom, catégorie, icône, difficulté) — elles
-  s'ajoutent au prompt à côté des habitudes par défaut.
-- **Fixer un objectif quotidien** (0 = désactivé) affiché dans le bilan du jour.
-- **Activer un rappel quotidien** (notification locale opt-in) à l'heure de ton
-  choix — jamais imposé, désactivé par défaut.
-
-## 🌙 Progression hors-ligne
-
-Au retour dans l'app, le héros a continué de farmer l'étage courant. Les gains
-d'or et d'XP accumulés (plafonnés à 8 h) sont calculés et présentés dans une
-modale « Pendant ton absence ».
+Donjon · Check-in · Objectif · Talents · Héros (classe + forge + notifications).
 
 ## 🚀 Lancer en local
 
 ```bash
 cd mobile
 npm install
-npx expo start          # puis scanner le QR code avec l'app Expo Go
-# ou
-npm run android         # émulateur Android
-npm run ios             # simulateur iOS (macOS requis)
+npx expo start          # scanner le QR code avec Expo Go
+npm run android         # ou émulateur Android
 ```
 
-> Après `npm install`, il est recommandé de lancer `npx expo install --check`
-> pour aligner les versions natives (notamment `expo-notifications`) avec le SDK.
+> Après `npm install`, `npx expo install --check` aligne les versions natives.
 
 ## ✅ Qualité
 
@@ -77,29 +56,26 @@ npm test                # tests unitaires du moteur (Jest)
 
 ```
 mobile/
-├─ App.tsx                 # coquille : onglets, boucle de tick, modale hors-ligne
+├─ App.tsx                    # onglets, barre de monnaies, boucle de tick, modales
 └─ src/
-   ├─ theme.ts             # couleurs / typographie
-   ├─ components/ui.tsx    # Card, ProgressBar, Chip, Stat…
+   ├─ theme.ts
+   ├─ components/             # CurrencyBar, ui (Card, ProgressBar…)
    ├─ game/
-   │  ├─ types.ts          # types du modèle de jeu
-   │  ├─ config.ts         # catégories, habitudes, constantes, courbes d'XP
-   │  ├─ engine.ts         # maths de combat + simulation hors-ligne (pures)
-   │  └─ store.ts          # état global Zustand + persistance AsyncStorage
-   └─ screens/             # TodayScreen, DungeonScreen, HeroScreen
+   │  ├─ types.ts             # modèle de jeu
+   │  ├─ config.ts            # classes, compagnons, talents, voies, check-in, constantes
+   │  ├─ engine.ts            # formules + stats dérivées (pures, testées)
+   │  ├─ store.ts             # état Zustand + actions (combat, achats, pesée…)
+   │  └─ notifications.ts     # rappel quotidien opt-in
+   └─ screens/                # Dungeon, Today (check-in), Objectif, Talents, Hero
 ```
 
-- **État** : [Zustand](https://github.com/pmndrs/zustand) avec middleware `persist`.
-- **Persistance** : `@react-native-async-storage/async-storage`.
-- **Logique de jeu** : fonctions pures dans `engine.ts` (facilement testables).
+La logique de jeu vit dans `engine.ts` (fonctions pures) et `store.ts` (Zustand +
+persistance AsyncStorage). Un prototype web jouable des mêmes mécaniques est dans
+[`../prototype`](../prototype).
 
-## 🛠️ Feuille de route vers la commercialisation
+## 🛠️ Suite
 
-- [x] Habitudes personnalisées et objectif quotidien optionnels
-- [x] Notifications locales opt-in (rappel quotidien)
-- [x] Tests unitaires sur `engine.ts`
-- [ ] Comptes + synchro cloud (Supabase / Firebase)
-- [ ] Intégration Apple Santé / Google Fit (pas & sommeil automatiques)
-      — nécessite un *development build* (hors Expo Go)
-- [ ] Contenu de donjon : biomes, équipement, compétences actives
-- [ ] Monétisation : cosmétiques, boosts, premium sans pub
+- Effets « juice » natifs (sons, haptique, particules d'explosion) — présents dans
+  le prototype web, à porter en RN
+- Comptes + synchro cloud, intégration Apple Santé / Google Fit
+- Contenu de donjon (biomes, équipement, sorts), prestige

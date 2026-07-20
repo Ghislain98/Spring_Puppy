@@ -1,60 +1,49 @@
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  Pressable,
-  SafeAreaView,
-  StatusBar,
-  Platform,
-  AppState,
-  AppStateStatus,
-  Modal,
-} from 'react-native';
+import { View, Text, StyleSheet, Pressable, SafeAreaView, StatusBar, Platform, AppState, AppStateStatus, Modal } from 'react-native';
 import { colors, radius, font } from './src/theme';
 import { useGame } from './src/game/store';
-import { GAME } from './src/game/config';
-import { OfflineResult } from './src/game/engine';
-import TodayScreen from './src/screens/TodayScreen';
-import DungeonScreen from './src/screens/DungeonScreen';
-import HeroScreen from './src/screens/HeroScreen';
-import SettingsScreen from './src/screens/SettingsScreen';
+import { GAME, CLASSES } from './src/game/config';
+import { OfflineResult, fmt } from './src/game/engine';
 import { scheduleDailyReminder } from './src/game/notifications';
+import CurrencyBar from './src/components/CurrencyBar';
+import DungeonScreen from './src/screens/DungeonScreen';
+import TodayScreen from './src/screens/TodayScreen';
+import ObjectifScreen from './src/screens/ObjectifScreen';
+import TalentsScreen from './src/screens/TalentsScreen';
+import HeroScreen from './src/screens/HeroScreen';
 
-type TabKey = 'today' | 'dungeon' | 'hero' | 'settings';
-
+type TabKey = 'dungeon' | 'today' | 'body' | 'talents' | 'hero';
 const TABS: { key: TabKey; label: string; emoji: string }[] = [
-  { key: 'today', label: 'Check-in', emoji: '✅' },
   { key: 'dungeon', label: 'Donjon', emoji: '🏰' },
+  { key: 'today', label: 'Check-in', emoji: '✅' },
+  { key: 'body', label: 'Objectif', emoji: '🎯' },
+  { key: 'talents', label: 'Talents', emoji: '🌟' },
   { key: 'hero', label: 'Héros', emoji: '🦸' },
-  { key: 'settings', label: 'Réglages', emoji: '⚙️' },
 ];
 
 export default function App() {
-  const [tab, setTab] = useState<TabKey>('today');
+  const [tab, setTab] = useState<TabKey>('dungeon');
   const [offline, setOffline] = useState<OfflineResult | null>(null);
-
+  const cls = useGame((s) => s.cls);
+  const setClass = useGame((s) => s.setClass);
   const init = useGame((s) => s.init);
   const tick = useGame((s) => s.tick);
 
-  // Démarrage : reset quotidien + gains hors-ligne + re-programmation du rappel.
   useEffect(() => {
     const res = init();
     if (res && (res.gold > 0 || res.xp > 0)) setOffline(res);
-    const { notificationsEnabled, reminderHour } = useGame.getState();
-    if (notificationsEnabled) scheduleDailyReminder(reminderHour);
+    const st = useGame.getState();
+    if (st.notificationsEnabled) scheduleDailyReminder(st.reminderHour);
   }, [init]);
 
-  // Boucle de combat idle (app au premier plan).
   useEffect(() => {
     const id = setInterval(() => tick(), GAME.TICK_MS);
     return () => clearInterval(id);
   }, [tick]);
 
-  // Retour au premier plan -> recalcul des gains hors-ligne.
   useEffect(() => {
-    const sub = AppState.addEventListener('change', (next: AppStateStatus) => {
-      if (next === 'active') {
+    const sub = AppState.addEventListener('change', (n: AppStateStatus) => {
+      if (n === 'active') {
         const res = init();
         if (res && (res.gold > 0 || res.xp > 0)) setOffline(res);
       }
@@ -65,20 +54,19 @@ export default function App() {
   return (
     <SafeAreaView style={styles.root}>
       <StatusBar barStyle="light-content" backgroundColor={colors.bg} />
-      <View style={styles.brandBar}>
-        <Text style={styles.brand}>
-          ⚔️ Habit<Text style={{ color: colors.gold }}>Quest</Text>
-        </Text>
+      <View style={styles.brand}>
+        <Text style={styles.brandTxt}>⚔️ Habit<Text style={{ color: colors.gold }}>Quest</Text> <Text style={styles.tag}>· fantasy</Text></Text>
       </View>
+      <CurrencyBar />
 
       <View style={{ flex: 1 }}>
-        {tab === 'today' && <TodayScreen onGoDungeon={() => setTab('dungeon')} />}
         {tab === 'dungeon' && <DungeonScreen />}
+        {tab === 'today' && <TodayScreen onGoDungeon={() => setTab('dungeon')} />}
+        {tab === 'body' && <ObjectifScreen />}
+        {tab === 'talents' && <TalentsScreen />}
         {tab === 'hero' && <HeroScreen />}
-        {tab === 'settings' && <SettingsScreen />}
       </View>
 
-      {/* Barre d'onglets */}
       <View style={styles.tabBar}>
         {TABS.map((t) => {
           const active = tab === t.key;
@@ -91,27 +79,35 @@ export default function App() {
         })}
       </View>
 
+      {/* Choix de classe au premier lancement */}
+      <Modal visible={!cls} transparent animationType="fade">
+        <View style={styles.overlay}>
+          <Text style={{ fontSize: 60 }}>🦸</Text>
+          <Text style={styles.overlayTitle}>Choisis ta classe</Text>
+          <Text style={styles.sub}>Changeable plus tard (5 💎).</Text>
+          <View style={styles.classGrid}>
+            {Object.values(CLASSES).map((c) => (
+              <Pressable key={c.id} style={styles.classCard} onPress={() => setClass(c.id)}>
+                <Text style={{ fontSize: 32 }}>{c.emoji}</Text>
+                <Text style={styles.className}>{c.name}</Text>
+                <Text style={styles.classDesc}>{c.desc}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      </Modal>
+
       {/* Gains hors-ligne */}
       <Modal visible={offline !== null} transparent animationType="fade" onRequestClose={() => setOffline(null)}>
-        <View style={styles.modalBackdrop}>
-          <View style={styles.offlineCard}>
-            <Text style={styles.offlineEmoji}>🌙</Text>
-            <Text style={styles.offlineTitle}>Pendant ton absence</Text>
-            <Text style={styles.offlineSub}>Ton héros a continué de fouiller le donjon.</Text>
-            <View style={styles.offlineRow}>
-              <View style={styles.offlineStat}>
-                <Text style={[styles.offlineVal, { color: colors.gold }]}>+{offline?.gold ?? 0}</Text>
-                <Text style={styles.offlineLbl}>or</Text>
-              </View>
-              <View style={styles.offlineStat}>
-                <Text style={[styles.offlineVal, { color: colors.xp }]}>+{offline?.xp ?? 0}</Text>
-                <Text style={styles.offlineLbl}>XP</Text>
-              </View>
-            </View>
-            <Pressable style={styles.offlineBtn} onPress={() => setOffline(null)}>
-              <Text style={styles.offlineBtnText}>Récupérer</Text>
-            </Pressable>
+        <View style={styles.overlay}>
+          <Text style={{ fontSize: 44 }}>🌙</Text>
+          <Text style={styles.overlayTitle}>Pendant ton absence</Text>
+          <Text style={styles.sub}>Le donjon a continué de rapporter.</Text>
+          <View style={styles.offRow}>
+            <View style={{ alignItems: 'center' }}><Text style={[styles.offV, { color: colors.gold }]}>+{fmt(offline?.gold ?? 0)}</Text><Text style={styles.offL}>or</Text></View>
+            <View style={{ alignItems: 'center' }}><Text style={[styles.offV, { color: colors.xp }]}>+{fmt(offline?.xp ?? 0)}</Text><Text style={styles.offL}>XP</Text></View>
           </View>
+          <Pressable style={styles.offBtn} onPress={() => setOffline(null)}><Text style={styles.offBtnTxt}>Récupérer</Text></Pressable>
         </View>
       </Modal>
     </SafeAreaView>
@@ -119,58 +115,24 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: colors.bg,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
-  },
-  brandBar: {
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.border,
-  },
-  brand: { color: colors.text, fontSize: font.h3, fontWeight: '900', letterSpacing: 0.5 },
-  tabBar: {
-    flexDirection: 'row',
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-    backgroundColor: colors.bgElevated,
-    paddingBottom: Platform.OS === 'ios' ? 18 : 8,
-    paddingTop: 8,
-  },
+  root: { flex: 1, backgroundColor: colors.bg, paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 },
+  brand: { alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border },
+  brandTxt: { color: colors.text, fontSize: font.h3, fontWeight: '900', letterSpacing: 0.5 },
+  tag: { color: colors.textFaint, fontSize: font.tiny, fontWeight: '700' },
+  tabBar: { flexDirection: 'row', borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: colors.bgElevated, paddingBottom: Platform.OS === 'ios' ? 18 : 8, paddingTop: 8 },
   tab: { flex: 1, alignItems: 'center' },
-  tabEmoji: { fontSize: 22 },
-  tabLabel: { fontSize: font.tiny, fontWeight: '700', marginTop: 2 },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-  },
-  offlineCard: {
-    backgroundColor: colors.card,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 24,
-    alignItems: 'center',
-    width: '100%',
-    maxWidth: 340,
-  },
-  offlineEmoji: { fontSize: 44 },
-  offlineTitle: { color: colors.text, fontSize: font.h2, fontWeight: '900', marginTop: 8 },
-  offlineSub: { color: colors.textMuted, fontSize: font.small, marginTop: 4, textAlign: 'center' },
-  offlineRow: { flexDirection: 'row', gap: 40, marginVertical: 20 },
-  offlineStat: { alignItems: 'center' },
-  offlineVal: { fontSize: font.h1, fontWeight: '900' },
-  offlineLbl: { color: colors.textFaint, fontSize: font.small },
-  offlineBtn: {
-    backgroundColor: colors.gold,
-    borderRadius: radius.pill,
-    paddingHorizontal: 40,
-    paddingVertical: 14,
-  },
-  offlineBtnText: { color: '#2a1c00', fontWeight: '900', fontSize: font.body },
+  tabEmoji: { fontSize: 21 },
+  tabLabel: { fontSize: 10, fontWeight: '700', marginTop: 2 },
+  overlay: { flex: 1, backgroundColor: 'rgba(6,4,16,0.9)', justifyContent: 'center', alignItems: 'center', padding: 24 },
+  overlayTitle: { color: colors.text, fontSize: font.h2, fontWeight: '900', marginTop: 10 },
+  sub: { color: colors.textMuted, fontSize: font.small, marginTop: 4, textAlign: 'center' },
+  classGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'center', marginTop: 20, maxWidth: 340 },
+  classCard: { width: 150, backgroundColor: colors.card, borderWidth: 1.5, borderColor: colors.border, borderRadius: 15, padding: 14, alignItems: 'center' },
+  className: { color: colors.text, fontSize: font.body, fontWeight: '800', marginTop: 4 },
+  classDesc: { color: colors.textMuted, fontSize: font.tiny, marginTop: 3, textAlign: 'center', lineHeight: 15 },
+  offRow: { flexDirection: 'row', gap: 40, marginVertical: 22 },
+  offV: { fontSize: font.h1, fontWeight: '900' },
+  offL: { color: colors.textFaint, fontSize: font.small },
+  offBtn: { backgroundColor: colors.gold, borderRadius: radius.pill, paddingHorizontal: 40, paddingVertical: 14 },
+  offBtnTxt: { color: '#2a1c00', fontWeight: '900', fontSize: font.body },
 });

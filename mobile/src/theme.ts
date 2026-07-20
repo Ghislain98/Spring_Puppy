@@ -15,6 +15,8 @@ export const colors = {
   xp: '#7ce0ff',
   hp: '#ff5d7a',
   regen: '#5dffb0',
+  gem: '#63e6ff',
+  ember: '#ff7a3c',
 
   nutrition: '#4ade80',
   sport: '#fb923c',
