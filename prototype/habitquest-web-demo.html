@@ -167,6 +167,9 @@
   .qmeta { display:flex; justify-content:space-between; font-size:11px; color:var(--muted); margin-top:6px; font-variant-numeric:tabular-nums; }
   .chapbadge { background:var(--card); border:1px solid var(--goldDim); border-radius:999px; padding:6px 12px; color:var(--gold); font-weight:900; font-family:var(--serif); }
   .elanpill { background:linear-gradient(90deg,var(--xp),var(--regen)); color:#062018; border-radius:999px; padding:5px 10px; font-size:11px; font-weight:900; }
+  .relicpill { background:var(--card); border:1px solid var(--goldDim); color:var(--gold); border-radius:999px; padding:5px 10px; font-size:11px; font-weight:900; }
+  .achtoast { position:absolute; top:12px; left:12px; right:12px; z-index:100; display:flex; align-items:center; gap:12px; background:var(--cardAlt); border:1.5px solid var(--gold); border-radius:14px; padding:12px; box-shadow:0 6px 20px rgba(0,0,0,.5); transition:opacity .3s, transform .3s; animation:slidein .3s ease; }
+  @keyframes slidein { from{opacity:0;transform:translateY(-16px)} to{opacity:1;transform:translateY(0)} }
   @media (prefers-reduced-motion:reduce){ *{animation:none!important;transition:none!important} .ember{display:none} }
 </style>
 
@@ -257,6 +260,7 @@ function fresh(){return{
   streak:0,lastCheckin:null,buffUntil:0,
   totalDmg:0,kills:0,log:['✨ Ton héros pénètre dans le donjon…'],
   body:null,
+  reliques:0,unlocked:[],bestFloor:1,
   lastActive:Date.now(),
 };}
 let S; try{S=JSON.parse(localStorage.getItem('habitquest-demo2'))||fresh();}catch(e){S=fresh();}
@@ -275,6 +279,72 @@ const VOIES={
   equilibre:{name:"Voie de l'Équilibre",em:'⚖️',dir:'maintien',ds:'Maintien — chaque palier : +or',goal:'maintenir'},
 };
 const STEP=1.0; // kg par palier
+
+// ============ Biomes ============
+const BIOMES=['Cryptes moisies','Caverne des Braises','Forêt Hantée','Cavernes de Glace','Ruines Maudites','Marais des Ombres','Nécropole',"Antre du Dragon"];
+const biomeName=f=>BIOMES[Math.floor((f-1)/5)%BIOMES.length];
+
+// ============ Renaissance (prestige) ============
+const reliquesGain=f=>Math.floor(Math.pow(Math.max(0,f)/5,1.5));
+function doPrestige(){
+  const gain=reliquesGain(S.floor); if(gain<=0)return 0;
+  S.reliques=(S.reliques||0)+gain; S.gold=0; S.comp={}; S.up={atk:0,maxHp:0,regen:0,crit:0,click:0};
+  S.floor=1; S.mi=0; S.mhp=monsterMaxHp(1,0); S.hp=1e9;
+  pushLog('🌟 Renaissance ! +'+gain+' reliques. Ton héros repart plus fort.');
+  save(); return gain;
+}
+
+// ============ Succès ============
+const compTot=s=>Object.values(s.comp||{}).reduce((a,n)=>a+n,0);
+const talTot=s=>Object.values(s.tal||{}).reduce((a,n)=>a+n,0);
+const ACH=[
+  {id:'floor5',name:'Premiers pas',ds:'Atteindre l’étage 5',em:'🏰',done:s=>s.bestFloor>=5,gems:3},
+  {id:'floor10',name:'Explorateur',ds:'Atteindre l’étage 10',em:'🗺️',done:s=>s.bestFloor>=10,gems:5},
+  {id:'floor25',name:'Aventurier',ds:'Atteindre l’étage 25',em:'🧭',done:s=>s.bestFloor>=25,gems:10},
+  {id:'floor50',name:'Conquérant',ds:'Atteindre l’étage 50',em:'👑',done:s=>s.bestFloor>=50,reliques:3},
+  {id:'kills100',name:'Nettoyeur',ds:'Vaincre 100 monstres',em:'⚔️',done:s=>s.kills>=100,gems:3},
+  {id:'kills1000',name:'Fléau du donjon',ds:'Vaincre 1 000 monstres',em:'💀',done:s=>s.kills>=1000,gems:8},
+  {id:'level10',name:'Aguerri',ds:'Héros niveau 10',em:'⭐',done:s=>s.level>=10,gems:4},
+  {id:'level25',name:'Vétéran',ds:'Héros niveau 25',em:'🌟',done:s=>s.level>=25,gems:8},
+  {id:'comp10',name:'Petite troupe',ds:'Posséder 10 compagnons',em:'🤝',done:s=>compTot(s)>=10,gems:4},
+  {id:'comp50',name:'Armée de l’ombre',ds:'Posséder 50 compagnons',em:'🏴',done:s=>compTot(s)>=50,gems:10},
+  {id:'tal10',name:'Éveil',ds:'10 niveaux de talents',em:'🌀',done:s=>talTot(s)>=10,gems:6},
+  {id:'reliq1',name:'Renaissance',ds:'Obtenir ta 1ère relique',em:'🏵️',done:s=>(s.reliques||0)>=1,gems:5},
+  {id:'streak3',name:'On s’y tient',ds:'3 jours de check-in d’affilée',em:'🔥',done:s=>s.streak>=3,gems:4},
+  {id:'streak7',name:'Une semaine !',ds:'7 jours d’affilée',em:'📅',done:s=>s.streak>=7,gems:8},
+  {id:'streak30',name:'Discipline de fer',ds:'30 jours d’affilée',em:'🏆',done:s=>s.streak>=30,reliques:3},
+  {id:'chap1',name:'En chemin',ds:'Franchir 1 palier d’objectif',em:'🎯',done:s=>!!s.body&&s.body.chapters>=1,gems:5},
+  {id:'chap5',name:'Transformation',ds:'Franchir 5 paliers d’objectif',em:'💪',done:s=>!!s.body&&s.body.chapters>=5,reliques:2},
+  {id:'weigh10',name:'Suivi régulier',ds:'Enregistrer 10 pesées',em:'⚖️',done:s=>!!s.body&&s.body.history.length>=10,gems:6},
+];
+function achToast(a){
+  const rw=a.reliques?('+'+a.reliques+' 🏵️'):('+'+(a.gems||0)+' 💎');
+  const t=document.createElement('div'); t.className='achtoast';
+  t.innerHTML=`<span style="font-size:26px">${a.em}</span><div style="flex:1"><div style="color:var(--gold);font-size:11px;font-weight:800">🏆 Succès débloqué · ${rw}</div><div style="font-weight:900">${a.name}</div></div>`;
+  document.querySelector('.phone').appendChild(t);
+  setTimeout(()=>{t.style.opacity='0';t.style.transform='translateY(-14px)';},2000);
+  setTimeout(()=>t.remove(),2400);
+}
+function checkAch(){
+  if(!S.unlocked)S.unlocked=[]; S.bestFloor=Math.max(S.bestFloor||1,S.floor);
+  for(const a of ACH){
+    if(!S.unlocked.includes(a.id)&&a.done(S)){
+      S.unlocked.push(a.id);
+      if(a.gems)S.gems+=a.gems; if(a.reliques)S.reliques=(S.reliques||0)+a.reliques;
+      achToast(a); SND.level(); haptic([10,30,10]);
+    }
+  }
+}
+function openAch(){
+  const got=S.unlocked||[];
+  const ov=document.createElement('div');ov.className='overlay';ov.style.justifyContent='flex-end';ov.style.padding='0';
+  ov.innerHTML=`<div style="background:var(--bgEl);border-top-left-radius:22px;border-top-right-radius:22px;border:1px solid var(--border);padding:16px;max-height:82%;width:100%;max-width:470px;display:flex;flex-direction:column">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div style="font-family:var(--serif);font-size:18px;font-weight:700">🏆 Succès · ${got.length}/${ACH.length}</div><button class="link" id="achclose" style="font-size:20px">✕</button></div>
+    <div style="overflow-y:auto">${ACH.map(a=>{const g=got.includes(a.id);const rw=a.reliques?('+'+a.reliques+' 🏵️'):('+'+(a.gems||0)+' 💎');return `<div class="buy" style="opacity:${g?1:.55}"><span class="em">${g?a.em:'🔒'}</span><div style="flex:1"><div class="nm">${a.name}</div><div class="ds">${a.ds}</div></div><div class="cost" style="color:${g?'var(--success)':'var(--faint)'}">${g?'✓':rw}</div></div>`;}).join('')}</div></div>`;
+  document.querySelector('.phone').appendChild(ov);
+  ov.querySelector('#achclose').onclick=()=>ov.remove();
+  ov.onclick=e=>{if(e.target===ov)ov.remove();};
+}
 
 // ============ Juice : audio + haptique + effets ============
 const SND=(()=>{
@@ -329,8 +399,9 @@ function D(){
   if(voie==='agilite'){vDmg=1+0.02*ch; vCrit=Math.min(15,ch); vClick=1.4;}
   else if(voie==='force'){vHp=1+0.05*ch; vDmg=1+0.03*ch;}
   else if(voie==='equilibre'){vGold=1+0.04*ch; vDmg=1+0.01*ch;}
-  const dmgMult=c.dmg*(1+0.25*(T.force||0))*b*vDmg;
-  const goldMult=c.gold*(1+0.25*(T.cupidite||0))*b*vGold;
+  const pres=1+0.04*(S.reliques||0);
+  const dmgMult=c.dmg*(1+0.25*(T.force||0))*b*vDmg*pres;
+  const goldMult=c.gold*(1+0.25*(T.cupidite||0))*b*vGold*pres;
   const crit=Math.min(75,BASE.crit+c.crit+5*(T.precision||0)+(S.up.crit||0)*UP_GAIN.crit+vCrit);
   const critF=1+(crit/100)*(CRIT_MULT-1);
   const atk=BASE.atk+S.habit.atk+(S.up.atk||0)*UP_GAIN.atk;
@@ -373,12 +444,13 @@ function renderCur(){
   document.getElementById('cur').innerHTML=
     `<div class="curbox" id="goldbox"><span class="ic">💰</span><div><div class="v" style="color:var(--gold)">${fmt(S.gold)}</div><div class="s">+${fmt(d.goldSec)}/s</div></div></div>
      <div class="curbox" id="gemsbox"><span class="ic">💎</span><div><div class="v" style="color:var(--gem)">${fmt(S.gems)}</div><div class="s">gemmes</div></div></div>
+     ${(S.reliques>0)?`<div class="curbox" style="flex:0 0 auto"><span class="relicpill">🏵️ ${fmt(S.reliques)}</span></div>`:''}
      ${buffOn()?`<div class="curbox" style="flex:0 0 auto"><span class="buffpill">✨ ×1,5</span></div>`:''}
      ${elanOn()?`<div class="curbox" style="flex:0 0 auto"><span class="elanpill">⚡ ×2</span></div>`:''}`;
 }
 
 function headerHTML(title,right){
-  return `<div class="header"><div><h1>${title}</h1><div class="sub">Niv. ${S.level} · Étage ${S.floor} · ${(CLASSES[S.cls]||CLASSES.guerrier).em} ${(CLASSES[S.cls]||CLASSES.guerrier).name}</div></div>${right||`<div class="streak">🔥<b>${S.streak}</b></div>`}</div>`;
+  return `<div class="header"><div><h1>${title}</h1><div class="sub">Niv. ${S.level} · Étage ${S.floor} · ${biomeName(S.floor)}</div></div>${right||`<div class="streak">🔥<b>${S.streak}</b></div>`}</div>`;
 }
 
 // ============ DONJON ============
@@ -597,6 +669,12 @@ function renderHero(){
     <div class="classgrid" id="classgrid"></div>
     <div class="section"><span>🔨 Forge · dépense ton or</span></div>
     <div id="forge"></div>
+    <div class="section"><span>🏆 Succès</span></div>
+    <button class="buy can" id="achbtn" style="width:100%;justify-content:space-between"><span class="nm">Voir les succès</span><span class="cnt" style="font-size:16px">${(S.unlocked||[]).length}/${ACH.length}</span></button>
+    <div class="section"><span>🌟 Renaissance</span></div>
+    <div class="card"><div class="sub" style="line-height:1.5">Recommence la run (or, compagnons, forge, étage) contre des <b style="color:var(--gold)">Reliques</b> permanentes : <b>+4% dégâts & or</b> chacune. Tu gardes gemmes, talents, classe, objectif et streak.</div>
+      <div class="stat3" style="margin-top:12px"><div><b style="color:var(--gold)">🏵️ ${S.reliques||0}</b><span>Reliques</span></div><div><b style="color:var(--regen)">+${4*(S.reliques||0)}%</b><span>Bonus</span></div><div><b style="color:var(--xp)">+${reliquesGain(S.floor)}</b><span>Si tu renais</span></div></div>
+      <button class="btn-gold" id="prestigebtn" style="margin-top:12px" ${reliquesGain(S.floor)<=0?'disabled':''}>${reliquesGain(S.floor)>0?('Renaître (+'+reliquesGain(S.floor)+' 🏵️)'):"Atteins l'étage 5 pour renaître"}</button></div>
     <button class="link" id="reset" style="display:block;margin:12px auto">Réinitialiser (démo)</button>`;
   document.getElementById('classgrid').innerHTML=Object.entries(CLASSES).map(([id,c])=>`<div class="classcard ${S.cls===id?'sel':''}" data-cl="${id}"><div class="em">${c.em}</div><div class="nm">${c.name}</div><div class="ds">${c.ds}</div></div>`).join('');
   document.querySelectorAll('[data-cl]').forEach(el=>el.onclick=()=>{
@@ -606,6 +684,8 @@ function renderHero(){
   });
   document.getElementById('forge').innerHTML=UPG.map(u=>{const cost=upCost(u.k),can=S.gold>=cost;return `<div class="buy ${can?'can':'no'}" data-u="${u.k}" style="${can?'border-color:'+u.col:''}"><span class="em">${u.em}</span><div style="flex:1"><div class="nm">${u.nm} <small>Niv. ${S.up[u.k]}</small></div><div class="ds">${u.ds}</div></div><div class="right"><div class="cost" style="color:${can?'var(--gold)':'var(--faint)'}">💰${fmt(cost)}</div></div></div>`;}).join('');
   document.querySelectorAll('[data-u]').forEach(el=>el.onclick=()=>{const k=el.dataset.u,cost=upCost(k);if(S.gold>=cost){S.gold-=cost;S.up[k]++;save();renderHero();SND.buy();haptic(9);}});
+  document.getElementById('achbtn').onclick=openAch;
+  document.getElementById('prestigebtn').onclick=()=>{const g=reliquesGain(S.floor);if(g<=0)return;if(confirm('Renaissance ? Tu gagnes '+g+' 🏵️ reliques permanentes (+'+(4*g)+'% dégâts & or) et réinitialises ta run.')){doPrestige();SND.boss();haptic([30,40,70]);renderHero();renderCur();}};
   document.getElementById('reset').onclick=()=>{if(confirm('Effacer toute la progression ?')){S=fresh();save();go('dungeon');}};
 }
 
@@ -733,6 +813,7 @@ setInterval(()=>{
     if(floatAcc>=0.5){ if(tab==='dungeon')spawnFloat(fmt(d.dps*0.5),'var(--hp)',false); floatAcc=0; }
     if(S.mhp<=0)killMonster(); else updateDungeon(false);
   }
+  checkAch();
   if(tab!=='dungeon')renderCur();
   if(!S._t||Date.now()-S._t>4000){S._t=Date.now();save();}
 },100);
