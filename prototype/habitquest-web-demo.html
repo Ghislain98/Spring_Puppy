@@ -78,6 +78,9 @@
   .hero .spr { filter:drop-shadow(0 0 6px rgba(255,204,77,.35)) drop-shadow(0 2px 3px #000); }
   .cpill .spr { filter:none; }
   .heroname { font-size:11px; font-weight:800; color:var(--gold); margin-top:-2px; white-space:nowrap; }
+  .fxbadges { display:flex; gap:4px; justify-content:center; margin-top:3px; min-height:16px; }
+  .fxb { font-size:14px; animation:fxpulse 1s ease-in-out infinite; }
+  @keyframes fxpulse { 0%,100%{transform:scale(1);opacity:.85} 50%{transform:scale(1.25);opacity:1} }
   .hero { font-size:56px; line-height:1; animation:herobob 2.6s ease-in-out infinite; }
   @keyframes herobob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
   .hero.atk { animation:herolunge .3s; }
@@ -284,6 +287,8 @@ function fresh(){return{
   habit:{atk:0,maxHp:0,regen:0,crit:0},
   up:{atk:0,maxHp:0,regen:0,crit:0,click:0},
   tal:{},comp:{},
+  classXp:{guerrier:0,mage:0,rodeur:0,paladin:0},
+  classTal:{guerrier:{},mage:{},rodeur:{},paladin:{}},
   floor:1,mi:0,mhp:monsterMaxHp(1,0),hp:BASE.maxHp,
   streak:0,lastCheckin:null,buffUntil:0,
   totalDmg:0,kills:0,log:['✨ Ton héros pénètre dans le donjon…'],
@@ -295,7 +300,56 @@ let S; try{S=JSON.parse(localStorage.getItem('habitquest-demo2'))||fresh();}catc
 S=Object.assign(fresh(),S);
 S.habit=Object.assign({atk:0,maxHp:0,regen:0,crit:0},S.habit);
 S.up=Object.assign({atk:0,maxHp:0,regen:0,crit:0,click:0},S.up);
+S.classXp=Object.assign({guerrier:0,mage:0,rodeur:0,paladin:0},S.classXp);
+S.classTal=Object.assign({guerrier:{},mage:{},rodeur:{},paladin:{}},S.classTal);
 function save(){S.lastActive=Date.now();localStorage.setItem('habitquest-demo2',JSON.stringify(S));}
+
+// ============ Arbres de talents par classe ============
+const classXpForLevel=l=>Math.floor(80*(l-1)*l);
+const classLevelOf=xp=>{let l=1;while(classXpForLevel(l+1)<=xp)l++;return l;};
+const CLASS_TREES={
+  guerrier:[
+    {id:'rage',t:1,nm:'Rage',em:'🗡️',max:5,ds:'+8% dégâts / niv',ap:(e,l)=>e.dmg+=0.08*l},
+    {id:'cuirasse',t:1,nm:'Cuirasse',em:'🛡️',max:5,ds:'+8% PV / niv',ap:(e,l)=>e.hp+=0.08*l},
+    {id:'saignement',t:2,nm:'Saignement',em:'🩸',max:5,ds:'Saignement : +6% ATK/s / niv',ap:(e,l)=>e.bleed+=0.06*l},
+    {id:'brasier',t:2,nm:"Brasier d'acier",em:'🔥',max:5,ds:'Brûlure : +8% ATK/s / niv',ap:(e,l)=>e.burn+=0.08*l},
+    {id:'berserk',t:3,nm:'Berserk',em:'💢',max:5,ds:'+2% crit & +5% dégâts / niv',ap:(e,l)=>{e.crit+=2*l;e.dmg+=0.05*l}},
+    {id:'execution',t:3,nm:'Exécution',em:'☠️',max:3,ds:'Vulnérabilité : +5% dégâts subis / niv',ap:(e,l)=>e.vuln+=0.05*l},
+  ],
+  mage:[
+    {id:'feu',t:1,nm:'Boule de feu',em:'🔥',max:5,ds:'Brûlure : +10% ATK/s / niv',ap:(e,l)=>e.burn+=0.10*l},
+    {id:'givre',t:1,nm:'Éclat de givre',em:'❄️',max:5,ds:'Vulnérabilité : +4% dégâts subis / niv',ap:(e,l)=>e.vuln+=0.04*l},
+    {id:'foudre',t:2,nm:'Foudre',em:'⚡',max:5,ds:'+3% critique / niv',ap:(e,l)=>e.crit+=3*l},
+    {id:'arcanes',t:2,nm:'Arcanes',em:'🔮',max:5,ds:'+10% dégâts / niv',ap:(e,l)=>e.dmg+=0.10*l},
+    {id:'fonte',t:3,nm:'Fonte',em:'☄️',max:3,ds:'Brûlure : +15% ATK/s / niv',ap:(e,l)=>e.burn+=0.15*l},
+    {id:'maitrise',t:3,nm:'Maîtrise élémentaire',em:'🌈',max:3,ds:'+6% dégâts & +3% vuln / niv',ap:(e,l)=>{e.dmg+=0.06*l;e.vuln+=0.03*l}},
+  ],
+  rodeur:[
+    {id:'precis',t:1,nm:'Tir précis',em:'🎯',max:5,ds:'+4% critique / niv',ap:(e,l)=>e.crit+=4*l},
+    {id:'cupidite',t:1,nm:'Cupidité',em:'🪙',max:5,ds:'+12% or / niv',ap:(e,l)=>e.gold+=0.12*l},
+    {id:'poison',t:2,nm:'Poison',em:'☠️',max:5,ds:'Poison : +0,5% PV max/s / niv',ap:(e,l)=>e.poisonHp+=0.005*l},
+    {id:'salve',t:2,nm:'Salve',em:'🏹',max:5,ds:'+9% dégâts / niv',ap:(e,l)=>e.dmg+=0.09*l},
+    {id:'venin',t:3,nm:'Venin mortel',em:'🐍',max:3,ds:'Poison : +0,5% PV max/s / niv',ap:(e,l)=>e.poisonHp+=0.005*l},
+    {id:'aigle',t:3,nm:"Œil d'aigle",em:'🦅',max:3,ds:'+3% crit & +6% dégâts / niv',ap:(e,l)=>{e.crit+=3*l;e.dmg+=0.06*l}},
+  ],
+  paladin:[
+    {id:'chatiment',t:1,nm:'Châtiment',em:'✨',max:5,ds:'+9% dégâts / niv',ap:(e,l)=>e.dmg+=0.09*l},
+    {id:'foi',t:1,nm:'Foi',em:'🛡️',max:5,ds:'+10% PV & +1 régén / niv',ap:(e,l)=>{e.hp+=0.10*l;e.regen+=1*l}},
+    {id:'feusacre',t:2,nm:'Feu sacré',em:'🔥',max:5,ds:'Brûlure : +8% ATK/s / niv',ap:(e,l)=>e.burn+=0.08*l},
+    {id:'benediction',t:2,nm:'Bénédiction dorée',em:'💰',max:5,ds:'+15% or/sec / niv',ap:(e,l)=>e.goldSec+=0.15*l},
+    {id:'jugement',t:3,nm:'Jugement',em:'⚡',max:5,ds:'+2% crit & +6% dégâts / niv',ap:(e,l)=>{e.crit+=2*l;e.dmg+=0.06*l}},
+    {id:'aura',t:3,nm:'Aura de lumière',em:'🌟',max:3,ds:'+5% dégâts & +5% vuln / niv',ap:(e,l)=>{e.dmg+=0.05*l;e.vuln+=0.05*l}},
+  ],
+};
+const TIER_REQ={1:0,2:3,3:6}; // points dépensés requis pour débloquer un palier
+function classSpent(cls){const a=S.classTal[cls]||{};return Object.values(a).reduce((x,n)=>x+n,0);}
+function classPoints(cls){const total=classLevelOf(S.classXp[cls]||0);const spent=classSpent(cls);return{total,spent,avail:total-spent};}
+function classEff(cls){
+  const e={dmg:0,crit:0,gold:0,goldSec:0,hp:0,regen:0,vuln:0,burn:0,bleed:0,poisonHp:0};
+  const tree=CLASS_TREES[cls]||[],a=S.classTal&&S.classTal[cls]||{};
+  for(const n of tree){const l=a[n.id]||0;if(l>0)n.ap(e,l);}
+  return e;
+}
 
 const buffOn=()=>S.buffUntil>Date.now();
 const elanOn=()=>!!(S.body&&S.body.elanUntil>Date.now());
@@ -324,7 +378,7 @@ function doPrestige(){
 
 // ============ Succès ============
 const compTot=s=>Object.values(s.comp||{}).reduce((a,n)=>a+n,0);
-const talTot=s=>Object.values(s.tal||{}).reduce((a,n)=>a+n,0);
+const talTot=s=>Object.values(s.classTal||{}).reduce((a,tree)=>a+Object.values(tree||{}).reduce((x,n)=>x+n,0),0);
 const ACH=[
   {id:'floor5',name:'Premiers pas',ds:'Atteindre l’étage 5',em:'🏰',done:s=>s.bestFloor>=5,gems:3},
   {id:'floor10',name:'Explorateur',ds:'Atteindre l’étage 10',em:'🗺️',done:s=>s.bestFloor>=10,gems:5},
@@ -420,7 +474,8 @@ function coinFly(n){
 
 // valeurs dérivées
 function D(){
-  const c=CLASSES[S.cls]||CLASSES.guerrier, T=S.tal;
+  const c=CLASSES[S.cls]||CLASSES.guerrier;
+  const ce=classEff(S.cls||'guerrier');
   const b=(buffOn()?1.5:1)*(elanOn()?2:1);
   const ch=(S.body&&S.body.chapters)||0, voie=S.body&&S.body.voie;
   let vDmg=1,vGold=1,vHp=1,vCrit=0,vClick=1;
@@ -428,20 +483,26 @@ function D(){
   else if(voie==='force'){vHp=1+0.05*ch; vDmg=1+0.03*ch;}
   else if(voie==='equilibre'){vGold=1+0.04*ch; vDmg=1+0.01*ch;}
   const pres=1+0.04*(S.reliques||0);
-  const dmgMult=c.dmg*(1+0.25*(T.force||0))*b*vDmg*pres;
-  const goldMult=c.gold*(1+0.25*(T.cupidite||0))*b*vGold*pres;
-  const crit=Math.min(75,BASE.crit+c.crit+5*(T.precision||0)+(S.up.crit||0)*UP_GAIN.crit+vCrit);
+  const vuln=1+ce.vuln; // multiplicateur de dégâts subis par le monstre (givre/exécution)
+  const dmgMult=c.dmg*(1+ce.dmg)*b*vDmg*pres;
+  const goldMult=c.gold*(1+ce.gold)*b*vGold*pres;
+  const crit=Math.min(75,BASE.crit+c.crit+ce.crit+(S.up.crit||0)*UP_GAIN.crit+vCrit);
   const critF=1+(crit/100)*(CRIT_MULT-1);
   const atk=BASE.atk+S.habit.atk+(S.up.atk||0)*UP_GAIN.atk;
-  const maxHp=(BASE.maxHp+S.habit.maxHp+(S.up.maxHp||0)*UP_GAIN.maxHp)*c.hp*vHp;
-  const regen=(BASE.regen+S.habit.regen+(S.up.regen||0)*UP_GAIN.regen)*c.regen;
-  const dps=atk*critF*dmgMult;
+  const maxHp=(BASE.maxHp+S.habit.maxHp+(S.up.maxHp||0)*UP_GAIN.maxHp)*c.hp*vHp*(1+ce.hp);
+  const regen=(BASE.regen+S.habit.regen+(S.up.regen||0)*UP_GAIN.regen)*c.regen+ce.regen;
+  const hitBase=atk*critF*dmgMult*vuln; // dégâts effectifs de référence
+  const dps=hitBase;
   const clickBase=2+S.level+(S.up.click||0)*3;
-  const clickDmg=clickBase*dmgMult*c.click*vClick*(1+1.2*(T.frappe||0));
-  const compMult=(1+0.2*(T.tresorier||0))*goldMult;
+  const clickDmg=clickBase*dmgMult*vuln*c.click*vClick;
+  const compMult=(1+ce.goldSec)*goldMult;
   const goldSec=COMPANIONS.reduce((a,cp)=>a+(S.comp[cp.id]||0)*cp.rate,0)*compMult;
-  const offCap=(8+2*(T.souffle||0))*3600;
-  return{c,dmgMult,goldMult,crit,critF,atk,maxHp,regen,dps,clickDmg,goldSec,offCap};
+  const offCap=8*3600;
+  // Effets élémentaires (dégâts sur la durée)
+  const burnDps=ce.burn*hitBase;   // brûlure : % de l'attaque/sec
+  const bleedDps=ce.bleed*hitBase; // saignement : % de l'attaque/sec
+  const poisonPct=ce.poisonHp;     // poison : % des PV max du monstre/sec
+  return{c,ce,dmgMult,goldMult,crit,critF,atk,maxHp,regen,dps,clickDmg,goldSec,offCap,vuln,burnDps,bleedDps,poisonPct};
 }
 
 // gains hors-ligne
@@ -453,7 +514,7 @@ let offlineMsg=null;
     const kps=d.dps/monsterMaxHp(S.floor,0);
     const g=Math.floor((kps*goldPerKill(S.floor,0)*d.goldMult + d.goldSec)*cap);
     const x=Math.floor(kps*xpPerKill(S.floor,0)*cap);
-    if(g>0||x>0){S.gold+=g;S.xp+=x;S.level=levelFromXp(S.xp);offlineMsg={g,x,min:Math.floor(cap/60)};}
+    if(g>0||x>0){S.gold+=g;S.xp+=x;S.level=levelFromXp(S.xp);if(S.cls)S.classXp[S.cls]=(S.classXp[S.cls]||0)+x;offlineMsg={g,x,min:Math.floor(cap/60)};}
   }
 })();
 
@@ -498,6 +559,7 @@ function renderDungeon(){
           <div class="floatlayer" id="floats"></div>
           <div class="mob" id="mob">${spr(mobKey(S.floor,S.mi),82)||mobEmoji(S.floor,S.mi)}</div>
           <div class="mobname" id="mobnm" style="${boss?'color:var(--gold)':''}">${boss?'⚜ BOSS ⚜':'Monstre '+(S.mi+1)}</div>
+          <div class="fxbadges" id="fxbadges"></div>
         </div>
       </div>
       <div class="tapipill" style="text-align:center;margin-top:6px">👆 Tape le monstre pour frapper</div>
@@ -562,7 +624,10 @@ function updateDungeon(full){
   setw('mbar',S.mhp/mMax*100);
   setw('hbar',S.hp/d.maxHp*100);
   set('hlbl','PV héros '+Math.max(0,Math.ceil(S.hp))+'/'+Math.ceil(d.maxHp));
-  set('c-dps',fmt(d.dps)); set('c-click',fmt(d.clickDmg)); set('c-gs',fmt(d.goldSec)); set('c-left',(MPF-S.mi));
+  const dotNow=d.burnDps+d.bleedDps+d.poisonPct*mMax;
+  set('c-dps',fmt(d.dps+dotNow)); set('c-click',fmt(d.clickDmg)); set('c-gs',fmt(d.goldSec)); set('c-left',(MPF-S.mi));
+  const badges=document.getElementById('fxbadges');
+  if(badges){const b=[];if(d.ce.burn>0)b.push('🔥');if(d.ce.bleed>0)b.push('🩸');if(d.ce.poisonHp>0)b.push('☠️');if(d.ce.vuln>0)b.push('❄️');badges.innerHTML=b.map(x=>`<span class="fxb">${x}</span>`).join('');}
   if(full){
     const mo=document.getElementById('mob'); if(mo)mo.innerHTML=spr(mobKey(S.floor,S.mi),82)||mobEmoji(S.floor,S.mi);
     const nm=document.getElementById('mobnm'); if(nm){nm.textContent=boss?'⚜ BOSS ⚜':'Monstre '+(S.mi+1);nm.style.color=boss?'var(--gold)':'';}
@@ -604,7 +669,7 @@ function damageMonster(amount){
 function killMonster(){
   const d=D(),boss=isBoss(S.mi),oldEm=mobKey(S.floor,S.mi),oldLvl=S.level;
   const g=Math.round(goldPerKill(S.floor,S.mi)*d.goldMult);
-  S.gold+=g; S.xp+=xpPerKill(S.floor,S.mi); S.kills++;
+  const gx=xpPerKill(S.floor,S.mi); S.gold+=g; S.xp+=gx; if(S.cls)S.classXp[S.cls]=(S.classXp[S.cls]||0)+gx; S.kills++;
   const nl=levelFromXp(S.xp); if(nl>oldLvl){S.gems+=(nl-oldLvl);S.level=nl;pushLog('⭐ Niveau '+nl+' atteint ! +'+(nl-oldLvl)+' 💎');}
   spawnFloat('+'+fmt(g)+' 💰','var(--gold)',false,50);
   ghostMob(oldEm); spawnSparks(boss?20:9,boss?'#ffcc4d':'#ff5d7a'); coinFly(boss?9:4);
@@ -678,19 +743,38 @@ function celebrate(tx,tg){
   document.getElementById('godg').onclick=()=>{ov.remove();go('dungeon');};
 }
 
-// ============ TALENTS ============
+// ============ TALENTS (arbre par classe) ============
 function renderTalents(){
-  screen.innerHTML=headerHTML('Talents',`<div class="goldpill">💎 ${fmt(S.gems)}</div>`)+
-    `<div class="card sub" style="line-height:1.5">Dépense tes <b style="color:var(--gem)">gemmes</b> (gagnées aux boss, montées de niveau et check-ins) pour des bonus <b>permanents</b>.</div>
-     <div id="tallist"></div>`;
-  const box=document.getElementById('tallist');
-  box.innerHTML=TALENTS.map(t=>{const lvl=S.tal[t.id]||0,maxed=lvl>=t.max,cost=talCost(t,lvl),can=!maxed&&S.gems>=cost;
-    return `<div class="buy ${can?'can':'no'}" data-t="${t.id}">
-      <span class="em">${t.em}</span>
-      <div style="flex:1"><div class="nm">${t.nm} <small>Niv. ${lvl}/${t.max}</small></div><div class="ds">${t.ds}</div></div>
-      <div class="right"><div class="cost" style="color:${maxed?'var(--success)':can?'var(--gem)':'var(--faint)'}">${maxed?'MAX':'💎'+fmt(cost)}</div></div>
-    </div>`;}).join('');
-  box.querySelectorAll('[data-t]').forEach(el=>el.onclick=()=>{const t=TALENTS.find(x=>x.id===el.dataset.t),lvl=S.tal[t.id]||0,cost=talCost(t,lvl);if(lvl<t.max&&S.gems>=cost){S.gems-=cost;S.tal[t.id]=lvl+1;save();renderTalents();renderCur();SND.buy();haptic(9);bump(document.getElementById('gemsbox'));}});
+  const cls=S.cls||'guerrier', c=CLASSES[cls], p=classPoints(cls), tree=CLASS_TREES[cls];
+  const clvl=classLevelOf(S.classXp[cls]||0), cur=classXpForLevel(clvl), nxt=classXpForLevel(clvl+1);
+  screen.innerHTML=headerHTML('Talents',`<div class="chapbadge">🎓 ${p.avail} pt</div>`)+
+    `<div class="card">
+       <div style="display:flex;align-items:center;gap:10px"><span style="font-size:30px">${spr('hero_'+cls,34)||c.em}</span>
+       <div style="flex:1"><div style="font-family:var(--serif);font-size:17px;font-weight:700">${c.name} · Niv. ${clvl}</div><div class="sub">${p.avail} point(s) à dépenser · ${p.spent} utilisé(s)</div></div></div>
+       <div class="bar" style="margin-top:8px;height:8px"><i style="background:var(--gem);width:${Math.min(100,(S.classXp[cls]-cur)/((nxt-cur)||1)*100)}%"></i></div>
+       <div class="sub" style="margin-top:5px">Joue cette classe pour la faire monter et gagner des points. Change de classe dans l'onglet Héros.</div>
+     </div>
+     <div id="tree"></div>
+     <button class="link" id="respec" style="display:block;margin:10px auto">Réinitialiser l'arbre (gratuit)</button>`;
+  const box=document.getElementById('tree'); let html='';
+  for(const tier of [1,2,3]){
+    const req=TIER_REQ[tier], unlocked=p.spent>=req;
+    html+=`<div class="section"><span>Palier ${tier}${unlocked?'':' 🔒 ('+req+' pts)'}</span></div>`;
+    for(const n of tree.filter(x=>x.t===tier)){
+      const lv=(S.classTal[cls][n.id]||0), maxed=lv>=n.max, can=unlocked&&!maxed&&p.avail>0;
+      html+=`<div class="buy ${can?'can':'no'}" data-n="${n.id}" style="${unlocked?'':'opacity:.5'}">
+        <span class="em">${n.em}</span>
+        <div style="flex:1"><div class="nm">${n.nm} <small>${lv}/${n.max}</small></div><div class="ds">${n.ds}</div></div>
+        <div class="cost" style="color:${maxed?'var(--success)':can?'var(--gem)':'var(--faint)'}">${maxed?'MAX':(unlocked?'+':'🔒')}</div>
+      </div>`;
+    }
+  }
+  box.innerHTML=html;
+  box.querySelectorAll('[data-n]').forEach(el=>el.onclick=()=>{
+    const n=tree.find(x=>x.id===el.dataset.n), lv=S.classTal[cls][n.id]||0, pp=classPoints(cls);
+    if(pp.spent>=TIER_REQ[n.t] && pp.avail>0 && lv<n.max){S.classTal[cls][n.id]=lv+1;save();renderTalents();SND.buy();haptic(9);}
+  });
+  document.getElementById('respec').onclick=()=>{S.classTal[cls]={};save();renderTalents();};
 }
 
 // ============ HÉROS ============
@@ -699,7 +783,7 @@ function renderHero(){
   const UPG=[{k:'atk',em:'⚔️',nm:'Aiguiser la lame',ds:'+3 attaque',col:'var(--hp)'},{k:'click',em:'🗡️',nm:'Dague affûtée',ds:'+3 dégâts de clic',col:'var(--xp)'},{k:'maxHp',em:'🛡️',nm:"Armure",ds:'+20 PV max',col:'var(--regen)'},{k:'regen',em:'🧪',nm:'Élixir de régén.',ds:'+2 régén./s',col:'var(--sommeil)'},{k:'crit',em:'🎯',nm:"Œil du chasseur",ds:'+2% critique',col:'var(--gold)'}];
   screen.innerHTML=`<div class="header"><h1>Héros</h1><div class="goldpill">💰 ${fmt(S.gold)}</div></div>
     <div class="card" style="text-align:center"><div style="font-size:52px">${d.c.em}</div>
-      <div style="font-family:var(--serif);font-size:20px;font-weight:700;margin-top:4px">Niveau ${S.level} · ${d.c.name}</div>
+      <div style="font-family:var(--serif);font-size:20px;font-weight:700;margin-top:4px">Niveau ${S.level} · ${d.c.name} <span style="color:var(--gem);font-size:14px">(classe niv. ${classLevelOf(S.classXp[S.cls||'guerrier']||0)})</span></div>
       <div class="sub num">${fmt(S.xp-cur)} / ${fmt(nxt-cur)} XP</div>
       <div class="bar" style="margin-top:7px;height:9px"><i style="background:var(--xp);width:${Math.min(100,(S.xp-cur)/(nxt-cur)*100)}%"></i></div></div>
     <div class="section"><span>Statistiques</span></div>
@@ -723,7 +807,7 @@ function renderHero(){
       <button class="btn-gold" id="prestigebtn" style="margin-top:12px" ${reliquesGain(S.floor)<=0?'disabled':''}>${reliquesGain(S.floor)>0?('Renaître (+'+reliquesGain(S.floor)+' 🏵️)'):"Atteins l'étage 5 pour renaître"}</button></div>
     <button class="link" id="reset" style="display:block;margin:12px auto">Réinitialiser (démo)</button>
     <div class="sub" style="text-align:center;font-size:10px;color:var(--faint);margin-top:6px">Icônes : Delapouite & Lorc — game-icons.net (CC BY 3.0)</div>`;
-  document.getElementById('classgrid').innerHTML=Object.entries(CLASSES).map(([id,c])=>`<div class="classcard ${S.cls===id?'sel':''}" data-cl="${id}"><div class="em">${c.em}</div><div class="nm">${c.name}</div><div class="ds">${c.ds}</div></div>`).join('');
+  document.getElementById('classgrid').innerHTML=Object.entries(CLASSES).map(([id,c])=>`<div class="classcard ${S.cls===id?'sel':''}" data-cl="${id}"><div class="em">${spr('hero_'+id,30)||c.em}</div><div class="nm">${c.name} <span style="color:var(--gem);font-size:11px">niv.${classLevelOf(S.classXp[id]||0)}</span></div><div class="ds">${c.ds}</div></div>`).join('');
   document.querySelectorAll('[data-cl]').forEach(el=>el.onclick=()=>{
     if(S.cls===el.dataset.cl)return;
     if(!S.cls){S.cls=el.dataset.cl;save();renderHero();return;}
@@ -853,11 +937,13 @@ setInterval(()=>{
   // combat auto
   let hp=Math.min(d.maxHp,S.hp+d.regen*dt)-monsterAtk(S.floor,S.mi)*dt;
   if(hp<=0){S.hp=d.maxHp;S.mhp=monsterMaxHp(S.floor,S.mi);pushLog('💀 Héros terrassé étage '+S.floor+', il se relève !');save();updateDungeon(true);}
-  else{S.hp=hp; autoAcc+=d.dps*dt;
-    // applique les dégâts auto en continu, floats périodiques
-    S.mhp-=d.dps*dt; S.totalDmg+=d.dps*dt;
+  else{S.hp=hp;
+    // dégâts directs + effets élémentaires (brûlure/saignement/poison)
+    const dot=d.burnDps+d.bleedDps+d.poisonPct*monsterMaxHp(S.floor,S.mi);
+    const total=d.dps+dot;
+    S.mhp-=total*dt; S.totalDmg+=total*dt;
     floatAcc+=dt;
-    if(floatAcc>=0.5){ if(tab==='dungeon')spawnFloat(fmt(d.dps*0.5),'var(--hp)',false); floatAcc=0; }
+    if(floatAcc>=0.5){ if(tab==='dungeon'){spawnFloat(fmt(d.dps*0.5),'var(--hp)',false); if(dot>0)spawnFloat('🔥'+fmt(dot*0.5),'var(--ember)',false);} floatAcc=0; }
     if(S.mhp<=0)killMonster(); else updateDungeon(false);
   }
   checkAch();
