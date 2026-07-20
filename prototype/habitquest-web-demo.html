@@ -158,6 +158,15 @@
   @keyframes flashg { 0%{background:var(--card)} 25%{background:rgba(93,255,176,.3)} 100%{background:var(--card)} }
   .buffpill { animation:buffpulse 1.2s ease-in-out infinite; }
   @keyframes buffpulse { 0%,100%{filter:brightness(1);box-shadow:0 0 0 rgba(255,204,77,0)} 50%{filter:brightness(1.15);box-shadow:0 0 14px rgba(255,204,77,.6)} }
+  /* ---- Objectif corporel ---- */
+  .winput { width:100%; background:var(--bgEl); border:1.5px solid var(--border); color:var(--text); border-radius:14px; padding:14px; font-size:22px; font-weight:800; text-align:center; font-variant-numeric:tabular-nums; }
+  .winput:focus { outline:none; border-color:var(--gold); }
+  .qwrap { margin:8px 0 2px; }
+  .qbar { height:16px; background:#0c0920; border:1px solid var(--border); border-radius:999px; overflow:hidden; }
+  .qbar>i { display:block; height:100%; background:linear-gradient(90deg,var(--gold),var(--ember)); border-radius:999px; transition:width .4s ease; }
+  .qmeta { display:flex; justify-content:space-between; font-size:11px; color:var(--muted); margin-top:6px; font-variant-numeric:tabular-nums; }
+  .chapbadge { background:var(--card); border:1px solid var(--goldDim); border-radius:999px; padding:6px 12px; color:var(--gold); font-weight:900; font-family:var(--serif); }
+  .elanpill { background:linear-gradient(90deg,var(--xp),var(--regen)); color:#062018; border-radius:999px; padding:5px 10px; font-size:11px; font-weight:900; }
   @media (prefers-reduced-motion:reduce){ *{animation:none!important;transition:none!important} .ember{display:none} }
 </style>
 
@@ -247,6 +256,7 @@ function fresh(){return{
   floor:1,mi:0,mhp:monsterMaxHp(1,0),hp:BASE.maxHp,
   streak:0,lastCheckin:null,buffUntil:0,
   totalDmg:0,kills:0,log:['✨ Ton héros pénètre dans le donjon…'],
+  body:null,
   lastActive:Date.now(),
 };}
 let S; try{S=JSON.parse(localStorage.getItem('habitquest-demo2'))||fresh();}catch(e){S=fresh();}
@@ -256,6 +266,15 @@ S.up=Object.assign({atk:0,maxHp:0,regen:0,crit:0,click:0},S.up);
 function save(){S.lastActive=Date.now();localStorage.setItem('habitquest-demo2',JSON.stringify(S));}
 
 const buffOn=()=>S.buffUntil>Date.now();
+const elanOn=()=>!!(S.body&&S.body.elanUntil>Date.now());
+
+// ============ Objectif corporel (infini) ============
+const VOIES={
+  agilite:{name:"Voie de l'Agilité",em:'🏃',dir:'perte',ds:'Perte de poids — chaque palier : +crit & clic',goal:'perdre'},
+  force:{name:'Voie de la Force',em:'🏋️',dir:'prise',ds:'Prise de masse — chaque palier : +PV & dégâts',goal:'prendre'},
+  equilibre:{name:"Voie de l'Équilibre",em:'⚖️',dir:'maintien',ds:'Maintien — chaque palier : +or',goal:'maintenir'},
+};
+const STEP=1.0; // kg par palier
 
 // ============ Juice : audio + haptique + effets ============
 const SND=(()=>{
@@ -303,17 +322,23 @@ function coinFly(n){
 
 // valeurs dérivées
 function D(){
-  const c=CLASSES[S.cls]||CLASSES.guerrier, T=S.tal, b=buffOn()?1.5:1;
-  const dmgMult=c.dmg*(1+0.25*(T.force||0))*b;
-  const goldMult=c.gold*(1+0.25*(T.cupidite||0))*b;
-  const crit=Math.min(75,BASE.crit+c.crit+5*(T.precision||0)+(S.up.crit||0)*UP_GAIN.crit);
+  const c=CLASSES[S.cls]||CLASSES.guerrier, T=S.tal;
+  const b=(buffOn()?1.5:1)*(elanOn()?2:1);
+  const ch=(S.body&&S.body.chapters)||0, voie=S.body&&S.body.voie;
+  let vDmg=1,vGold=1,vHp=1,vCrit=0,vClick=1;
+  if(voie==='agilite'){vDmg=1+0.02*ch; vCrit=Math.min(15,ch); vClick=1.4;}
+  else if(voie==='force'){vHp=1+0.05*ch; vDmg=1+0.03*ch;}
+  else if(voie==='equilibre'){vGold=1+0.04*ch; vDmg=1+0.01*ch;}
+  const dmgMult=c.dmg*(1+0.25*(T.force||0))*b*vDmg;
+  const goldMult=c.gold*(1+0.25*(T.cupidite||0))*b*vGold;
+  const crit=Math.min(75,BASE.crit+c.crit+5*(T.precision||0)+(S.up.crit||0)*UP_GAIN.crit+vCrit);
   const critF=1+(crit/100)*(CRIT_MULT-1);
   const atk=BASE.atk+S.habit.atk+(S.up.atk||0)*UP_GAIN.atk;
-  const maxHp=(BASE.maxHp+S.habit.maxHp+(S.up.maxHp||0)*UP_GAIN.maxHp)*c.hp;
+  const maxHp=(BASE.maxHp+S.habit.maxHp+(S.up.maxHp||0)*UP_GAIN.maxHp)*c.hp*vHp;
   const regen=(BASE.regen+S.habit.regen+(S.up.regen||0)*UP_GAIN.regen)*c.regen;
   const dps=atk*critF*dmgMult;
   const clickBase=2+S.level+(S.up.click||0)*3;
-  const clickDmg=clickBase*dmgMult*c.click*(1+1.2*(T.frappe||0));
+  const clickDmg=clickBase*dmgMult*c.click*vClick*(1+1.2*(T.frappe||0));
   const compMult=(1+0.2*(T.tresorier||0))*goldMult;
   const goldSec=COMPANIONS.reduce((a,cp)=>a+(S.comp[cp.id]||0)*cp.rate,0)*compMult;
   const offCap=(8+2*(T.souffle||0))*3600;
@@ -336,7 +361,7 @@ let offlineMsg=null;
 // ============ Navigation ============
 let tab='dungeon';
 const screen=document.getElementById('screen');
-const NAV=[{k:'dungeon',ic:'🏰',l:'Donjon'},{k:'checkin',ic:'✅',l:'Check-in'},{k:'talents',ic:'🌟',l:'Talents'},{k:'hero',ic:'🦸',l:'Héros'}];
+const NAV=[{k:'dungeon',ic:'🏰',l:'Donjon'},{k:'checkin',ic:'✅',l:'Check-in'},{k:'body',ic:'🎯',l:'Objectif'},{k:'talents',ic:'🌟',l:'Talents'},{k:'hero',ic:'🦸',l:'Héros'}];
 function renderNav(){
   document.getElementById('nav').innerHTML=NAV.map(n=>`<button class="${tab===n.k?'active':''}" data-tab="${n.k}"><span class="ic">${n.ic}</span>${n.l}</button>`).join('');
   document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>go(b.dataset.tab));
@@ -348,7 +373,8 @@ function renderCur(){
   document.getElementById('cur').innerHTML=
     `<div class="curbox" id="goldbox"><span class="ic">💰</span><div><div class="v" style="color:var(--gold)">${fmt(S.gold)}</div><div class="s">+${fmt(d.goldSec)}/s</div></div></div>
      <div class="curbox" id="gemsbox"><span class="ic">💎</span><div><div class="v" style="color:var(--gem)">${fmt(S.gems)}</div><div class="s">gemmes</div></div></div>
-     ${buffOn()?`<div class="curbox" style="flex:0 0 auto"><span class="buffpill">✨ ×1,5</span></div>`:''}`;
+     ${buffOn()?`<div class="curbox" style="flex:0 0 auto"><span class="buffpill">✨ ×1,5</span></div>`:''}
+     ${elanOn()?`<div class="curbox" style="flex:0 0 auto"><span class="elanpill">⚡ ×2</span></div>`:''}`;
 }
 
 function headerHTML(title,right){
@@ -584,7 +610,113 @@ function renderHero(){
 }
 
 function render(){renderNav();renderCur();
-  if(tab==='dungeon')renderDungeon();else if(tab==='checkin')renderCheckin();else if(tab==='talents')renderTalents();else renderHero();}
+  if(tab==='dungeon')renderDungeon();else if(tab==='checkin')renderCheckin();else if(tab==='body')renderBody();else if(tab==='talents')renderTalents();else renderHero();}
+
+// ============ OBJECTIF CORPOREL ============
+function sparkline(vals){
+  if(vals.length<2)return '<div class="sub" style="text-align:center">Enregistre au moins 2 pesées pour voir ta courbe.</div>';
+  const w=280,h=54,pad=5,mn=Math.min(...vals),mx=Math.max(...vals),rg=(mx-mn)||1;
+  const pts=vals.map((v,i)=>{const x=pad+i/(vals.length-1)*(w-2*pad);const y=pad+(1-(v-mn)/rg)*(h-2*pad);return x.toFixed(1)+','+y.toFixed(1);}).join(' ');
+  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none"><polyline points="${pts}" fill="none" stroke="var(--gold)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+}
+function voieBonusText(B){
+  const ch=B.chapters||0;
+  if(B.voie==='agilite')return `+${2*ch}% dégâts, +${Math.min(15,ch)}% crit, clic ×1,4`;
+  if(B.voie==='force')return `+${5*ch}% PV, +${3*ch}% dégâts`;
+  return `+${4*ch}% or`;
+}
+function renderBody(){
+  const B=S.body;
+  if(!B||!B.voie){
+    screen.innerHTML=headerHTML('Objectif')+
+      `<div class="card sub" style="line-height:1.5">Choisis ta <b style="color:var(--gold)">Voie</b> : elle relie ton objectif corporel réel à la puissance de ton héros. Changeable quand tu veux.</div>
+       <div class="classgrid" id="voiegrid"></div>
+       <div class="section"><span>Ton point de départ</span></div>
+       <div class="card"><div class="sub" style="margin-bottom:8px">Ton poids actuel (kg) :</div>
+       <input class="winput" id="w0" type="number" inputmode="decimal" placeholder="ex. 72.5"></div>
+       <button class="btn-gold" id="startbody">Commencer l'aventure 🎯</button>
+       <div class="sub" style="text-align:center;margin-top:10px;line-height:1.5">💚 On récompense la <b>régularité</b>, jamais la vitesse. Aucune punition si ça bouge dans l'autre sens.</div>`;
+    let pick=null;
+    const grid=document.getElementById('voiegrid');
+    grid.innerHTML=Object.entries(VOIES).map(([id,v])=>`<div class="classcard" data-v="${id}" style="grid-column:span 2"><div style="display:flex;align-items:center;gap:10px;text-align:left"><span class="em" style="font-size:28px">${v.em}</span><div><div class="nm" style="font-size:15px">${v.name}</div><div class="ds">${v.ds}</div></div></div></div>`).join('');
+    grid.querySelectorAll('[data-v]').forEach(el=>el.onclick=()=>{pick=el.dataset.v;grid.querySelectorAll('.classcard').forEach(c=>c.classList.remove('sel'));el.classList.add('sel');});
+    document.getElementById('startbody').onclick=()=>{
+      const w=parseFloat(document.getElementById('w0').value);
+      if(!pick){alert('Choisis une Voie.');return;}
+      if(!(w>20&&w<400)){alert('Entre un poids valide en kg.');return;}
+      const dir=VOIES[pick].dir;
+      S.body={voie:pick,dir,weight:w,start:w,anchor:w,target:dir==='perte'?w-STEP:dir==='prise'?w+STEP:w,chapter:1,chapters:0,history:[{ts:Date.now(),w}],lastWeighIn:Date.now(),elanUntil:0,unit:'kg'};
+      save();SND.buy();haptic(9);renderBody();renderNav();
+    };
+    return;
+  }
+  const v=VOIES[B.voie];
+  let prog;
+  if(B.dir==='maintien')prog=1-Math.min(1,Math.abs(B.weight-B.anchor)/1);
+  else if(B.dir==='perte')prog=(B.start-B.weight)/((B.start-B.target)||1);
+  else prog=(B.weight-B.start)/((B.target-B.start)||1);
+  prog=Math.max(0,Math.min(1,prog));
+  const objTxt=B.dir==='maintien'?`Rester autour de ${B.anchor.toFixed(1)} kg (±1)`:`${B.dir==='perte'?'Descendre à':'Monter à'} ${B.target.toFixed(1)} kg`;
+  screen.innerHTML=headerHTML('Objectif',`<div class="chapbadge">Ch. ${B.chapter}</div>`)+
+    `<div class="card">
+       <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><span style="font-size:28px">${v.em}</span><div><div style="font-family:var(--serif);font-size:17px;font-weight:700">${v.name}</div><div class="sub">Objectif : ${objTxt}</div></div></div>
+       <div class="qwrap"><div class="qbar"><i style="width:${(prog*100).toFixed(0)}%"></i></div>
+       <div class="qmeta"><span>Départ ${B.start.toFixed(1)}</span><span>${(prog*100).toFixed(0)}%</span><span>Cible ${(B.dir==='maintien'?B.anchor:B.target).toFixed(1)}</span></div></div>
+     </div>
+     <div class="section"><span>⚖️ Pesée</span></div>
+     <div class="card">
+       <div class="sub" style="margin-bottom:8px">Actuel : <b style="color:var(--text)">${B.weight.toFixed(1)} kg</b> · <span style="color:var(--faint)">en vrai : 1×/semaine</span></div>
+       <input class="winput" id="wnow" type="number" inputmode="decimal" placeholder="${B.weight.toFixed(1)}">
+       <button class="btn-gold" style="margin-top:10px" id="weighbtn">Enregistrer ma pesée ⚖️</button>
+     </div>
+     <div class="section"><span>📜 Chronique du héros</span></div>
+     <div class="card">${sparkline(B.history.map(h=>h.w))}</div>
+     <div class="section"><span>🌟 Bonus permanent de la Voie</span></div>
+     <div class="card sub"><b style="color:var(--gold)">${B.chapters}</b> palier(s) franchi(s) — bonus actif : ${voieBonusText(B)}</div>
+     <button class="link" id="changevoie" style="display:block;margin:12px auto">Changer de Voie</button>
+     <div style="height:12px"></div>`;
+  document.getElementById('weighbtn').onclick=()=>{
+    const w=parseFloat(document.getElementById('wnow').value);
+    if(!(w>20&&w<400)){alert('Entre un poids valide en kg.');return;}
+    weighIn(w);
+  };
+  document.getElementById('changevoie').onclick=()=>{ if(confirm('Changer de Voie ? Tu gardes tes paliers déjà franchis.')){S.body.voie=null;save();renderBody();} };
+}
+function weighIn(w){
+  const B=S.body, prev=B.weight, now=Date.now();
+  B.history.push({ts:now,w}); if(B.history.length>80)B.history.shift();
+  const toward=B.dir==='perte'?w<prev:B.dir==='prise'?w>prev:Math.abs(w-B.anchor)<=1;
+  const reached=B.dir==='perte'?w<=B.target:B.dir==='prise'?w>=B.target:Math.abs(w-B.anchor)<=1;
+  let gold=200*B.chapter, gems=1, elan=false, chapterUp=false;
+  if(toward){elan=true; gold+=400*B.chapter;}
+  if(reached){
+    chapterUp=true; B.chapters++; B.chapter++;
+    gems+=3+B.chapters; gold+=1500*B.chapter;
+    B.start=w;
+    if(B.dir==='perte')B.target=w-STEP; else if(B.dir==='prise')B.target=w+STEP; else B.anchor=w;
+  }
+  B.weight=w; B.lastWeighIn=now;
+  S.gold+=gold; S.gems+=gems;
+  if(elan)B.elanUntil=now+24*3600*1000;
+  save();
+  coffreOverlay({gold,gems,elan,chapterUp,chapter:B.chapter});
+}
+function coffreOverlay(r){
+  const ov=document.createElement('div');ov.className='overlay';
+  ov.innerHTML=`<div class="big">${r.chapterUp?'🏆':'🎁'}</div>
+    <h2>${r.chapterUp?'Palier franchi !':'Coffre de la Constance'}</h2>
+    ${r.chapterUp?`<div class="sub" style="margin-top:4px">Nouveau chapitre ${r.chapter} — l'aventure continue, sans fin.</div>`:''}
+    <div class="celebRow">
+      <div><b style="color:var(--gold)">+${fmt(r.gold)}</b><span>or</span></div>
+      <div><b style="color:var(--gem)">+${r.gems}</b><span>💎</span></div>
+      ${r.elan?`<div><b style="color:var(--regen)">⚡×2</b><span>24h</span></div>`:''}
+    </div>
+    <div class="sub" style="margin-bottom:16px">${r.elan?`Élan activé : <b style="color:var(--regen)">×2 or & dégâts</b> pendant 24h !`:`Merci d'avoir pris soin de toi. 💚`}</div>
+    <button class="btn-gold" style="max-width:260px" id="cofok">Foncer au donjon ⚔️</button>`;
+  document.querySelector('.phone').appendChild(ov);
+  SND.level(); haptic([10,30,10]);
+  document.getElementById('cofok').onclick=()=>{ov.remove();go('dungeon');};
+}
 
 // ============ Boucle idle (100ms) ============
 let autoAcc=0, floatAcc=0;
