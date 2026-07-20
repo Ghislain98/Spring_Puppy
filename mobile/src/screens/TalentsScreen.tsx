@@ -5,6 +5,7 @@ import { Card } from '../components/ui';
 import { useGame } from '../game/store';
 import { TALENTS } from '../game/config';
 import { fmt, talCost } from '../game/engine';
+import { haptics } from '../game/fx';
 
 export default function TalentsScreen() {
   const s = useGame();
@@ -24,7 +25,7 @@ export default function TalentsScreen() {
         const cost = talCost(t.base, lvl);
         const can = !maxed && s.gems >= cost;
         return (
-          <Pressable key={t.id} onPress={() => buyTalent(t.id)} style={[styles.buy, { borderColor: can ? colors.gem : colors.border, opacity: maxed || can ? 1 : 0.65 }]}>
+          <Pressable key={t.id} onPress={() => { if (buyTalent(t.id)) haptics.buy(); }} style={[styles.buy, { borderColor: can ? colors.gem : colors.border, opacity: maxed || can ? 1 : 0.65 }]}>
             <Text style={styles.em}>{t.emoji}</Text>
             <View style={{ flex: 1 }}>
               <Text style={styles.nm}>{t.name} <Text style={styles.small}>Niv. {lvl}/{t.max}</Text></Text>

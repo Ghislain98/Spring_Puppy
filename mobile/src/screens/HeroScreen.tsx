@@ -5,6 +5,7 @@ import { Card } from '../components/ui';
 import { useGame } from '../game/store';
 import { CLASSES, FORGE, xpForLevel } from '../game/config';
 import { derive, fmt, upgradeCost } from '../game/engine';
+import { haptics } from '../game/fx';
 import { scheduleDailyReminder, cancelDailyReminder } from '../game/notifications';
 
 export default function HeroScreen() {
@@ -85,7 +86,7 @@ export default function HeroScreen() {
         const cost = upgradeCost(s, u.key);
         const can = s.gold >= cost;
         return (
-          <Pressable key={u.key} onPress={() => buyUpgrade(u.key)} style={[styles.buy, { borderColor: can ? u.color : colors.border, opacity: can ? 1 : 0.7 }]}>
+          <Pressable key={u.key} onPress={() => { if (buyUpgrade(u.key)) haptics.buy(); }} style={[styles.buy, { borderColor: can ? u.color : colors.border, opacity: can ? 1 : 0.7 }]}>
             <Text style={styles.buyEm}>{u.emoji}</Text>
             <View style={{ flex: 1 }}>
               <Text style={styles.buyNm}>{u.name} <Text style={styles.small}>Niv. {s.upgrades[u.key]}</Text></Text>

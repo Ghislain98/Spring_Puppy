@@ -1,12 +1,25 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { colors, radius, font } from '../theme';
+import React, { useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Animated } from 'react-native';
+import { colors, radius } from '../theme';
 import { useGame } from '../game/store';
 import { derive, fmt, buffOn, elanOn } from '../game/engine';
 
 export default function CurrencyBar() {
   const s = useGame();
   const d = derive(s);
+  const gemPulse = useRef(new Animated.Value(1)).current;
+  const prevGems = useRef(s.gems);
+
+  useEffect(() => {
+    if (s.gems > prevGems.current) {
+      Animated.sequence([
+        Animated.timing(gemPulse, { toValue: 1.22, duration: 120, useNativeDriver: true }),
+        Animated.spring(gemPulse, { toValue: 1, useNativeDriver: true, friction: 4 }),
+      ]).start();
+    }
+    prevGems.current = s.gems;
+  }, [s.gems]);
+
   return (
     <View style={styles.row}>
       <View style={styles.box}>
@@ -16,13 +29,13 @@ export default function CurrencyBar() {
           <Text style={styles.s}>+{fmt(d.goldSec)}/s</Text>
         </View>
       </View>
-      <View style={styles.box}>
+      <Animated.View style={[styles.box, { transform: [{ scale: gemPulse }] }]}>
         <Text style={styles.ic}>💎</Text>
         <View>
           <Text style={[styles.v, { color: colors.gem }]}>{fmt(s.gems)}</Text>
           <Text style={styles.s}>gemmes</Text>
         </View>
-      </View>
+      </Animated.View>
       {buffOn(s) && (
         <View style={[styles.box, styles.pillBox]}>
           <Text style={[styles.pill, { backgroundColor: colors.gold }]}>✨ ×1,5</Text>

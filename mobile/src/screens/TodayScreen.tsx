@@ -5,6 +5,7 @@ import { Card } from '../components/ui';
 import { CATEGORIES, CHECKIN_ORDER, checkItemsByCategory } from '../game/config';
 import { Category, ClaimEntry } from '../game/types';
 import { useGame, dayKey } from '../game/store';
+import { haptics } from '../game/fx';
 
 type Answers = Record<string, string | boolean>;
 
@@ -47,7 +48,7 @@ export default function TodayScreen({ onGoDungeon }: { onGoDungeon?: () => void 
 
   const claim = () => {
     const r = claimCheckin(entries);
-    if (r) setCelebrate({ xp: r.xp, gold: r.gold, gems: r.gems });
+    if (r) { setCelebrate({ xp: r.xp, gold: r.gold, gems: r.gems }); haptics.level(); }
   };
 
   if (celebrate) {

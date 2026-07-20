@@ -5,6 +5,7 @@ import { Card } from '../components/ui';
 import { useGame } from '../game/store';
 import { VOIES } from '../game/config';
 import { fmt } from '../game/engine';
+import { haptics } from '../game/fx';
 import { VoieId } from '../game/types';
 
 export default function ObjectifScreen() {
@@ -31,7 +32,7 @@ export default function ObjectifScreen() {
     if (!(w > 20 && w < 400)) { Alert.alert('Entre un poids valide en kg.'); return; }
     const r = weighIn(w);
     setWnow('');
-    if (r) setReward(r);
+    if (r) { setReward(r); if (r.chapterUp) haptics.boss(); else haptics.buy(); }
   };
 
   // Choix / changement de Voie
