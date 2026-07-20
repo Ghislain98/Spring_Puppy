@@ -2,12 +2,8 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-import { GameState, Stat, DungeonLogEntry, LoggedHabit, HabitPreset } from './types';
-import {
-  GAME,
-  presetById,
-  levelFromXp,
-} from './config';
+import { GameState, Stat, DungeonLogEntry, LoggedHabit, HabitPreset, ClaimEntry } from './types';
+import { GAME, levelFromXp } from './config';
 import {
   effectiveStat,
   heroDps,
@@ -58,9 +54,8 @@ function initialState(): GameState {
     history: {},
     dungeonLog: [makeLog('loot', "Ton héros entre dans le donjon…")],
     streak: 0,
-    lastHabitDate: null,
+    lastCheckinDate: null,
     customHabits: [],
-    dailyGoal: 0,
     notificationsEnabled: false,
     reminderHour: 20,
     totalHabits: 0,
@@ -72,13 +67,12 @@ function initialState(): GameState {
 // ---------- Store ----------
 export interface GameActions {
   init: () => OfflineResult | null;
-  logHabit: (presetId: string) => LoggedHabit | null;
+  claimCheckin: (entries: ClaimEntry[]) => boolean;
   buyUpgrade: (stat: Stat) => boolean;
   tick: () => void;
   resetGame: () => void;
   addCustomHabit: (h: Omit<HabitPreset, 'id'>) => void;
   removeCustomHabit: (id: string) => void;
-  setDailyGoal: (n: number) => void;
   setNotifications: (enabled: boolean, hour: number) => void;
 }
 
@@ -132,59 +126,63 @@ export const useGame = create<Store>()(
         return offline;
       },
 
-      logHabit: (presetId: string) => {
+      // Encaisse le check-in du jour : applique XP, or et boosts de stats en une
+      // fois. Verrouillé à un check-in validé par jour.
+      claimCheckin: (entries: ClaimEntry[]) => {
         const s = get();
-        const preset = presetById(presetId) || s.customHabits.find((h: HabitPreset) => h.id === presetId);
-        if (!preset) return null;
-
-        // Assure le bon jour.
         const today = dayKey();
-        let todayLog = s.todayLog;
+        if (s.lastCheckinDate === today) return false; // déjà fait aujourd'hui
+        if (entries.length === 0) return false;
+
+        // Bascule de jour du journal si nécessaire.
         let history = s.history;
+        let todayLog = s.todayLog;
         if (s.todayDate !== today) {
           history = { ...history };
           if (todayLog.length > 0) history[s.todayDate] = todayLog.length;
           todayLog = [];
         }
 
-        // Streak : maj au premier log du jour.
-        let streak = s.streak;
-        let lastHabitDate = s.lastHabitDate;
-        if (lastHabitDate !== today) {
-          streak = lastHabitDate === prevDayKey(today) ? streak + 1 : 1;
-          lastHabitDate = today;
+        // Streak : +1 si check-in fait hier, sinon repart à 1.
+        const streak = s.lastCheckinDate === prevDayKey(today) ? s.streak + 1 : 1;
+
+        // Cumul des récompenses.
+        let addXp = 0;
+        let addGold = 0;
+        let hpHeal = 0;
+        const habitStats = { ...s.habitStats };
+        const logs: LoggedHabit[] = [];
+        for (const e of entries) {
+          addXp += e.xp;
+          addGold += e.gold;
+          habitStats[e.stat] = (habitStats[e.stat] || 0) + e.statGain;
+          if (e.stat === 'maxHp') hpHeal += e.statGain;
+          logs.push({
+            presetId: 'checkin',
+            category: e.category,
+            label: e.label,
+            emoji: e.emoji,
+            xp: e.xp,
+            gold: e.gold,
+            ts: Date.now(),
+          });
         }
 
-        const entry: LoggedHabit = {
-          presetId: preset.id,
-          category: preset.category,
-          label: preset.label,
-          emoji: preset.emoji,
-          xp: preset.xp,
-          gold: preset.gold,
-          ts: Date.now(),
-        };
-
-        const newXp = s.xp + preset.xp;
-        const habitStats = { ...s.habitStats, [preset.stat]: (s.habitStats[preset.stat] || 0) + preset.statGain };
-
-        // Un gain de PV max soigne aussi le héros d'autant.
-        const heroHp = preset.stat === 'maxHp' ? s.heroHp + preset.statGain : s.heroHp;
-
+        const newXp = s.xp + addXp;
         set({
           xp: newXp,
           level: levelFromXp(newXp),
-          gold: s.gold + preset.gold,
+          gold: s.gold + addGold,
           habitStats,
-          heroHp,
-          todayLog: [entry, ...todayLog],
+          heroHp: s.heroHp + hpHeal,
+          todayLog: [...logs, ...todayLog],
           history,
           streak,
-          lastHabitDate,
+          lastCheckinDate: today,
           todayDate: today,
-          totalHabits: s.totalHabits + 1,
+          totalHabits: s.totalHabits + entries.length,
         });
-        return entry;
+        return true;
       },
 
       buyUpgrade: (stat: Stat) => {
@@ -280,8 +278,6 @@ export const useGame = create<Store>()(
         set({ customHabits: s.customHabits.filter((h: HabitPreset) => h.id !== id) });
       },
 
-      setDailyGoal: (n) => set({ dailyGoal: Math.max(0, Math.floor(n)) }),
-
       setNotifications: (enabled, hour) =>
         set({ notificationsEnabled: enabled, reminderHour: Math.max(0, Math.min(23, hour)) }),
     }),
@@ -290,13 +286,12 @@ export const useGame = create<Store>()(
       storage: createJSONStorage(() => AsyncStorage),
       partialize: ({
         init,
-        logHabit,
+        claimCheckin,
         buyUpgrade,
         tick,
         resetGame,
         addCustomHabit,
         removeCustomHabit,
-        setDailyGoal,
         setNotifications,
         ...rest
       }: any) => rest,

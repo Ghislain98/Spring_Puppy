@@ -16,6 +16,17 @@ export interface HabitPreset {
   statGain: number; // gain permanent de la stat par log
 }
 
+// Une récompense sélectionnée pendant le check-in, prête à être encaissée.
+export interface ClaimEntry {
+  category: Category;
+  label: string;
+  emoji: string;
+  xp: number;
+  gold: number;
+  stat: Stat;
+  statGain: number;
+}
+
 // Une habitude enregistrée dans le journal.
 export interface LoggedHabit {
   presetId: string;
@@ -69,11 +80,10 @@ export interface GameState {
 
   // Rétention
   streak: number;
-  lastHabitDate: string | null;
+  lastCheckinDate: string | null; // dernier jour où le check-in a été validé
 
   // Personnalisation (toutes optionnelles)
-  customHabits: HabitPreset[]; // habitudes créées par l'utilisateur
-  dailyGoal: number; // objectif d'habitudes/jour (0 = désactivé)
+  customHabits: HabitPreset[]; // items perso ajoutés au check-in
   notificationsEnabled: boolean; // rappel quotidien opt-in
   reminderHour: number; // heure du rappel (0-23)
 

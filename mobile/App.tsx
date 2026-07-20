@@ -24,7 +24,7 @@ import { scheduleDailyReminder } from './src/game/notifications';
 type TabKey = 'today' | 'dungeon' | 'hero' | 'settings';
 
 const TABS: { key: TabKey; label: string; emoji: string }[] = [
-  { key: 'today', label: 'Aujourd’hui', emoji: '📅' },
+  { key: 'today', label: 'Check-in', emoji: '✅' },
   { key: 'dungeon', label: 'Donjon', emoji: '🏰' },
   { key: 'hero', label: 'Héros', emoji: '🦸' },
   { key: 'settings', label: 'Réglages', emoji: '⚙️' },
@@ -72,7 +72,7 @@ export default function App() {
       </View>
 
       <View style={{ flex: 1 }}>
-        {tab === 'today' && <TodayScreen />}
+        {tab === 'today' && <TodayScreen onGoDungeon={() => setTab('dungeon')} />}
         {tab === 'dungeon' && <DungeonScreen />}
         {tab === 'hero' && <HeroScreen />}
         {tab === 'settings' && <SettingsScreen />}

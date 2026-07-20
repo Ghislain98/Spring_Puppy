@@ -18,8 +18,6 @@ import { Category } from '../game/types';
 import { scheduleDailyReminder, cancelDailyReminder } from '../game/notifications';
 
 export default function SettingsScreen() {
-  const dailyGoal = useGame((s) => s.dailyGoal);
-  const setDailyGoal = useGame((s) => s.setDailyGoal);
   const notificationsEnabled = useGame((s) => s.notificationsEnabled);
   const reminderHour = useGame((s) => s.reminderHour);
   const setNotifications = useGame((s) => s.setNotifications);
@@ -65,20 +63,8 @@ export default function SettingsScreen() {
         <Text style={styles.title}>Réglages</Text>
         <Text style={styles.subtitle}>Tout ici est optionnel — l'app fonctionne très bien sans y toucher.</Text>
 
-        {/* Objectif quotidien */}
-        <SectionTitle style={{ marginTop: spacing(4) }}>Objectif quotidien</SectionTitle>
-        <Card style={{ marginBottom: spacing(4) }}>
-          <View style={styles.row}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.rowTitle}>{dailyGoal === 0 ? 'Désactivé' : `${dailyGoal} habitudes / jour`}</Text>
-              <Text style={styles.rowSub}>Un petit objectif pour garder le rythme, sans pression.</Text>
-            </View>
-            <Stepper value={dailyGoal} onDec={() => setDailyGoal(dailyGoal - 1)} onInc={() => setDailyGoal(dailyGoal + 1)} />
-          </View>
-        </Card>
-
         {/* Notifications */}
-        <SectionTitle>Rappel quotidien</SectionTitle>
+        <SectionTitle style={{ marginTop: spacing(4) }}>Rappel quotidien</SectionTitle>
         <Card style={{ marginBottom: spacing(4) }}>
           <View style={styles.row}>
             <View style={{ flex: 1 }}>
@@ -110,8 +96,8 @@ export default function SettingsScreen() {
         <Card style={{ marginBottom: spacing(4) }}>
           {customHabits.length === 0 ? (
             <Text style={styles.rowSub}>
-              Ajoute tes propres habitudes healthy. Elles apparaîtront dans le prompt d'ajout, à côté des habitudes
-              par défaut.
+              Ajoute tes propres habitudes healthy. Elles apparaîtront dans le check-in quotidien, dans leur
+              catégorie, à côté des questions par défaut.
             </Text>
           ) : (
             customHabits.map((h) => {

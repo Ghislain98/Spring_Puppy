@@ -1,4 +1,4 @@
-import { Category, HabitPreset, Stat } from './types';
+import { Category, Stat } from './types';
 import { colors } from '../theme';
 
 // --- Catégories ---
@@ -46,38 +46,127 @@ export function categoryMeta(key: Category): CategoryMeta {
   return CATEGORIES.find((c) => c.key === key)!;
 }
 
-// --- Modèles d'habitudes ---
-export const HABIT_PRESETS: HabitPreset[] = [
-  // Nutrition -> maxHp
-  { id: 'nut_meal', category: 'nutrition', label: 'Repas équilibré', emoji: '🍲', xp: 40, gold: 25, stat: 'maxHp', statGain: 6 },
-  { id: 'nut_veggies', category: 'nutrition', label: 'Fruits & légumes', emoji: '🥦', xp: 30, gold: 18, stat: 'maxHp', statGain: 4 },
-  { id: 'nut_water', category: 'nutrition', label: '1,5L d’eau', emoji: '💧', xp: 20, gold: 12, stat: 'maxHp', statGain: 3 },
-  { id: 'nut_nosugar', category: 'nutrition', label: 'Pas de sucre ajouté', emoji: '🚫🍬', xp: 35, gold: 20, stat: 'maxHp', statGain: 5 },
-  { id: 'nut_homecook', category: 'nutrition', label: 'Repas fait maison', emoji: '👩‍🍳', xp: 30, gold: 18, stat: 'maxHp', statGain: 4 },
+// --- Contenu du check-in quotidien ---
+// Chaque question est soit un interrupteur (fait / pas fait), soit un choix
+// à plusieurs paliers (intensité, quantité...). La stat renforcée dépend de la
+// catégorie (nutrition -> PV, sport -> attaque, sommeil -> régén).
 
-  // Sport -> atk
-  { id: 'spo_workout', category: 'sport', label: 'Séance de sport', emoji: '🏋️', xp: 60, gold: 40, stat: 'atk', statGain: 5 },
-  { id: 'spo_steps', category: 'sport', label: '10 000 pas', emoji: '🚶', xp: 40, gold: 25, stat: 'atk', statGain: 3 },
-  { id: 'spo_run', category: 'sport', label: 'Course / vélo', emoji: '🏃', xp: 55, gold: 35, stat: 'atk', statGain: 4 },
-  { id: 'spo_stretch', category: 'sport', label: 'Étirements', emoji: '🧘', xp: 25, gold: 15, stat: 'atk', statGain: 2 },
-  { id: 'spo_stairs', category: 'sport', label: 'Escaliers (pas d’ascenseur)', emoji: '🪜', xp: 20, gold: 12, stat: 'atk', statGain: 2 },
+export interface CheckReward {
+  xp: number;
+  gold: number;
+  statGain: number;
+}
 
-  // Sommeil -> regen
-  { id: 'sle_8h', category: 'sommeil', label: '8h de sommeil', emoji: '🛌', xp: 50, gold: 30, stat: 'regen', statGain: 4 },
-  { id: 'sle_early', category: 'sommeil', label: 'Couché avant 23h', emoji: '🌙', xp: 40, gold: 25, stat: 'regen', statGain: 3 },
-  { id: 'sle_noscreen', category: 'sommeil', label: 'Pas d’écran au lit', emoji: '📵', xp: 35, gold: 22, stat: 'regen', statGain: 3 },
-  { id: 'sle_nap', category: 'sommeil', label: 'Sieste réparatrice', emoji: '💤', xp: 20, gold: 12, stat: 'regen', statGain: 2 },
+export interface CheckOption extends CheckReward {
+  id: string;
+  label: string;
+}
+
+export interface CheckItem {
+  id: string;
+  category: Category;
+  label: string;
+  emoji: string;
+  stat: Stat;
+  kind: 'toggle' | 'choice';
+  reward?: CheckReward; // pour kind === 'toggle'
+  options?: CheckOption[]; // pour kind === 'choice' (le 1er palier = "non", récompense nulle)
+}
+
+export const CHECK_ITEMS: CheckItem[] = [
+  // --- SPORT -> attaque ---
+  {
+    id: 'spo_workout',
+    category: 'sport',
+    label: "Tu t'es entraîné aujourd'hui ?",
+    emoji: '🏋️',
+    stat: 'atk',
+    kind: 'choice',
+    options: [
+      { id: 'none', label: 'Non', xp: 0, gold: 0, statGain: 0 },
+      { id: 'light', label: 'Léger', xp: 30, gold: 18, statGain: 3 },
+      { id: 'moderate', label: 'Modéré', xp: 55, gold: 35, statGain: 5 },
+      { id: 'intense', label: 'Intense', xp: 85, gold: 55, statGain: 8 },
+    ],
+  },
+
+  // --- NUTRITION -> PV max ---
+  {
+    id: 'nut_calories',
+    category: 'nutrition',
+    label: 'Objectif calories atteint ?',
+    emoji: '🎯',
+    stat: 'maxHp',
+    kind: 'toggle',
+    reward: { xp: 40, gold: 25, statGain: 5 },
+  },
+  {
+    id: 'nut_protein',
+    category: 'nutrition',
+    label: 'Assez de protéines ?',
+    emoji: '🍗',
+    stat: 'maxHp',
+    kind: 'toggle',
+    reward: { xp: 25, gold: 15, statGain: 3 },
+  },
+  {
+    id: 'nut_veggies',
+    category: 'nutrition',
+    label: 'Légumes / fibres ?',
+    emoji: '🥦',
+    stat: 'maxHp',
+    kind: 'toggle',
+    reward: { xp: 25, gold: 15, statGain: 3 },
+  },
+  {
+    id: 'nut_fruits',
+    category: 'nutrition',
+    label: 'Fruits ?',
+    emoji: '🍎',
+    stat: 'maxHp',
+    kind: 'toggle',
+    reward: { xp: 20, gold: 12, statGain: 2 },
+  },
+  {
+    id: 'nut_water',
+    category: 'nutrition',
+    label: "Combien d'eau ?",
+    emoji: '💧',
+    stat: 'maxHp',
+    kind: 'choice',
+    options: [
+      { id: 'low', label: '< 1L', xp: 0, gold: 0, statGain: 0 },
+      { id: '1l', label: '1L', xp: 15, gold: 8, statGain: 2 },
+      { id: '1.5l', label: '1,5L', xp: 25, gold: 15, statGain: 3 },
+      { id: '2l', label: '2L+', xp: 35, gold: 20, statGain: 4 },
+    ],
+  },
+
+  // --- SOMMEIL -> régénération ---
+  {
+    id: 'sle_hours',
+    category: 'sommeil',
+    label: 'Combien de sommeil ?',
+    emoji: '🛌',
+    stat: 'regen',
+    kind: 'choice',
+    options: [
+      { id: 'lt6', label: '< 6h', xp: 10, gold: 5, statGain: 1 },
+      { id: '6to7', label: '6–7h', xp: 30, gold: 18, statGain: 2 },
+      { id: '7to8', label: '7–8h', xp: 50, gold: 30, statGain: 4 },
+      { id: 'gt8', label: '8h+', xp: 60, gold: 38, statGain: 5 },
+    ],
+  },
 ];
 
-export function presetsByCategory(cat: Category): HabitPreset[] {
-  return HABIT_PRESETS.filter((h) => h.category === cat);
+export function checkItemsByCategory(cat: Category): CheckItem[] {
+  return CHECK_ITEMS.filter((i) => i.category === cat);
 }
 
-export function presetById(id: string): HabitPreset | undefined {
-  return HABIT_PRESETS.find((h) => h.id === id);
-}
+// Ordre de parcours des étapes du check-in.
+export const CHECKIN_ORDER: Category[] = ['sport', 'nutrition', 'sommeil'];
 
-// --- Intensités pour les habitudes personnalisées (récompenses standardisées) ---
+// --- Intensités pour les items personnalisés (récompenses standardisées) ---
 export type Intensity = 'facile' | 'moyen' | 'difficile';
 
 export const INTENSITIES: { key: Intensity; label: string; xp: number; gold: number; statGain: number }[] = [
