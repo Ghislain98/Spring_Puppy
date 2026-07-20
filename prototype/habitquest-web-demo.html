@@ -72,7 +72,18 @@
   .link { background:none; border:0; color:var(--muted); text-decoration:underline; font-size:13px; cursor:pointer; }
 
   /* Donjon */
-  .arena { position:relative; text-align:center; padding:8px 0 2px; }
+  .arena { position:relative; text-align:center; padding:8px 0 2px; display:flex; align-items:center; justify-content:center; gap:6px; }
+  .party { display:flex; flex-direction:column; align-items:center; gap:6px; width:104px; flex:0 0 auto; }
+  .hero { font-size:56px; line-height:1; animation:herobob 2.6s ease-in-out infinite; }
+  @keyframes herobob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+  .hero.atk { animation:herolunge .3s; }
+  @keyframes herolunge { 0%{transform:translateX(0)} 40%{transform:translateX(16px) rotate(7deg)} 100%{transform:translateX(0)} }
+  .comps { display:flex; flex-wrap:wrap; gap:4px; justify-content:center; min-height:22px; }
+  .cpill { font-size:15px; background:var(--card); border:1px solid var(--border); border-radius:8px; padding:1px 5px; display:inline-flex; align-items:center; gap:2px; }
+  .cpill b { font-size:9px; color:var(--gold); font-weight:800; }
+  .cnone { font-size:10px; color:var(--faint); }
+  .vs { font-size:16px; opacity:.45; flex:0 0 auto; }
+  .mobcol { position:relative; width:124px; flex:0 0 auto; display:flex; flex-direction:column; align-items:center; }
   .floatlayer { position:absolute; inset:0; pointer-events:none; overflow:visible; }
   .flt { position:absolute; font-weight:900; font-variant-numeric:tabular-nums; animation:flt .8s ease-out forwards; text-shadow:0 1px 3px #000; }
   .flt.crit { font-size:26px; }
@@ -383,7 +394,7 @@ function spawnSparks(n,color){
     s.style.left='50%'; s.style.top='40%'; s.style.color=color; s.style.background=color; layer.appendChild(s); setTimeout(()=>s.remove(),520); }
 }
 function tapRing(x){ const layer=document.getElementById('floats'); if(!layer)return; const r=document.createElement('div'); r.className='ring'; r.style.left=(x!=null?x:50)+'%'; r.style.top='40%'; layer.appendChild(r); setTimeout(()=>r.remove(),430); }
-function ghostMob(em){ const ar=document.querySelector('.arena'); if(!ar)return; const g=document.createElement('div'); g.className='ghost'; g.textContent=em; ar.appendChild(g); setTimeout(()=>g.remove(),500); }
+function ghostMob(em){ const ar=document.querySelector('.mobcol')||document.querySelector('.arena'); if(!ar)return; const g=document.createElement('div'); g.className='ghost'; g.textContent=em; ar.appendChild(g); setTimeout(()=>g.remove(),500); }
 function levelToast(lvl){ const ar=document.querySelector('.arena'); if(!ar)return; const t=document.createElement('div'); t.className='leveltoast'; t.textContent='⭐ NIVEAU '+lvl; ar.appendChild(t); setTimeout(()=>t.remove(),1200); }
 function coinFly(n){
   const mob=document.getElementById('mob'), gb=document.getElementById('goldbox'); if(!mob||!gb)return;
@@ -466,19 +477,26 @@ function renderDungeon(){
   screen.innerHTML=headerHTML('Donjon')+
     `<div class="card">
       <div class="arena">
-        <div class="mobglow"></div>
-        <div class="floatlayer" id="floats"></div>
-        <div class="mob" id="mob">${mobEmoji(S.floor,S.mi)}</div>
-        <div class="mobname" id="mobnm" style="${boss?'color:var(--gold)':''}">${boss?'⚜ BOSS ⚜':'Monstre '+(S.mi+1)}</div>
-        <div class="tapipill">👆 Tape le monstre pour frapper</div>
-        <div style="height:8px"></div>
-        <div class="bar" id="mbarw"><i id="mbar" style="background:${boss?'linear-gradient(90deg,var(--gold),var(--ember))':'var(--hp)'}"></i></div>
-        <div class="cstats">
-          <div class="cstat"><b id="c-dps" style="color:var(--hp)"></b><span>DPS</span></div>
-          <div class="cstat"><b id="c-click" style="color:var(--xp)"></b><span>Dégâts/clic</span></div>
-          <div class="cstat"><b id="c-gs" style="color:var(--gold)"></b><span>Or/sec</span></div>
-          <div class="cstat"><b id="c-left" style="color:var(--text)"></b><span>Reste</span></div>
+        <div class="party">
+          <div class="hero" id="hero">🦸</div>
+          <div class="comps" id="comps"></div>
         </div>
+        <div class="vs">⚔️</div>
+        <div class="mobcol">
+          <div class="mobglow"></div>
+          <div class="floatlayer" id="floats"></div>
+          <div class="mob" id="mob">${mobEmoji(S.floor,S.mi)}</div>
+          <div class="mobname" id="mobnm" style="${boss?'color:var(--gold)':''}">${boss?'⚜ BOSS ⚜':'Monstre '+(S.mi+1)}</div>
+        </div>
+      </div>
+      <div class="tapipill" style="text-align:center;margin-top:6px">👆 Tape le monstre pour frapper</div>
+      <div style="height:8px"></div>
+      <div class="bar" id="mbarw"><i id="mbar" style="background:${boss?'linear-gradient(90deg,var(--gold),var(--ember))':'var(--hp)'}"></i></div>
+      <div class="cstats">
+        <div class="cstat"><b id="c-dps" style="color:var(--hp)"></b><span>DPS</span></div>
+        <div class="cstat"><b id="c-click" style="color:var(--xp)"></b><span>Dégâts/clic</span></div>
+        <div class="cstat"><b id="c-gs" style="color:var(--gold)"></b><span>Or/sec</span></div>
+        <div class="cstat"><b id="c-left" style="color:var(--text)"></b><span>Reste</span></div>
       </div>
     </div>
     <div class="card" style="padding:11px 13px"><div class="bar" style="height:9px"><i id="hbar" style="background:var(--regen)"></i></div><div class="s" id="hlbl" style="color:var(--muted);font-size:11px;margin-top:5px;font-variant-numeric:tabular-nums"></div></div>
@@ -488,8 +506,15 @@ function renderDungeon(){
     <div class="section"><span>📜 Journal</span></div>
     <div class="log" id="log"></div>`;
   document.getElementById('mob').onclick=onTapMob;
-  renderAmt(); renderCompanions();
+  renderAmt(); renderCompanions(); renderComps();
   updateDungeon(true);
+}
+function renderComps(){
+  const box=document.getElementById('comps'); if(!box)return;
+  const owned=COMPANIONS.filter(cp=>(S.comp[cp.id]||0)>0);
+  box.innerHTML=owned.length
+    ? owned.map(cp=>`<span class="cpill">${cp.em}<b>${fmt(S.comp[cp.id])}</b></span>`).join('')
+    : '<span class="cnone">Recrute des compagnons ↓</span>';
 }
 let buyAmt=1;
 function renderAmt(){
@@ -515,7 +540,7 @@ function renderCompanions(){
   }).join('');
   box.querySelectorAll('[data-c]').forEach(el=>el.onclick=()=>{
     const cp=COMPANIONS.find(c=>c.id===el.dataset.c), amt=Math.max(1,amountFor(cp)), cost=bulkCost(cp,amt);
-    if(S.gold>=cost){S.gold-=cost;S.comp[cp.id]=(S.comp[cp.id]||0)+amt;save();renderCompanions();SND.buy();haptic(9);bump(document.getElementById('goldbox'));const row=document.querySelector('[data-c="'+cp.id+'"]');if(row){row.classList.remove('flash');void row.offsetWidth;row.classList.add('flash');}}
+    if(S.gold>=cost){S.gold-=cost;S.comp[cp.id]=(S.comp[cp.id]||0)+amt;save();renderCompanions();renderComps();SND.buy();haptic(9);bump(document.getElementById('goldbox'));const row=document.querySelector('[data-c="'+cp.id+'"]');if(row){row.classList.remove('flash');void row.offsetWidth;row.classList.add('flash');}}
   });
 }
 function updateDungeon(full){
@@ -532,6 +557,8 @@ function updateDungeon(full){
     const nm=document.getElementById('mobnm'); if(nm){nm.textContent=boss?'⚜ BOSS ⚜':'Monstre '+(S.mi+1);nm.style.color=boss?'var(--gold)':'';}
     const mb=document.getElementById('mbar'); if(mb)mb.style.background=boss?'linear-gradient(90deg,var(--gold),var(--ember))':'var(--hp)';
     const lg=document.getElementById('log'); if(lg)lg.innerHTML=S.log.map(t=>`<div class="logline"><span class="i">${t[0]}</span><span>${t.slice(2)}</span></div>`).join('');
+    renderComps();
+    const h=document.getElementById('hero'); if(h){h.classList.remove('atk');void h.offsetWidth;h.classList.add('atk');}
   }
 }
 function pushLog(s){S.log.unshift(s);if(S.log.length>26)S.log.pop();}
@@ -553,6 +580,7 @@ function onTapMob(e){
   spawnFloat((crit?'✦ ':'')+fmt(amount),crit?'var(--gold)':'var(--xp)',crit,x);
   tapRing(x); spawnSparks(crit?11:5,crit?'#ffcc4d':'#7ce0ff');
   const m=document.getElementById('mob'); m.classList.remove('hit'); void m.offsetWidth; m.classList.add('hit');
+  const h=document.getElementById('hero'); if(h){h.classList.remove('atk');void h.offsetWidth;h.classList.add('atk');}
   if(crit){SND.crit();haptic(18);} else {SND.hit();haptic(6);}
   damageMonster(amount);
 }
@@ -614,7 +642,7 @@ function renderCheckin(){
   const dots=[...ORDER,'r'].map((_,i)=>`<i class="${i===step?'act':i<step?'done':''}"></i>`).join('');
   const nextLbl=isSum?'Récupérer ⚔️':(step===ORDER.length-1?'Mes récompenses →':'Suivant →');
   screen.innerHTML=headerHTML('Check-in du jour')+`<div class="dots">${dots}</div>`+body+
-    `<div style="height:84px"></div><div class="navbar">${step>0?'<button class="back" id="back">Précédent</button>':'<div style="flex:1"></div>'}<button class="btn-gold next" id="next" ${isSum&&entries().length===0?'disabled':''}>${nextLbl}</button></div>`;
+    `<div class="navbar" style="position:static;border-top:0;background:transparent;padding:16px 0 24px">${step>0?'<button class="back" id="back">Précédent</button>':'<div style="flex:1"></div>'}<button class="btn-gold next" id="next" ${isSum&&entries().length===0?'disabled':''}>${nextLbl}</button></div>`;
   document.querySelectorAll('[data-t]').forEach(el=>el.onclick=()=>{answers[el.dataset.t]=!answers[el.dataset.t];renderCheckin();});
   document.querySelectorAll('[data-o]').forEach(el=>el.onclick=()=>{const[i,o]=el.dataset.o.split('|');answers[i]=o;renderCheckin();});
   const bk=document.getElementById('back'); if(bk)bk.onclick=()=>{step--;renderCheckin();};
