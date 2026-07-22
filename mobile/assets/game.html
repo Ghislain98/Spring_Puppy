@@ -241,7 +241,31 @@
   .overlay { position:absolute; inset:0; background:rgba(6,4,16,.82); z-index:30; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:26px; text-align:center; backdrop-filter:blur(2px); }
   .overlay .big { font-size:64px; animation:pop .5s ease; } @keyframes pop { 0%{transform:scale(.4);opacity:0} 60%{transform:scale(1.15)} 100%{transform:scale(1)} }
   .overlay h2 { font-family:var(--serif); font-size:25px; margin:12px 0 0; }
-  .celebRow { display:flex; gap:22px; margin:20px 0; } .celebRow div { text-align:center; } .celebRow b { font-size:28px; font-weight:900; font-variant-numeric:tabular-nums; } .celebRow span { display:block; color:var(--faint); font-size:12px; }
+  .celebRow { display:flex; gap:22px; margin:16px 0 12px; } .celebRow div { text-align:center; } .celebRow b { font-size:28px; font-weight:900; font-variant-numeric:tabular-nums; } .celebRow span { display:block; color:var(--faint); font-size:12px; }
+  .perfectTag { background:linear-gradient(90deg,var(--gold),var(--ember)); color:#2a1c00; font-weight:900; font-size:12px; padding:5px 12px; border-radius:999px; margin-top:6px; animation:pop .4s ease; }
+  .powerGains { display:flex; flex-wrap:wrap; gap:6px 12px; justify-content:center; margin:2px 0 12px; max-width:320px; }
+  .powerGains .pgain { font-size:12.5px; font-weight:800; }
+  .chestReveal { display:flex; align-items:center; gap:12px; background:var(--card); border:1.5px solid var(--border); border-radius:14px; padding:11px 16px; margin-bottom:10px; animation:pop .45s ease; }
+  .chestReveal.jackpot { border-color:var(--gold); box-shadow:0 0 20px rgba(244,185,66,.5); animation:jackpop .5s ease; }
+  .chestReveal .chestico { font-size:30px; }
+  .chestReveal .chestt { font-size:11px; color:var(--faint); font-weight:800; text-transform:uppercase; letter-spacing:.4px; }
+  .chestReveal .chestv { font-size:17px; font-weight:900; color:var(--gold); }
+  @keyframes jackpop { 0%{transform:scale(.5);opacity:0} 55%{transform:scale(1.18)} 100%{transform:scale(1)} }
+  .mileBadge { background:var(--cardAlt); border:1px solid var(--gold); color:var(--gold); font-weight:800; font-size:12.5px; padding:7px 14px; border-radius:999px; margin-bottom:8px; }
+  .questClaim { color:var(--success); font-weight:800; font-size:12.5px; margin:2px 0; }
+  .streakRow { margin-top:10px; font-size:14px; color:var(--muted); font-weight:700; } .streakRow b { color:var(--ember); font-size:20px; }
+  .streakBig { font-family:var(--serif); font-size:30px; font-weight:900; color:var(--ember); margin-top:8px; } .streakBig span { font-family:var(--sans); font-size:12px; color:var(--muted); font-weight:700; }
+  .buffline { background:var(--bgEl); border:1px solid var(--border); border-radius:12px; padding:9px 12px; font-size:12px; color:var(--muted); line-height:1.45; margin-top:12px; }
+  .maprow { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
+  .mapcell { background:var(--bgEl); border:1px solid var(--border); border-left-width:3px; border-radius:11px; padding:9px 11px; }
+  .mapcell .mapem { font-size:20px; } .mapcell .mappow { font-weight:800; font-size:13px; margin-top:3px; } .mapcell .mapstat { font-size:11px; color:var(--faint); font-weight:700; font-variant-numeric:tabular-nums; }
+  .wq { display:flex; align-items:center; gap:11px; background:var(--card); border:1px solid var(--border); border-radius:13px; padding:10px 13px; margin-bottom:8px; }
+  .wq.wqdone { border-color:var(--success); opacity:.8; }
+  .wq .wqem { font-size:22px; } .wq .wqnm { font-weight:800; font-size:13.5px; } .wq .wqnm small { color:var(--faint); font-weight:700; } .wq .wqds { font-size:11px; color:var(--faint); }
+  .wq .wqrw { font-weight:900; font-size:13px; white-space:nowrap; }
+  .antband { display:flex; align-items:center; justify-content:space-between; gap:10px; background:linear-gradient(90deg,rgba(255,138,61,.12),transparent); border:1px solid var(--border); border-radius:12px; padding:9px 13px; margin-bottom:12px; }
+  .antband .as { font-weight:900; color:var(--ember); font-size:15px; } .antband .as small { color:var(--muted); font-weight:700; font-size:11px; }
+  .antband .pdots { display:flex; gap:5px; } .antband .pdots i { width:13px; height:13px; border-radius:50%; border:1.5px solid var(--border); display:block; } .antband .pdots i.on { background:var(--gold); border-color:var(--gold); box-shadow:0 0 6px var(--gold); }
   .confirmbox { background:var(--card); border:1px solid var(--borderLit); border-radius:18px; padding:20px; max-width:320px; width:100%; box-shadow:0 12px 40px rgba(0,0,0,.6); animation:pop .25s ease; }
   .confirmbox .cmsg { font-size:14.5px; line-height:1.5; color:var(--text); margin-bottom:18px; }
   .confirmbox .cmsg b { color:var(--gold); }
@@ -338,19 +362,21 @@ const TALENTS=[
   {id:'souffle',nm:'Second souffle',em:'🌙',ds:'+2h de gains hors-ligne / niv',base:5,max:8},
 ];
 
+// 4 catégories santé, chacune renforce une partie précise du héros (mapping visible).
 const CATS={
-  sport:{label:'Sport',em:'💪',color:'var(--sport)',tag:"L'effort forge la puissance d'attaque",stat:'atk'},
-  nutrition:{label:'Nutrition',em:'🥗',color:'var(--nutrition)',tag:'Bien manger renforce la vitalité',stat:'maxHp'},
-  sommeil:{label:'Sommeil',em:'😴',color:'var(--sommeil)',tag:'Un bon repos accélère la régénération',stat:'regen'},
+  sport:{label:'Sport',em:'💪',color:'var(--sport)',stat:'atk',power:'Force',ptag:'dégâts',tag:"L'effort forge tes dégâts"},
+  nutrition:{label:'Nutrition',em:'🥗',color:'var(--nutrition)',stat:'maxHp',power:'Vitalité',ptag:'PV max',tag:'Bien manger renforce ta vitalité'},
+  sommeil:{label:'Sommeil',em:'😴',color:'var(--sommeil)',stat:'regen',power:'Récupération',ptag:'régén/s',tag:'Un bon repos accélère ta régénération'},
+  hydratation:{label:'Hydratation',em:'💧',color:'var(--xp)',stat:'crit',power:'Vivacité',ptag:'% critique',tag:'Bien s’hydrater aiguise tes réflexes'},
 };
-const ORDER=['sport','nutrition','sommeil'];
+const ORDER=['sport','nutrition','sommeil','hydratation'];
 const ITEMS=[
   {id:'spo',cat:'sport',label:"Tu t'es entraîné ?",em:'🏋️',kind:'choice',options:[{id:'n',label:'Non',xp:0,gold:0,g:0},{id:'l',label:'Léger',xp:30,gold:18,g:3},{id:'m',label:'Modéré',xp:55,gold:35,g:5},{id:'i',label:'Intense',xp:85,gold:55,g:8}]},
   {id:'cal',cat:'nutrition',label:'Objectif calories ?',em:'🎯',kind:'toggle',xp:40,gold:25,g:5},
   {id:'pro',cat:'nutrition',label:'Assez de protéines ?',em:'🍗',kind:'toggle',xp:25,gold:15,g:3},
   {id:'veg',cat:'nutrition',label:'Légumes / fibres ?',em:'🥦',kind:'toggle',xp:25,gold:15,g:3},
   {id:'fru',cat:'nutrition',label:'Fruits ?',em:'🍎',kind:'toggle',xp:20,gold:12,g:2},
-  {id:'water',cat:'nutrition',label:"Combien d'eau ?",em:'💧',kind:'choice',options:[{id:'n',label:'<1L',xp:0,gold:0,g:0},{id:'a',label:'1L',xp:15,gold:8,g:2},{id:'b',label:'1,5L',xp:25,gold:15,g:3},{id:'c',label:'2L+',xp:35,gold:20,g:4}]},
+  {id:'water',cat:'hydratation',label:"Combien d'eau ?",em:'💧',kind:'choice',options:[{id:'n',label:'<1L',xp:0,gold:0,g:0},{id:'a',label:'1L',xp:15,gold:8,g:2},{id:'b',label:'1,5L',xp:25,gold:15,g:3},{id:'c',label:'2L+',xp:40,gold:22,g:4}]},
   {id:'sleep',cat:'sommeil',label:'Combien de sommeil ?',em:'🛌',kind:'choice',options:[{id:'a',label:'<6h',xp:10,gold:5,g:1},{id:'b',label:'6–7h',xp:30,gold:18,g:2},{id:'c',label:'7–8h',xp:50,gold:30,g:4},{id:'d',label:'8h+',xp:60,gold:38,g:5}]},
 ];
 
@@ -446,6 +472,18 @@ function fmt(n){
   const m=n/Math.pow(10,exp); return m.toFixed(2)+'e'+exp;
 }
 function todayKey(){const d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();}
+function dayNum(key){ if(!key)return null; const p=(''+key).split('-').map(Number); return Math.floor(Date.UTC(p[0],p[1]-1,p[2])/86400000); }
+function weekKey(){ const d=new Date(); const day=(d.getDay()+6)%7; const monday=new Date(d); monday.setDate(d.getDate()-day); return monday.getFullYear()+'-'+(monday.getMonth()+1)+'-'+monday.getDate(); }
+// Quêtes hebdomadaires (rythme + récompenses) — se réinitialisent chaque lundi.
+const WEEKLY=[
+  {id:'checkins',nm:'Assiduité',ds:'Fais 5 check-ins cette semaine',em:'📅',goal:5,reward:{gems:15}},
+  {id:'sport',nm:'Corps actif',ds:'3 séances de sport',em:'💪',goal:3,reward:{gems:12}},
+  {id:'sleep7',nm:'Sommeil réparateur',ds:'4 nuits de 7h ou +',em:'😴',goal:4,reward:{gems:12}},
+  {id:'water2',nm:'Bien hydraté',ds:'5 jours à 2 L ou +',em:'💧',goal:5,reward:{gems:10}},
+  {id:'perfect',nm:'Équilibre parfait',ds:'3 journées complètes (4 catégories)',em:'⚖️',goal:3,reward:{reliques:2}},
+];
+function weekReset(){ if(S.week.key!==weekKey()){ S.week={key:weekKey(),prog:{},done:{}}; } if(!S.week.done)S.week.done={}; }
+function weekBump(track,n){ weekReset(); S.week.prog[track]=(S.week.prog[track]||0)+(n||1); }
 
 // ============ État ============
 function fresh(){return{
@@ -456,7 +494,8 @@ function fresh(){return{
   classXp:{guerrier:0,mage:0,rodeur:0,paladin:0},
   classTal:{guerrier:{},mage:{},rodeur:{},paladin:{}},
   floor:1,mi:0,mhp:monsterMaxHp(1,0),hp:BASE.maxHp,
-  streak:0,lastCheckin:null,buffUntil:0,
+  streak:0,streakBest:0,lastCheckin:null,buffUntil:0,buffMult:1.5,freezes:2,
+  week:{key:null,prog:{}},perfectDays:0,checkinsTotal:0,moodLog:[],
   totalDmg:0,kills:0,log:['✨ Ton héros pénètre dans le donjon…'],
   body:null,
   reliques:0,unlocked:[],bestFloor:1,
@@ -468,6 +507,17 @@ S=Object.assign(fresh(),S);
 S.habit=Object.assign({atk:0,maxHp:0,regen:0,crit:0},S.habit);
 S.up=Object.assign({atk:0,maxHp:0,regen:0,crit:0,click:0,critdmg:0,speed:0,power:0,multi:0},S.up);
 S.ascUp=Object.assign({power:0,fortune:0,start:0,wisdom:0},S.ascUp);
+S.week=Object.assign({key:null,prog:{}},S.week); if(!S.week.prog)S.week.prog={};
+if(typeof S.buffMult!=='number')S.buffMult=1.5; if(typeof S.freezes!=='number')S.freezes=2;
+// Gel de série : un jour manqué consomme un jeton « gel » plutôt que de casser le streak.
+let streakMsg=null;
+(function(){
+  if(!S.lastCheckin||S.streak<=0)return;
+  const gap=dayNum(todayKey())-dayNum(S.lastCheckin);
+  if(gap>=2){ const missed=gap-1, used=Math.min(S.freezes||0,missed); S.freezes-=used;
+    if(used<missed){ streakMsg={broke:true,had:S.streak}; S.streak=0; }
+    else if(used>0){ streakMsg={froze:used}; } }
+})();
 S.classXp=Object.assign({guerrier:0,mage:0,rodeur:0,paladin:0},S.classXp);
 S.classTal=Object.assign({guerrier:{},mage:{},rodeur:{},paladin:{}},S.classTal);
 function save(){S.lastActive=Date.now();localStorage.setItem('habitquest-demo2',JSON.stringify(S));}
@@ -744,7 +794,7 @@ function coinFly(n){
 function D(){
   const c=CLASSES[S.cls]||CLASSES.guerrier;
   const ce=classEff(S.cls||'guerrier');
-  const b=(buffOn()?1.5:1)*(elanOn()?2:1);
+  const b=(buffOn()?(S.buffMult||1.5):1)*(elanOn()?2:1);
   const ch=(S.body&&S.body.chapters)||0, voie=S.body&&S.body.voie;
   let vDmg=1,vGold=1,vHp=1,vCrit=0,vClick=1;
   if(voie==='agilite'){vDmg=1+0.02*ch; vCrit=Math.min(15,ch); vClick=1.4;}
@@ -819,7 +869,7 @@ function renderCur(){
     `<div class="curbox" id="goldbox"><span class="ic" style="color:var(--gold)">${ic('coin',20)}</span><div><div class="v" style="color:var(--gold)">${fmt(S.gold)}</div><div class="s">+${fmt(d.goldSec)}/s</div></div></div>
      <div class="curbox" id="gemsbox"><span class="ic" style="color:var(--gem)">${ic('gem',20)}</span><div><div class="v" style="color:var(--gem)">${fmt(S.gems)}</div><div class="s">gemmes</div></div></div>
      ${(S.reliques>0)?`<div class="curbox" style="flex:0 0 auto"><span class="relicpill">${ic('star',14)} ${fmt(S.reliques)}</span></div>`:''}
-     ${buffOn()?`<div class="curbox" style="flex:0 0 auto"><span class="buffpill">${ic('flame',13)} ×1,5</span></div>`:''}
+     ${buffOn()?`<div class="curbox" style="flex:0 0 auto"><span class="buffpill">${ic('flame',13)} ×${(S.buffMult||1.5).toFixed(1)}</span></div>`:''}
      ${elanOn()?`<div class="curbox" style="flex:0 0 auto"><span class="elanpill">${ic('bolt',13)} ×2</span></div>`:''}`;
 }
 
@@ -1031,14 +1081,79 @@ function killMonster(){
 let step=0,answers={};
 const itemsOf=cat=>ITEMS.filter(i=>i.cat===cat);
 function entries(){const out=[];ITEMS.forEach(it=>{const a=answers[it.id];if(it.kind==='toggle'){if(a)out.push({cat:it.cat,label:it.label,em:it.em,xp:it.xp,gold:it.gold,g:it.g});}else{const o=it.options.find(o=>o.id===a);if(o&&(o.xp||o.gold))out.push({cat:it.cat,label:it.label+' '+o.label,em:it.em,xp:o.xp,gold:o.gold,g:o.g});}});return out;}
+// ===== Boucle de récompense (le shot de dopamine du check-in) =====
+const STREAK_MILE={3:5,7:12,14:25,21:40,30:60,50:120,100:300};
+function rollChest(perfect){
+  const r=Math.random();
+  const gBig=Math.round(goldPerKill(S.floor,0)*30+200);
+  if(r<0.50) return {kind:'gems',gems:2+Math.floor(Math.random()*4),tier:'commun'};
+  if(r<0.78) return {kind:'gold',gold:gBig,tier:'or'};
+  if(r<0.92) return {kind:'gems',gems:8+Math.floor(Math.random()*10),tier:'rare'};
+  if(r<0.985) return {kind:'relic',reliques:1,tier:'relique',jackpot:true};
+  return {kind:'astre',astres:1,tier:'astre',jackpot:true};
+}
+function claimWeekly(){
+  weekReset(); const out=[];
+  for(const q of WEEKLY){ if((S.week.prog[q.id]||0)>=q.goal && !S.week.done[q.id]){ S.week.done[q.id]=1;
+    if(q.reward.gems)S.gems+=q.reward.gems; if(q.reward.reliques)S.reliques=(S.reliques||0)+q.reward.reliques; out.push(q); } }
+  return out;
+}
+function doCheckin(){
+  const es=entries(); if(!es.length)return null;
+  weekReset();
+  const covered=new Set(es.map(e=>e.cat));
+  const perfect=ORDER.every(c=>covered.has(c));
+  if(S.lastCheckin!==todayKey()) S.streak=(S.streak||0)+1;
+  S.streakBest=Math.max(S.streakBest||0,S.streak); S.checkinsTotal=(S.checkinsTotal||0)+1;
+  const sMult=1+Math.min(2,(S.streak-1)*0.05); // série croissante (cap ×3 vers 40 jours)
+  const pMult=perfect?1.5:1;
+  const baseXp=es.reduce((a,e)=>a+e.xp,0), baseGold=es.reduce((a,e)=>a+e.gold,0);
+  const tx=Math.round(baseXp*sMult*pMult), tg=Math.round(baseGold*sMult*pMult);
+  const gains={}; es.forEach(e=>{const st=CATS[e.cat].stat;S.habit[st]=(S.habit[st]||0)+e.g;gains[e.cat]=(gains[e.cat]||0)+e.g;if(st==='maxHp')S.hp+=e.g;});
+  let gems=3+(perfect?5:0); const mileGem=STREAK_MILE[S.streak]||0; gems+=mileGem;
+  const chest=rollChest(perfect);
+  const chestGold=chest.gold||0;
+  S.xp+=tx; S.gold+=tg+chestGold; S.gems+=gems+(chest.gems||0);
+  if(chest.reliques)S.reliques=(S.reliques||0)+chest.reliques; if(chest.astres)S.astres=(S.astres||0)+chest.astres;
+  S.level=levelFromXp(S.xp);
+  S.lastCheckin=todayKey(); S.buffMult=perfect?2:1.6; S.buffUntil=Date.now()+24*3600*1000;
+  if(perfect)S.perfectDays=(S.perfectDays||0)+1;
+  weekBump('checkins',1);
+  if(answers['spo']&&answers['spo']!=='n')weekBump('sport',1);
+  if(answers['sleep']==='c'||answers['sleep']==='d')weekBump('sleep7',1);
+  if(answers['water']==='c')weekBump('water2',1);
+  if(perfect)weekBump('perfect',1);
+  const claimed=claimWeekly();
+  if(S.freezes<3 && S.streak>0 && S.streak%5===0)S.freezes=Math.min(3,(S.freezes||0)+1); // regagne un gel tous les 5 jours
+  save();
+  return {tx,tg,gems:gems+(chest.gems||0),gains,perfect,streak:S.streak,sMult,pMult,mileGem,chest,claimed};
+}
+function buffHrsLeft(){return Math.max(0,Math.ceil((S.buffUntil-Date.now())/3600000));}
+function coveredNow(){const s=new Set();ITEMS.forEach(it=>{const a=answers[it.id];if(it.kind==='toggle'){if(a)s.add(it.cat);}else{const o=it.options&&it.options.find(o=>o.id===a);if(o&&(o.xp||o.gold))s.add(it.cat);}});return s;}
+function weeklyHTML(){
+  weekReset();
+  return WEEKLY.map(q=>{const p=Math.min(q.goal,S.week.prog[q.id]||0),done=S.week.done&&S.week.done[q.id];
+    return `<div class="wq ${done?'wqdone':''}"><span class="wqem">${q.em}</span><div style="flex:1"><div class="wqnm">${q.nm} ${done?'<span style="color:var(--success)">✓</span>':'<small>'+p+'/'+q.goal+'</small>'}</div><div class="wqds">${q.ds}</div><div class="bar" style="height:6px;margin-top:5px"><i style="background:${done?'var(--success)':'var(--gold)'};width:${p/q.goal*100}%"></i></div></div><div class="wqrw" style="color:${done?'var(--success)':'var(--gem)'}">${done?'✓':(q.reward.gems?q.reward.gems+' 💎':q.reward.reliques+' 🏵️')}</div></div>`;
+  }).join('');
+}
+function mappingHTML(){
+  return `<div class="maprow">`+ORDER.map(cat=>{const c=CATS[cat];const val=S.habit[c.stat]||0;return `<div class="mapcell" style="border-color:${c.color}"><span class="mapem">${c.em}</span><div class="mappow" style="color:${c.color}">${c.power}</div><div class="mapstat">+${val} ${c.ptag}</div></div>`;}).join('')+`</div>`;
+}
 function renderCheckin(){
   if(S.lastCheckin===todayKey()){
-    screen.innerHTML=headerHTML('Check-in du jour')+
-      `<div class="card" style="text-align:center"><div style="font-size:42px">✅</div>
-        <div style="font-family:var(--serif);font-size:20px;font-weight:700;margin-top:6px">Check-in terminé</div>
-        <div class="sub">Bénédiction active : <b style="color:var(--gold)">×1,5 or & dégâts</b> aujourd'hui.</div>
-        <button class="btn-gold" style="margin-top:14px" onclick="go('dungeon')">Retour au donjon ⚔️</button></div>
-      <button class="link" id="replay">Rejouer le check-in (démo)</button>`;
+    screen.innerHTML=headerHTML('Santé du jour')+
+      `<div class="card" style="text-align:center;background:linear-gradient(180deg,var(--cardAlt),var(--card))">
+        <div style="font-size:38px">✅</div>
+        <div style="font-family:var(--serif);font-size:19px;font-weight:700">Objectifs du jour validés</div>
+        <div class="streakBig">🔥 ${S.streak} <span>jours d’affilée</span></div>
+        <div class="sub" style="margin-top:2px">Record ${S.streakBest||S.streak} · 🧊 ${S.freezes} gel(s) · ${S.perfectDays||0} journées parfaites</div>
+        <div class="buffline">Bénédiction <b style="color:var(--gold)">×${(S.buffMult||1.5).toFixed(1)} or &amp; dégâts</b> — expire dans <b>${buffHrsLeft()}h</b>. Reviens demain pour la garder !</div>
+        <button class="btn-gold" style="margin-top:12px" onclick="go('dungeon')">Dépenser au donjon ⚔️</button></div>
+      <div class="section"><span>${ic('sword',14)} Ce que ta journée a renforcé</span></div>
+      <div class="card">${mappingHTML()}<div class="sub" style="margin-top:9px;text-align:center">Chaque jour sain rend ton héros <b style="color:var(--gold)">définitivement</b> plus fort.</div></div>
+      <div class="section"><span>📅 Quêtes de la semaine</span></div>
+      <div>${weeklyHTML()}</div>
+      <button class="link" id="replay" style="display:block;margin:14px auto">Rejouer le check-in (démo)</button>`;
     document.getElementById('replay').onclick=()=>{S.lastCheckin=null;step=0;answers={};save();render();};
     return;
   }
@@ -1051,37 +1166,51 @@ function renderCheckin(){
         else{ctl=`<div class="opts">`+it.options.map(o=>{const sel=answers[it.id]===o.id?'sel':'';const bg=answers[it.id]===o.id?`style="background:${c.color};border-color:${c.color}"`:'';return `<div class="opt ${sel}" ${bg} data-o="${it.id}|${o.id}">${o.label}</div>`;}).join('')+`</div>`;}
         return `<div class="card"><div class="itemHead"><span>${it.em}</span><span class="lbl">${it.label}</span></div>${ctl}</div>`;}).join('');
   }else{
-    const es=entries(),tx=es.reduce((a,e)=>a+e.xp,0),tg=es.reduce((a,e)=>a+e.gold,0);
+    const es=entries(),bx=es.reduce((a,e)=>a+e.xp,0),bg=es.reduce((a,e)=>a+e.gold,0);
+    const cov=coveredNow(),perfect=ORDER.every(c=>cov.has(c));
+    const nStreak=(S.lastCheckin===todayKey()?S.streak:S.streak+1);
+    const sMult=1+Math.min(2,(nStreak-1)*0.05), pMult=perfect?1.5:1;
+    const tx=Math.round(bx*sMult*pMult), tg=Math.round(bg*sMult*pMult);
     body=`<div style="font-family:var(--serif);font-size:21px;font-weight:700;margin-bottom:10px">Tes récompenses</div>
-      <div class="card"><div class="stat3"><div><b style="color:var(--xp)">+${tx}</b><span>XP</span></div><div><b style="color:var(--gold)">+${tg}</b><span>or</span></div><div><b style="color:var(--gem)">+3</b><span>gemmes</span></div></div></div>`+
+      ${perfect?'<div class="perfectTag" style="margin:0 auto 10px;display:table">🌟 JOURNÉE PARFAITE · bonus ×1,5 + bénédiction ×2</div>':''}
+      <div class="card"><div class="stat3"><div><b style="color:var(--xp)">+${fmt(tx)}</b><span>XP</span></div><div><b style="color:var(--gold)">+${fmt(tg)}</b><span>or</span></div><div><b style="color:var(--gem)">+${3+(perfect?5:0)}</b><span>gemmes</span></div></div>
+        <div class="sub" style="text-align:center;margin-top:8px">série ×${sMult.toFixed(2)}${perfect?' · parfait ×1,5':''} · 🎁 coffre surprise à l’ouverture</div></div>`+
       (es.length===0?`<div class="card sub" style="text-align:center;line-height:1.5">Rien de coché. Reviens en arrière et sélectionne au moins une action healthy 💪</div>`:
-        es.map(e=>`<div class="recap"><span>${e.em}</span><span class="lbl">${e.label}</span><span class="p" style="color:${CATS[e.cat].color}">+${e.g}</span><span class="p" style="color:var(--xp)">+${e.xp}</span><span class="p" style="color:var(--gold)">+${e.gold}</span></div>`).join(''));
+        es.map(e=>`<div class="recap"><span>${e.em}</span><span class="lbl">${e.label}</span><span class="p" style="color:${CATS[e.cat].color}">+${e.g} ${CATS[e.cat].power}</span><span class="p" style="color:var(--gold)">+${e.gold}</span></div>`).join(''));
   }
+  const cov=coveredNow();
+  const ant=`<div class="antband"><div class="as">🔥 Série ${S.streak} <small>· +1 aujourd’hui</small></div><div style="text-align:right"><div class="pdots">${ORDER.map(c=>`<i class="${cov.has(c)?'on':''}"></i>`).join('')}</div><div style="font-size:10px;color:${cov.size===4?'var(--gold)':'var(--faint)'};margin-top:3px;font-weight:700">${cov.size}/4 ${cov.size===4?'· JOUR PARFAIT ×2 !':'catégories'}</div></div></div>`;
   const dots=[...ORDER,'r'].map((_,i)=>`<i class="${i===step?'act':i<step?'done':''}"></i>`).join('');
-  const nextLbl=isSum?'Récupérer ⚔️':(step===ORDER.length-1?'Mes récompenses →':'Suivant →');
-  screen.innerHTML=headerHTML('Check-in du jour')+`<div class="dots">${dots}</div>`+body+
+  const nextLbl=isSum?'Encaisser mes récompenses 🎁':(step===ORDER.length-1?'Mes récompenses →':'Suivant →');
+  screen.innerHTML=headerHTML('Check-in du jour')+ant+`<div class="dots">${dots}</div>`+body+
     `<div class="navbar" style="position:static;border-top:0;background:transparent;padding:16px 0 24px">${step>0?'<button class="back" id="back">Précédent</button>':'<div style="flex:1"></div>'}<button class="btn-gold next" id="next" ${isSum&&entries().length===0?'disabled':''}>${nextLbl}</button></div>`;
   document.querySelectorAll('[data-t]').forEach(el=>el.onclick=()=>{answers[el.dataset.t]=!answers[el.dataset.t];renderCheckin();});
   document.querySelectorAll('[data-o]').forEach(el=>el.onclick=()=>{const[i,o]=el.dataset.o.split('|');answers[i]=o;renderCheckin();});
   const bk=document.getElementById('back'); if(bk)bk.onclick=()=>{step--;renderCheckin();};
   document.getElementById('next').onclick=()=>{
     if(!isSum){step++;renderCheckin();return;}
-    const es=entries(); if(!es.length)return;
-    const tx=es.reduce((a,e)=>a+e.xp,0),tg=es.reduce((a,e)=>a+e.gold,0);
-    es.forEach(e=>{S.habit[CATS[e.cat].stat]+=e.g;if(CATS[e.cat].stat==='maxHp')S.hp+=e.g;});
-    S.xp+=tx;S.gold+=tg;S.gems+=3;S.level=levelFromXp(S.xp);S.streak++;S.lastCheckin=todayKey();
-    S.buffUntil=Date.now()+24*3600*1000; save();
-    celebrate(tx,tg);
+    const r=doCheckin(); if(!r)return;
+    celebrate(r);
   };
 }
-function celebrate(tx,tg){
+const CHEST_LABEL={commun:'Coffre commun',or:'💰 JACKPOT D’OR',rare:'💎 Coffre rare',relique:'🏵️ RELIQUE !',astre:'✦ ASTRE LÉGENDAIRE !'};
+function celebrate(r){
   const ov=document.createElement('div');ov.className='overlay';
-  ov.innerHTML=`<div class="big">⚔️</div><h2>Récompenses encaissées !</h2>
-    <div class="celebRow"><div><b style="color:var(--xp)">+${tx}</b><span>XP</span></div><div><b style="color:var(--gold)">+${tg}</b><span>or</span></div><div><b style="color:var(--gem)">+3</b><span>💎</span></div></div>
-    <div class="sub" style="margin-bottom:6px">Bénédiction du jour : <b style="color:var(--gold)">×1,5 or & dégâts</b> pendant 24h.</div>
-    <div class="sub" style="margin-bottom:20px">🔥 Streak ${S.streak} jours</div>
-    <button class="btn-gold" style="max-width:260px" id="godg">Partir au donjon ⚔️</button>`;
+  const powerLines=Object.keys(r.gains).map(cat=>`<span class="pgain" style="color:${CATS[cat].color}">${CATS[cat].em} +${r.gains[cat]} ${CATS[cat].power}</span>`).join('');
+  const chest=r.chest, cg=chest.gold?('+'+fmt(chest.gold)+' or'):chest.gems?('+'+chest.gems+' 💎'):chest.reliques?('+'+chest.reliques+' 🏵️ relique'):chest.astres?('+'+chest.astres+' ✦ astre'):'';
+  ov.innerHTML=`<div class="big">${r.perfect?'🌟':'⚔️'}</div>
+    <h2>${r.perfect?'JOURNÉE PARFAITE !':'Objectifs santé validés !'}</h2>
+    ${r.perfect?'<div class="perfectTag">4/4 catégories · Bénédiction ×2</div>':''}
+    <div class="celebRow"><div><b style="color:var(--xp)">+${fmt(r.tx)}</b><span>XP</span></div><div><b style="color:var(--gold)">+${fmt(r.tg)}</b><span>or</span></div><div><b style="color:var(--gem)">+${r.gems}</b><span>💎</span></div></div>
+    <div class="powerGains">${powerLines}</div>
+    <div class="chestReveal ${chest.jackpot?'jackpot':''}"><span class="chestico">${chest.jackpot?'🎁':'🪙'}</span><div><div class="chestt">${CHEST_LABEL[chest.tier]||'Coffre'}</div><div class="chestv">${cg}</div></div></div>
+    ${r.mileGem?`<div class="mileBadge">🔥 Palier ${r.streak} jours · +${r.mileGem} 💎 bonus !</div>`:''}
+    ${r.claimed.length?r.claimed.map(q=>`<div class="questClaim">✅ Quête « ${q.nm} » : +${q.reward.gems?q.reward.gems+' 💎':q.reward.reliques+' 🏵️'}</div>`).join(''):''}
+    <div class="streakRow">🔥 <b>${r.streak}</b> jours d’affilée${r.sMult>1?` · récompenses ×${r.sMult.toFixed(2)}`:''}</div>
+    <button class="btn-gold" style="max-width:280px;margin-top:12px" id="godg">Dépenser au donjon ⚔️</button>`;
   document.querySelector('.phone').appendChild(ov);
+  SND.level&&SND.level(); haptic([12,30,12,30,60]);
+  if(r.perfect||r.chest.jackpot){ if(SND.boss)SND.boss(); haptic([20,40,20,40,20,80]); }
   document.getElementById('godg').onclick=()=>{ov.remove();go('dungeon');};
 }
 
@@ -1372,6 +1501,10 @@ if(offlineMsg){
     <button class="btn-gold" style="max-width:220px" id="ok">Récupérer</button>`;
   document.querySelector('.phone').appendChild(ov);
   document.getElementById('ok').onclick=()=>ov.remove();
+}
+if(streakMsg){
+  setTimeout(()=>{ if(streakMsg.froze) uiToast('🧊 Jour manqué : '+streakMsg.froze+' gel utilisé, ta série est sauvée !');
+    else if(streakMsg.broke) uiToast('💔 Série de '+streakMsg.had+' jours perdue (plus de gel). On repart !'); },600);
 }
 // braises d'ambiance
 for(let i=0;i<10;i++){const e=document.createElement('div');e.className='ember';e.style.left=(Math.random()*100)+'%';e.style.animationDuration=(6+Math.random()*7)+'s';e.style.animationDelay=(-Math.random()*10)+'s';document.body.appendChild(e);}
