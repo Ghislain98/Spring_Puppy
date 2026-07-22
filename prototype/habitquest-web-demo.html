@@ -354,6 +354,7 @@ const ICON={"boss":"data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.o
 /* __ICONS_END__ */
 // ============ Constantes de jeu ============
 const CRIT_MULT=2;
+const MOB_PERIOD=1.15; // le monstre riposte tous les 1,15 s (par coups, pas en continu)
 // Paliers de compagnons : +5% dégâts par tranche de 10 compagnons recrutés.
 const COMP_TIER_SIZE=10, COMP_TIER_BONUS=0.05;
 // Un étage = 10 à 30 monstres (ça monte avec l'étage) + 1 boss à la fin.
@@ -479,7 +480,7 @@ const isElite=(f,i)=> isBoss(f,i)&&f%5===0; // boss d'élite tous les 5 étages
 const xpForLevel=l=>Math.floor(50*(l-1)*l);
 const levelFromXp=xp=>{let l=1;while(xpForLevel(l+1)<=xp)l++;return l;};
 const monsterMaxHp=(f,i)=>Math.ceil(42*Math.pow(1.33,f-1)*(1+i*0.09)*(isBoss(f,i)?4.5:1)*(isElite(f,i)?2.2:1));
-const monsterAtk=(f,i)=>Math.ceil(3*Math.pow(1.28,f-1)*(isBoss(f,i)?2.2:1));
+const monsterAtk=(f,i)=>Math.ceil(2.4*Math.pow(1.24,f-1)*(isBoss(f,i)?1.8:1));
 const goldPerKill=(f,i)=>Math.ceil(6*Math.pow(1.3,f-1)*(isBoss(f,i)?6:1));
 const xpPerKill=(f,i)=>Math.ceil(8*Math.pow(1.25,f-1)*(isBoss(f,i)?5:1));
 const compCost=(cp,count)=>Math.ceil(cp.base*Math.pow(1.15,count));
@@ -563,7 +564,10 @@ if(typeof S.onboarded!=='boolean')S.onboarded=!!S.cls;
 function save(){S.lastActive=Date.now();localStorage.setItem('habitquest-demo2',JSON.stringify(S));}
 
 // ============ Arbres de talents par classe ============
-const classXpForLevel=l=>Math.floor(80*(l-1)*l);
+// Progression de classe VOLONTAIREMENT lente : 1 point de talent tous les 10
+// niveaux, l'arbre (~60 pts) se remplit sur des dizaines d'heures, puis c'est
+// du parangon infini. Courbe ~cubique pour que chaque niveau coûte bien plus.
+const classXpForLevel=l=>Math.floor(90*Math.pow(l,2.5));
 const classLevelOf=xp=>{let l=1;while(classXpForLevel(l+1)<=xp)l++;return l;};
 // Chaque classe : 1 racine qui s'ouvre en 4 BRANCHES indépendantes qui ne se
 // rejoignent JAMAIS. Chaque branche = un chemin linéaire de 5 nœuds :
@@ -1036,8 +1040,9 @@ function D(){
   const multiHits=1+multi/100; // nombre de coups moyen (auto-DPS)
   const hitBase=atk*critF*dmgMult*vuln;
   const dps=hitBase*spd*multiHits;
-  // Régénération (+ vol de vie : une part de tes dégâts te soigne).
-  const regen=((BASE.regen+S.habit.regen+(S.up.regen||0)*UP_GAIN.regen)*c.regen+ce.regenAdd)+(ce.lifestealPct||0)*dps;
+  // Régénération : socle (2,5% des PV max/s, pour que l'endurance suive la
+  // montée en PV) + forge/talents + vol de vie (une part de tes dégâts te soigne).
+  const regen=maxHp*0.025+((BASE.regen+S.habit.regen+(S.up.regen||0)*UP_GAIN.regen)*c.regen+ce.regenAdd)+(ce.lifestealPct||0)*dps;
   const clickBase=2+S.level+(S.up.click||0)*3;
   const clickDmg=clickBase*dmgMult*vuln*c.click*vClick*ce.clickMul*spd;
   const compMult=ce.goldSecMul*goldMult*pe.goldsec;
@@ -1702,35 +1707,34 @@ function coffreOverlay(r){
 
 // ============ Boucle idle (100ms) ============
 let autoAcc=0, floatAcc=0, swingAcc=0, mAtkAcc=0;
+function heroDies(){
+  // Le héros tombe : il recommence l'étage depuis le premier monstre.
+  S.hp=D().maxHp; S.mi=0; S.mhp=monsterMaxHp(S.floor,0); S.rampStacks=0; mAtkAcc=0;
+  pushLog('💀 Héros terrassé à l’étage '+S.floor+' — il repart au début de l’étage.');
+  if(tab==='dungeon'){const h=document.getElementById('hero');if(h){h.classList.remove('hurt');void h.offsetWidth;h.classList.add('hurt');} SND.boss&&SND.boss(); haptic([40,60,40]); if(typeof advanceScene==='function')advanceScene();}
+  save();updateDungeon(true);
+}
 setInterval(()=>{
   const d=D(),dt=0.1;
   S.gold+=d.goldSec*dt;
-  // combat auto
-  let hp=Math.min(d.maxHp,S.hp+d.regen*dt)-monsterAtk(S.floor,S.mi)*dt;
-  if(hp<=0){
-    // Le héros tombe : il recommence l'étage depuis le premier monstre.
-    S.hp=d.maxHp; S.mi=0; S.mhp=monsterMaxHp(S.floor,0); S.rampStacks=0;
-    pushLog('💀 Héros terrassé à l’étage '+S.floor+' — il repart au début de l’étage.');
-    if(tab==='dungeon'){const h=document.getElementById('hero');if(h){h.classList.remove('hurt');void h.offsetWidth;h.classList.add('hurt');} SND.boss&&SND.boss(); haptic([40,60,40]); if(typeof advanceScene==='function')advanceScene();}
-    save();updateDungeon(true);
-  }
-  else{S.hp=hp;
-    // Fureur montante : les paliers grimpent tant que le héros frappe le même
-    // monstre (plafonnés à 15), et se réinitialisent à sa mort.
-    S.rampStacks=Math.min(15,(S.rampStacks||0)+dt*3);
-    // dégâts directs + effets élémentaires (brûlure/saignement/poison)
-    const dot=d.burnDps+d.bleedDps+d.poisonPct*monsterMaxHp(S.floor,S.mi);
-    const total=d.dps+dot;
-    S.mhp-=total*dt; S.totalDmg+=total*dt;
-    floatAcc+=dt; swingAcc+=dt; mAtkAcc+=dt;
-    // le héros frappe en rythme (cadence ×vitesse d'attaque)
-    const cadence=Math.max(0.28,0.62/Math.min(3,d.spd||1));
-    if(swingAcc>=cadence){ if(tab==='dungeon'&&d.dps>0){heroSwing();slashMob(false);} swingAcc=0; }
-    // le monstre riposte périodiquement (animation d'attaque + le héros encaisse)
-    if(mAtkAcc>=1.15){ if(tab==='dungeon')mobAttack(); mAtkAcc=0; }
-    if(floatAcc>=0.5){ if(tab==='dungeon'){spawnFloat(fmt(d.dps*0.5),'var(--hp)',false); if(dot>0)spawnFloat(fmt(dot*0.5),'var(--ember)',false,null,'flame');} floatAcc=0; }
-    if(S.mhp<=0)killMonster(); else updateDungeon(false);
-  }
+  // Régénération continue (le socle en % de PV max rend l'endurance viable).
+  S.hp=Math.min(d.maxHp,S.hp+d.regen*dt);
+  // Fureur montante : les paliers grimpent tant qu'on frappe le même monstre.
+  S.rampStacks=Math.min(15,(S.rampStacks||0)+dt*3);
+  // Le héros inflige ses dégâts (directs + brûlure/saignement/poison).
+  const dot=d.burnDps+d.bleedDps+d.poisonPct*monsterMaxHp(S.floor,S.mi);
+  S.mhp-=(d.dps+dot)*dt; S.totalDmg+=(d.dps+dot)*dt;
+  floatAcc+=dt; swingAcc+=dt; mAtkAcc+=dt;
+  const cadence=Math.max(0.28,0.62/Math.min(3,d.spd||1));
+  if(swingAcc>=cadence){ if(tab==='dungeon'&&d.dps>0){heroSwing();slashMob(false);} swingAcc=0; }
+  // Le monstre riposte par COUPS espacés (pas en continu) : tuer vite = esquiver
+  // ses coups. Un monstre encaissé en < une cadence ne te touche pas — les
+  // classes fragiles à gros DPS peuvent « burst » avant de se faire toucher.
+  if(mAtkAcc>=MOB_PERIOD){ mAtkAcc-=MOB_PERIOD; S.hp-=monsterAtk(S.floor,S.mi)*MOB_PERIOD; if(tab==='dungeon')mobAttack(); }
+  if(floatAcc>=0.5){ if(tab==='dungeon'){spawnFloat(fmt(d.dps*0.5),'var(--hp)',false); if(dot>0)spawnFloat(fmt(dot*0.5),'var(--ember)',false,null,'flame');} floatAcc=0; }
+  if(S.hp<=0){ heroDies(); }
+  else if(S.mhp<=0){ killMonster(); mAtkAcc=0; } // nouveau monstre : petit temps avant son 1er coup
+  else if(tab==='dungeon') updateDungeon(false);
   checkAch();
   if(tab!=='dungeon')renderCur();
   if(!S._t||Date.now()-S._t>4000){S._t=Date.now();save();}
