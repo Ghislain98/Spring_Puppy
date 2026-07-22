@@ -241,6 +241,12 @@
   .overlay { position:absolute; inset:0; background:rgba(6,4,16,.82); z-index:30; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:26px; text-align:center; backdrop-filter:blur(2px); }
   .overlay .big { font-size:64px; animation:pop .5s ease; } @keyframes pop { 0%{transform:scale(.4);opacity:0} 60%{transform:scale(1.15)} 100%{transform:scale(1)} }
   .overlay h2 { font-family:var(--serif); font-size:25px; margin:12px 0 0; }
+  .obwrap { width:100%; min-height:100%; display:flex; flex-direction:column; align-items:center; padding:8px 22px 22px; box-sizing:border-box; }
+  .obtop { text-align:center; } .obtop h2 { font-size:23px; }
+  .obbody { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; width:100%; padding:10px 0; }
+  .obp { color:var(--muted); font-size:13.5px; line-height:1.5; max-width:330px; margin:4px 0; }
+  .obnav { display:flex; gap:12px; width:100%; max-width:340px; padding:6px 0 4px; align-items:center; }
+  .obnav .btn-gold { flex:1; } .obnav .back { background:none; border:1px solid var(--border); color:var(--muted); border-radius:12px; padding:12px 16px; font-weight:700; cursor:pointer; }
   .celebRow { display:flex; gap:22px; margin:16px 0 12px; } .celebRow div { text-align:center; } .celebRow b { font-size:28px; font-weight:900; font-variant-numeric:tabular-nums; } .celebRow span { display:block; color:var(--faint); font-size:12px; }
   .perfectTag { background:linear-gradient(90deg,var(--gold),var(--ember)); color:#2a1c00; font-weight:900; font-size:12px; padding:5px 12px; border-radius:999px; margin-top:6px; animation:pop .4s ease; }
   .powerGains { display:flex; flex-wrap:wrap; gap:6px 12px; justify-content:center; margin:2px 0 12px; max-width:320px; }
@@ -513,7 +519,7 @@ function weekBump(track,n){ weekReset(); S.week.prog[track]=(S.week.prog[track]|
 
 // ============ État ============
 function fresh(){return{
-  gold:0,gems:0,xp:0,level:1,cls:null,
+  gold:0,gems:0,xp:0,level:1,cls:null,onboarded:false,
   habit:{atk:0,maxHp:0,regen:0,crit:0},
   up:{atk:0,maxHp:0,regen:0,crit:0,click:0,critdmg:0,speed:0,power:0,multi:0},
   tal:{},comp:{},
@@ -551,6 +557,9 @@ let streakMsg=null;
 S.classXp=Object.assign({guerrier:0,mage:0,rodeur:0,paladin:0},S.classXp);
 S.classTal=Object.assign({guerrier:{},mage:{},rodeur:{},paladin:{}},S.classTal);
 S.parangon=Object.assign({guerrier:{},mage:{},rodeur:{},paladin:{}},S.parangon); if(typeof S.rampStacks!=='number')S.rampStacks=0;
+// Les anciens joueurs (déjà une classe) sont considérés comme intégrés ; les
+// nouveaux passent par l'onboarding de première ouverture.
+if(typeof S.onboarded!=='boolean')S.onboarded=!!S.cls;
 function save(){S.lastActive=Date.now();localStorage.setItem('habitquest-demo2',JSON.stringify(S));}
 
 // ============ Arbres de talents par classe ============
@@ -1727,6 +1736,81 @@ setInterval(()=>{
   if(!S._t||Date.now()-S._t>4000){S._t=Date.now();save();}
 },100);
 
+// ============ Onboarding (première ouverture) ============
+// But : faire comprendre en 30 s que le check-in santé EST le cœur du jeu —
+// la récompense instantanée (le « shot de dopamine ») qui fait progresser le
+// héros et donne envie de revenir chaque jour.
+let obStep=0, obCls=null;
+function startOnboarding(){
+  const ov=document.createElement('div'); ov.className='overlay'; ov.id='onboard';
+  ov.style.cssText='justify-content:flex-start;overflow-y:auto;padding:0;background:linear-gradient(180deg,#160f22,#0d0916);backdrop-filter:none';
+  document.querySelector('.phone').appendChild(ov);
+  obStep=0; obCls=S.cls||null;
+  drawOnboard(ov);
+}
+function drawOnboard(ov){
+  const STEPS=5;
+  const catCard=c=>{const x=CATS[c];return `<div style="display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--border);border-radius:13px;padding:10px 12px;text-align:left">
+    <span style="font-size:26px;width:34px;text-align:center">${x.em}</span>
+    <div style="flex:1"><b style="font-size:14px">${x.label}</b><div class="sub" style="font-size:11px">${x.tag}</div></div>
+    <div style="text-align:right"><div style="color:${x.color};font-weight:800;font-size:13px">${x.power}</div><div class="sub" style="font-size:10px">+${x.ptag}</div></div></div>`;};
+  const loopRow=(em,t,d)=>`<div style="display:flex;align-items:center;gap:11px;background:var(--card);border:1px solid var(--border);border-radius:13px;padding:11px 13px;text-align:left"><span style="font-size:27px">${em}</span><div><b style="font-size:14px">${t}</b><div class="sub" style="font-size:11.5px;line-height:1.35">${d}</div></div></div>`;
+  let body='',title='',big='',foot='';
+  if(obStep===0){
+    big=`<div style="color:var(--gold);filter:drop-shadow(0 0 14px rgba(244,185,66,.6))">${ic('sword',60)}</div>`;
+    title='Bienvenue, aventurier';
+    body=`<p class="obp">HabitQuest transforme tes <b style="color:var(--gold)">bonnes habitudes de santé</b> en puissance de jeu.</p>
+      <p class="obp">Chaque jour où tu accomplis tes objectifs, tu déclenches un <b style="color:var(--ember)">shot de dopamine</b> — récompense instantanée — et ton héros en sort <b>renforcé</b>. 🔥</p>`;
+  } else if(obStep===1){
+    big='<div class="big">🎁</div>'; title='La boucle addictive';
+    body=`<div style="display:flex;flex-direction:column;gap:9px;width:100%;max-width:330px;margin:6px 0">
+      ${loopRow('✅','1. Check-in du jour','Coche tes objectifs santé en 20 secondes.')}
+      ${loopRow('🎉','2. Récompense immédiate','Coffre surprise, or, XP, gemmes — le shot de dopamine.')}
+      ${loopRow('⚔️','3. Ton héros progresse','Il combat tout seul dans le donjon, même app fermée.')}</div>
+      <p class="obp" style="font-size:12.5px">Reviens <b style="color:var(--gold)">chaque jour</b> pour garder ta série 🔥 et empiler les récompenses.</p>`;
+  } else if(obStep===2){
+    big='<div class="big">🛡️</div>'; title='4 piliers, 4 forces';
+    body=`<p class="obp" style="font-size:12.5px;margin-bottom:4px">Chaque catégorie santé renforce une partie précise de ton héros :</p>
+      <div style="display:flex;flex-direction:column;gap:8px;width:100%;max-width:330px">${ORDER.map(catCard).join('')}</div>
+      <div class="perfectTag" style="margin-top:12px">Journée complète 4/4 = récompenses ×2 !</div>`;
+  } else if(obStep===3){
+    big=''; title='Choisis ton héros';
+    body=`<p class="obp" style="font-size:12.5px">Tu pourras en changer plus tard (5 ${ic('gem',12)}). Chaque classe a son style — et son propre arbre de talents.</p>
+      <div class="classgrid" id="obpick" style="width:100%;max-width:340px;margin-top:4px"></div>`;
+  } else {
+    big='<div class="big">⏰</div>'; title='Un rappel pour ta série';
+    body=`<p class="obp">Un petit <b style="color:var(--gold)">rappel quotidien</b> t'aide à ne jamais casser ta série et à revenir chercher ta dose.</p>
+      <p class="obp" style="font-size:12px;color:var(--faint)">Tu peux le régler ou le couper à tout moment dans ⚙️ Réglages.</p>
+      <div style="display:flex;flex-direction:column;gap:10px;width:100%;max-width:300px;margin-top:8px">
+        <button class="btn-gold" id="obRemOn">Activer le rappel · 20:00</button>
+        <button class="link" id="obRemOff">Plus tard</button></div>`;
+  }
+  const dots=Array.from({length:STEPS},(_,i)=>`<i class="${i===obStep?'act':i<obStep?'done':''}"></i>`).join('');
+  const nextDisabled=(obStep===3&&!obCls)?'disabled':'';
+  if(obStep<4) foot=`<div class="obnav">${obStep>0?'<button class="back" id="obBack">Précédent</button>':'<div style="flex:1"></div>'}<button class="btn-gold" id="obNext" ${nextDisabled}>${obStep===3?'Commencer l’aventure ⚔️':'Suivant →'}</button></div>`;
+  ov.innerHTML=`<div class="obwrap">
+      <div class="dots" style="margin:18px 0 6px">${dots}</div>
+      <div class="obtop">${big}<h2 style="margin-top:8px">${title}</h2></div>
+      <div class="obbody">${body}</div>
+      ${foot}
+    </div>`;
+  if(obStep===3){
+    const grid=document.getElementById('obpick');
+    grid.innerHTML=Object.entries(CLASSES).map(([id,c])=>`<div class="classcard ${obCls===id?'sel':''}" data-p="${id}"><div class="em">${pixImg(SPR[(HERO_SPR[id]||'knight_m')+'_idle'],46)||c.em}</div><div class="nm">${c.name}</div><div class="ds">${c.ds}</div></div>`).join('');
+    grid.querySelectorAll('[data-p]').forEach(el=>el.onclick=()=>{obCls=el.dataset.p;SND.buy&&SND.buy();haptic(8);drawOnboard(ov);});
+  }
+  const nx=document.getElementById('obNext'); if(nx)nx.onclick=()=>{ if(obStep===3&&!obCls)return; obStep++; SND.kill&&SND.kill(); haptic(6); drawOnboard(ov); };
+  const bk=document.getElementById('obBack'); if(bk)bk.onclick=()=>{ obStep--; drawOnboard(ov); };
+  const ron=document.getElementById('obRemOn'); if(ron)ron.onclick=()=>{ S.reminder={enabled:true,h:20,m:0}; nativePost({type:'reqPerm'}); finishOnboarding(ov); };
+  const roff=document.getElementById('obRemOff'); if(roff)roff.onclick=()=>{ finishOnboarding(ov); };
+}
+function finishOnboarding(ov){
+  if(obCls)S.cls=obCls;
+  S.onboarded=true; save(); syncReminder();
+  ov.remove(); tab='checkin'; render();
+  uiToast&&uiToast('Ta quête commence — fais ton premier check-in ! 🎁');
+}
+
 // ============ Démarrage ============
 render();
 (function(){
@@ -1736,13 +1820,7 @@ render();
   window.addEventListener('pointerdown',()=>SND.unlock(),{once:true});
 })();
 syncReminder(); // au démarrage : (re)programme le rappel côté natif
-if(!S.cls){
-  const ov=document.createElement('div');ov.className='overlay';
-  ov.innerHTML=`<div style="color:var(--gold);filter:drop-shadow(0 0 10px rgba(244,185,66,.5));margin-bottom:2px">${ic('sword',52)}</div><h2>Choisis ta classe</h2><div class="sub" style="margin:6px 0 16px">Tu pourras en changer plus tard (5 ${ic('gem',12)}).</div><div class="classgrid" id="pick" style="width:100%;max-width:340px"></div>`;
-  document.querySelector('.phone').appendChild(ov);
-  document.getElementById('pick').innerHTML=Object.entries(CLASSES).map(([id,c])=>`<div class="classcard" data-p="${id}"><div class="em">${pixImg(SPR[(HERO_SPR[id]||'knight_m')+'_idle'],46)||c.em}</div><div class="nm">${c.name}</div><div class="ds">${c.ds}</div></div>`).join('');
-  ov.querySelectorAll('[data-p]').forEach(el=>el.onclick=()=>{S.cls=el.dataset.p;save();ov.remove();render();});
-}
+if(!S.onboarded) startOnboarding();
 if(offlineMsg){
   const lbl=offlineMsg.min>=60?Math.floor(offlineMsg.min/60)+'h'+String(offlineMsg.min%60).padStart(2,'0'):offlineMsg.min+' min';
   const ov=document.createElement('div');ov.className='overlay';
