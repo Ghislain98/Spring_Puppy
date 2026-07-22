@@ -81,36 +81,27 @@
   .hero .spr { filter:drop-shadow(0 0 6px rgba(255,204,77,.35)) drop-shadow(0 2px 3px #000); }
   .cpill .spr { filter:none; }
   .heroname { font-size:11px; font-weight:800; color:var(--gold); margin-top:-2px; white-space:nowrap; }
-  .tree3 { display:flex; gap:6px; margin-top:4px; }
-  .tcol { flex:1; display:flex; flex-direction:column; align-items:center; }
-  .tcolh { font-family:var(--serif); font-weight:700; font-size:12px; margin-bottom:10px; text-align:center; min-height:20px; }
-  .tnode { width:100%; position:relative; display:flex; flex-direction:column; align-items:center; gap:2px; padding:9px 2px; border:1.5px solid var(--border); border-radius:12px; background:var(--card); cursor:pointer; margin-bottom:18px; }
-  .tnode .tem { font-size:22px; line-height:1; }
-  .tnode .tlv { font-size:9px; font-weight:800; color:var(--muted); font-variant-numeric:tabular-nums; }
-  .tnode.avail { border-color:var(--gold); }
-  .tnode.alloc { border-color:var(--gem); background:var(--cardAlt); }
-  .tnode.lock { opacity:.35; }
-  .tnode.key { border-width:2px; border-color:var(--gold); box-shadow:0 0 10px rgba(255,204,77,.35); }
-  .tnode.key .tem { filter:drop-shadow(0 0 4px var(--gold)); }
-  .tnode.sel { outline:2px solid var(--text); outline-offset:1px; }
-  .tnode:not(.top)::before { content:''; position:absolute; top:-18px; left:50%; transform:translateX(-50%); width:2px; height:18px; background:var(--border); }
-  .tnode.alloc:not(.top)::before { background:var(--gem); }
+  /* Arbre de talents à branches (graphe) */
+  .skilltree { position:relative; width:100%; margin:6px 0 4px; }
+  .snode { position:absolute; transform:translateX(-50%); width:46px; height:46px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; border:2px solid var(--border); border-radius:12px; background:var(--card); cursor:pointer; z-index:2; transition:transform .1s, box-shadow .15s; }
+  .snode .sem { font-size:19px; line-height:1; }
+  .snode .slv { font-size:8px; font-weight:800; color:var(--muted); font-variant-numeric:tabular-nums; }
+  .snode.avail { border-color:var(--gold); }
+  .snode.alloc { border-color:var(--gem); background:var(--cardAlt); box-shadow:0 0 9px rgba(159,122,234,.45); }
+  .snode.lock { opacity:.35; }
+  .snode.sel { outline:2px solid var(--text); outline-offset:2px; z-index:3; }
+  .snode.key { border-radius:50%; border-width:2.5px; }
+  .snode.key.avail { border-color:var(--gold); box-shadow:0 0 12px rgba(244,185,66,.5); }
+  .snode.key.alloc { border-color:var(--gold); box-shadow:0 0 14px rgba(244,185,66,.6); }
+  .snode.key .sem { filter:drop-shadow(0 0 3px var(--gold)); }
+  .snode.cap { width:52px; height:52px; border-radius:14px; border-color:var(--borderLit); }
+  .snode.cap .sem { font-size:24px; }
+  .snode.cap.avail { border-color:var(--gem); box-shadow:0 0 14px rgba(159,122,234,.45); }
+  .snode.cap.alloc { border-color:var(--gem); background:linear-gradient(180deg,rgba(159,122,234,.22),var(--cardAlt)); box-shadow:0 0 18px rgba(159,122,234,.6); }
+  .snode.cap .sem { filter:drop-shadow(0 0 5px var(--gem)); }
   .tdet { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:12px; margin-top:4px; }
   .tdet.keyd { border-color:var(--gold); }
   .tdet.grandd { border-color:var(--gem); box-shadow:0 0 14px rgba(159,122,234,.35); background:linear-gradient(180deg,var(--cardAlt),var(--card)); }
-  .grandrow { margin-top:4px; display:flex; flex-direction:column; gap:8px; }
-  .gnode { position:relative; display:flex; align-items:center; gap:10px; padding:10px 12px; border:2px solid var(--border); border-radius:14px; background:var(--card); cursor:pointer; }
-  .gnode::before { content:''; position:absolute; top:-14px; left:50%; transform:translateX(-50%); width:2px; height:14px; background:var(--border); }
-  .gnode .gem2 { font-size:24px; line-height:1; filter:drop-shadow(0 0 5px var(--gem)); }
-  .gnode .gtxt { display:flex; flex-direction:column; }
-  .gnode .gtxt b { font-size:14px; }
-  .gnode .gtxt span { font-size:10px; font-weight:800; color:var(--gem); letter-spacing:.3px; }
-  .gnode.avail { border-color:var(--gem); box-shadow:0 0 12px rgba(159,122,234,.3); }
-  .gnode.avail::before { background:var(--gem); }
-  .gnode.alloc { border-color:var(--gem); background:linear-gradient(180deg,rgba(159,122,234,.18),var(--cardAlt)); box-shadow:0 0 16px rgba(159,122,234,.5); }
-  .gnode.alloc::before { background:var(--gem); }
-  .gnode.lock { opacity:.4; }
-  .gnode.sel { outline:2px solid var(--text); outline-offset:1px; }
   .fxbadges { display:flex; gap:4px; justify-content:center; margin-top:3px; min-height:16px; }
   .fxb { font-size:14px; animation:fxpulse 1s ease-in-out infinite; }
   @keyframes fxpulse { 0%,100%{transform:scale(1);opacity:.85} 50%{transform:scale(1.25);opacity:1} }
@@ -119,9 +110,13 @@
   .hero.atk { animation:herolunge .3s; }
   @keyframes herolunge { 0%{transform:translateX(0)} 40%{transform:translateX(16px) rotate(7deg)} 100%{transform:translateX(0)} }
   .comps { display:flex; flex-wrap:wrap; gap:4px; justify-content:center; min-height:22px; }
-  .cpill { font-size:15px; background:var(--card); border:1px solid var(--border); border-radius:8px; padding:1px 5px; display:inline-flex; align-items:center; gap:2px; }
-  .cpill b { font-size:9px; color:var(--gold); font-weight:800; }
+  .cpill { font-size:15px; background:var(--card); border:1px solid var(--border); border-radius:9px; padding:2px 7px 2px 5px; display:inline-flex; align-items:center; gap:4px; }
+  .cpill .cpname { font-size:10px; color:var(--muted); font-weight:700; white-space:nowrap; }
+  .cpill b { font-size:10px; color:var(--gold); font-weight:800; }
   .cnone { font-size:10px; color:var(--faint); }
+  .compbonus { background:linear-gradient(180deg,var(--cardAlt),var(--card)); border:1px solid var(--border); border-radius:12px; padding:9px 12px; margin-bottom:8px; }
+  .compbonus .cbline { display:flex; justify-content:space-between; align-items:center; font-size:12.5px; font-weight:800; }
+  .compbonus .cbline span { display:flex; align-items:center; gap:5px; color:var(--muted); }
   .vs { font-size:16px; opacity:.45; flex:0 0 auto; }
   .mobcol { position:relative; width:124px; flex:0 0 auto; display:flex; flex-direction:column; align-items:center; }
   .floatlayer { position:absolute; inset:0; pointer-events:none; overflow:visible; }
@@ -171,6 +166,11 @@
   @keyframes slashfx { 0%{opacity:0;transform:rotate(8deg) scale(.3)} 40%{opacity:.95} 100%{opacity:0;transform:rotate(62deg) scale(1.15)} }
   .scene .hero.hurt .pix { animation:hurtflash .3s; }
   @keyframes hurtflash { 0%,100%{filter:none} 50%{filter:brightness(.4) sepia(1) hue-rotate(-30deg) saturate(4)} }
+  .scene .mob.mattack .pix { animation:mobattack .38s ease-out; }
+  @keyframes mobattack { 0%{transform:scaleX(-1)} 40%{transform:scaleX(-1) translateX(22px) rotate(-6deg)} 100%{transform:scaleX(-1)} }
+  .scene .hero.flinch .pix { animation:heroflinch .3s ease-out; }
+  @keyframes heroflinch { 0%,100%{transform:translateX(0)} 45%{transform:translateX(-7px)} }
+  .scene .clash { position:absolute; left:34%; top:34%; width:26px; height:26px; pointer-events:none; z-index:6; background:radial-gradient(circle,#ff8a3d 0%,transparent 62%); animation:impactfx .3s ease-out forwards; }
   .scene.shakeS { animation:shakeS .16s; }
   @keyframes shakeS { 0%,100%{transform:translate(0,0)} 25%{transform:translate(-2px,1px)} 75%{transform:translate(2px,-1px)} }
   .scene .impact { position:absolute; border-radius:50%; pointer-events:none; z-index:5; background:radial-gradient(circle,#fff 0%,transparent 62%); animation:impactfx .28s ease-out forwards; }
@@ -301,12 +301,14 @@ const ICON={"boss":"data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.o
 /* __ICONS_END__ */
 // ============ Constantes de jeu ============
 const CRIT_MULT=2;
+// Paliers de compagnons : +5% dégâts par tranche de 10 compagnons recrutés.
+const COMP_TIER_SIZE=10, COMP_TIER_BONUS=0.05;
 // Un étage = 10 à 30 monstres (ça monte avec l'étage) + 1 boss à la fin.
 const regularMobs=f=>Math.min(30,8+f*2);
 const totalMobs=f=>regularMobs(f)+1;
 const BASE={atk:4,maxHp:60,regen:2,crit:3};
-const UP_GAIN={atk:3,maxHp:20,regen:2,crit:2,click:3};
-const UP_BASE={atk:50,maxHp:40,regen:60,crit:120,click:80};
+const UP_GAIN={atk:3,maxHp:20,regen:2,crit:2,click:3,critdmg:0.10,speed:0.03,power:0.06};
+const UP_BASE={atk:50,maxHp:40,regen:60,crit:120,click:80,critdmg:200,speed:300,power:150};
 
 const CLASSES={
   guerrier:{name:'Guerrier',em:'⚔️',hero:'🤺',hp:1.35,dmg:1.15,gold:1,crit:0,click:1,regen:1,ds:'Robuste. +35% PV, +15% dégâts.'},
@@ -441,7 +443,7 @@ function todayKey(){const d=new Date();return d.getFullYear()+'-'+(d.getMonth()+
 function fresh(){return{
   gold:0,gems:0,xp:0,level:1,cls:null,
   habit:{atk:0,maxHp:0,regen:0,crit:0},
-  up:{atk:0,maxHp:0,regen:0,crit:0,click:0},
+  up:{atk:0,maxHp:0,regen:0,crit:0,click:0,critdmg:0,speed:0,power:0},
   tal:{},comp:{},
   classXp:{guerrier:0,mage:0,rodeur:0,paladin:0},
   classTal:{guerrier:{},mage:{},rodeur:{},paladin:{}},
@@ -455,7 +457,7 @@ function fresh(){return{
 let S; try{S=JSON.parse(localStorage.getItem('habitquest-demo2'))||fresh();}catch(e){S=fresh();}
 S=Object.assign(fresh(),S);
 S.habit=Object.assign({atk:0,maxHp:0,regen:0,crit:0},S.habit);
-S.up=Object.assign({atk:0,maxHp:0,regen:0,crit:0,click:0},S.up);
+S.up=Object.assign({atk:0,maxHp:0,regen:0,crit:0,click:0,critdmg:0,speed:0,power:0},S.up);
 S.classXp=Object.assign({guerrier:0,mage:0,rodeur:0,paladin:0},S.classXp);
 S.classTal=Object.assign({guerrier:{},mage:{},rodeur:{},paladin:{}},S.classTal);
 function save(){S.lastActive=Date.now();localStorage.setItem('habitquest-demo2',JSON.stringify(S));}
@@ -471,113 +473,73 @@ const classLevelOf=xp=>{let l=1;while(classXpForLevel(l+1)<=xp)l++;return l;};
 // exige 2 keystones (dépendances). Un enabler ouvre chaque mécanique (DoT).
 const P=(x,l)=>Math.pow(x,l); // helper multiplicatif
 const CLASS_TREES={
-  guerrier:{branches:[
-    {nm:'Sang',col:'var(--hp)',nodes:[
-      {id:'g_s1',nm:'Saigner',em:'🩸',max:1,ds:'Ouvre : inflige un saignement (30% ATK/s).',ap:e=>e.bleedBase+=0.30},
-      {id:'g_s2',nm:'Lames affûtées',em:'🔪',max:5,ds:'Saignement ×1,20 par niv',ap:(e,l)=>e.bleedMul*=P(1.20,l)},
-      {id:'g_s3',nm:'Plaies ouvertes',em:'🩹',max:5,ds:'Saignement ×1,18 par niv',ap:(e,l)=>e.bleedMul*=P(1.18,l)},
-      {id:'g_s4',nm:'Hémorragie',em:'🔻',max:5,ds:'Saignement ×1,16 par niv',ap:(e,l)=>e.bleedMul*=P(1.16,l)},
-      {id:'g_sK',key:1,syn:'bloodrage',nm:'Saignée furieuse',em:'🌀',max:1,ds:'★ SYNERGIE : ta vitesse d’attaque ×(1 + saignement), jusqu’à ×3.'},
-    ]},
-    {nm:'Rage',col:'var(--ember)',nodes:[
-      {id:'g_r1',nm:'Colère',em:'💢',max:5,ds:'Dégâts ×1,15 par niv',ap:(e,l)=>e.dmgMul*=P(1.15,l)},
-      {id:'g_r2',nm:'Fureur',em:'🗡️',max:5,ds:'Dégâts ×1,14 par niv',ap:(e,l)=>e.dmgMul*=P(1.14,l)},
-      {id:'g_r3',nm:'Sang-froid',em:'🎯',max:5,ds:'+4% critique par niv',ap:(e,l)=>e.critAdd+=4*l},
-      {id:'g_r4',nm:'Mise à mort',em:'💥',max:4,ds:'Dégâts critiques +20% par niv (×2 → ×2,8)',ap:(e,l)=>e.critMultAdd+=0.2*l},
-      {id:'g_rK',key:1,nm:'Berserker',em:'😡',max:1,ds:'★ KEYSTONE : dégâts ×2 quand PV < 50%.',ap:e=>e.dmgLowHp=1.0},
-    ]},
-    {nm:'Garde',col:'var(--regen)',nodes:[
-      {id:'g_g1',nm:'Cuirasse',em:'🛡️',max:5,ds:'PV max ×1,20 par niv',ap:(e,l)=>e.hpMul*=P(1.20,l)},
-      {id:'g_g2',nm:'Faiblesse',em:'☠️',max:1,ds:'Ouvre : Vulnérabilité (+20% dégâts subis).',ap:e=>e.vulnBase+=0.20},
-      {id:'g_g3',nm:'Broyer',em:'🔨',max:5,ds:'Vulnérabilité ×1,15 par niv',ap:(e,l)=>e.vulnMul*=P(1.15,l)},
-      {id:'g_g4',nm:'Écrasement',em:'⚒️',max:5,ds:'Dégâts ×1,12 par niv',ap:(e,l)=>e.dmgMul*=P(1.12,l)},
-      {id:'g_gK',key:1,nm:'Colosse',em:'🗿',max:1,ds:'★ KEYSTONE : PV max ×2 et dégâts ×1,5.',ap:e=>{e.hpMul*=2;e.dmgMul*=1.5}},
-    ]},
-  ],grand:[
-    {id:'g_GR1',nm:'Titan de sang',em:'💠',ds:'CAPSTONE : dégâts ×2 ET saignement ×2.',req:['g_sK','g_rK'],ap:e=>{e.dmgMul*=2;e.bleedMul*=2}},
-    {id:'g_GR2',nm:'Rempart écarlate',em:'💠',ds:'CAPSTONE : PV max ×2 ET saignement ×2.',req:['g_sK','g_gK'],ap:e=>{e.hpMul*=2;e.bleedMul*=2}},
-    {id:'g_GR3',nm:'Bourreau colossal',em:'💠',ds:'CAPSTONE : dégâts ×2,5 ET +30% vulnérabilité.',req:['g_rK','g_gK'],ap:e=>{e.dmgMul*=2.5;e.vulnBase+=0.30}},
+  guerrier:{nodes:[
+    {id:'g_A',gx:2,gy:0,req:[],nm:'Colère',em:'💢',max:5,ds:'Dégâts ×1,15 par niv',ap:(e,l)=>e.dmgMul*=P(1.15,l)},
+    {id:'g_B',gx:1,gy:1,req:['g_A'],nm:'Saigner',em:'🩸',max:1,ds:'Ouvre : saignement (30% ATK/s).',ap:e=>e.bleedBase+=0.30},
+    {id:'g_C',gx:3,gy:1,req:['g_A'],nm:'Cuirasse',em:'🛡️',max:5,ds:'PV max ×1,18 par niv',ap:(e,l)=>e.hpMul*=P(1.18,l)},
+    {id:'g_D',gx:0,gy:2,req:['g_B'],nm:'Lames affûtées',em:'🔪',max:5,ds:'Saignement ×1,20 par niv',ap:(e,l)=>e.bleedMul*=P(1.20,l)},
+    {id:'g_E',gx:2,gy:2,req:['g_B','g_C'],nm:'Fureur',em:'🗡️',max:5,ds:'Dégâts ×1,16 par niv (exige Saigner + Cuirasse)',ap:(e,l)=>e.dmgMul*=P(1.16,l)},
+    {id:'g_F',gx:4,gy:2,req:['g_C'],nm:'Faiblesse',em:'☠️',max:1,ds:'Ouvre : Vulnérabilité (+20% dégâts subis).',ap:e=>e.vulnBase+=0.20},
+    {id:'g_G',gx:1,gy:3,req:['g_D'],nm:'Plaies ouvertes',em:'🩹',max:5,ds:'Saignement ×1,18 par niv',ap:(e,l)=>e.bleedMul*=P(1.18,l)},
+    {id:'g_H',gx:2,gy:3,req:['g_E'],nm:'Mise à mort',em:'💥',max:4,ds:'Dégâts critiques +20% par niv',ap:(e,l)=>e.critMultAdd+=0.2*l},
+    {id:'g_I',gx:3,gy:3,req:['g_F'],nm:'Broyer',em:'🔨',max:5,ds:'Vulnérabilité ×1,15 par niv',ap:(e,l)=>e.vulnMul*=P(1.15,l)},
+    {id:'g_K1',gx:0,gy:4,req:['g_G'],key:1,syn:'bloodrage',nm:'Saignée furieuse',em:'🌀',max:1,ds:'★ SYNERGIE : vitesse d’attaque ×(1+saignement), jusqu’à ×3.'},
+    {id:'g_K2',gx:2,gy:4,req:['g_H'],key:1,nm:'Berserker',em:'😡',max:1,ds:'★ KEYSTONE : dégâts ×2 quand PV < 50%.',ap:e=>e.dmgLowHp=1.0},
+    {id:'g_K3',gx:4,gy:4,req:['g_I'],key:1,nm:'Colosse',em:'🗿',max:1,ds:'★ KEYSTONE : PV max ×2 et dégâts ×1,5.',ap:e=>{e.hpMul*=2;e.dmgMul*=1.5}},
+    {id:'g_C1',gx:1,gy:5,req:['g_K1','g_K2'],cap:1,nm:'Titan de sang',em:'💠',max:1,ds:'CAPSTONE : dégâts ×2 ET saignement ×2.',ap:e=>{e.dmgMul*=2;e.bleedMul*=2}},
+    {id:'g_C2',gx:3,gy:5,req:['g_K2','g_K3'],cap:1,nm:'Bourreau colossal',em:'💠',max:1,ds:'CAPSTONE : dégâts ×2,5 ET +30% vulnérabilité.',ap:e=>{e.dmgMul*=2.5;e.vulnBase+=0.30}},
+    {id:'g_C3',gx:2,gy:6,req:['g_K1','g_K3'],cap:1,nm:'Rempart écarlate',em:'💠',max:1,ds:'CAPSTONE : PV max ×2 ET saignement ×2.',ap:e=>{e.hpMul*=2;e.bleedMul*=2}},
   ]},
-  mage:{branches:[
-    {nm:'Feu',col:'var(--ember)',nodes:[
-      {id:'m_f1',nm:'Enflammer',em:'🔥',max:1,ds:'Ouvre : brûlure (40% ATK/s).',ap:e=>e.burnBase+=0.40},
-      {id:'m_f2',nm:'Combustion',em:'🔥',max:5,ds:'Brûlure ×1,20 par niv',ap:(e,l)=>e.burnMul*=P(1.20,l)},
-      {id:'m_f3',nm:'Fournaise',em:'🌋',max:5,ds:'Brûlure ×1,18 par niv',ap:(e,l)=>e.burnMul*=P(1.18,l)},
-      {id:'m_f4',nm:'Braise ardente',em:'☄️',max:5,ds:'Brûlure ×1,16 par niv',ap:(e,l)=>e.burnMul*=P(1.16,l)},
-      {id:'m_fK',key:1,nm:'Immolation',em:'😈',max:1,ds:'★ KEYSTONE : brûlure ×3, mais dégâts directs ×0,6.',ap:e=>{e.burnMul*=3;e.dmgMul*=0.6}},
-    ]},
-    {nm:'Givre',col:'var(--xp)',nodes:[
-      {id:'m_g1',nm:'Givrer',em:'❄️',max:1,ds:'Ouvre : Vulnérabilité (+15%).',ap:e=>e.vulnBase+=0.15},
-      {id:'m_g2',nm:'Gel profond',em:'🧊',max:5,ds:'Vulnérabilité ×1,15 par niv',ap:(e,l)=>e.vulnMul*=P(1.15,l)},
-      {id:'m_g3',nm:'Carapace de glace',em:'🛡️',max:5,ds:'PV max ×1,15 par niv',ap:(e,l)=>e.hpMul*=P(1.15,l)},
-      {id:'m_g4',nm:'Éclats de glace',em:'🌨️',max:5,ds:'Vulnérabilité ×1,13 par niv',ap:(e,l)=>e.vulnMul*=P(1.13,l)},
-      {id:'m_gK',key:1,syn:'conflag',nm:'Zéro absolu',em:'🔷',max:1,ds:'★ SYNERGIE : brûlure ×(1 + vulnérabilité×2).'},
-    ]},
-    {nm:'Foudre',col:'var(--gold)',nodes:[
-      {id:'m_l1',nm:'Décharge',em:'⚡',max:5,ds:'+4% critique par niv',ap:(e,l)=>e.critAdd+=4*l},
-      {id:'m_l2',nm:'Arcanes',em:'🔮',max:5,ds:'Dégâts ×1,15 par niv',ap:(e,l)=>e.dmgMul*=P(1.15,l)},
-      {id:'m_l3',nm:'Conductivité',em:'🌩️',max:5,ds:'Dégâts critiques +25% par niv',ap:(e,l)=>e.critMultAdd+=0.25*l},
-      {id:'m_l4',nm:'Fulguration',em:'✨',max:5,ds:'Dégâts ×1,13 par niv',ap:(e,l)=>e.dmgMul*=P(1.13,l)},
-      {id:'m_lK',key:1,nm:'Surcharge',em:'⚡',max:1,ds:'★ KEYSTONE : +150% dégâts critiques (×2 → ×3,5).',ap:e=>e.critMultAdd+=1.5},
-    ]},
-  ],grand:[
-    {id:'m_GR1',nm:'Avatar élémentaire',em:'💠',ds:'CAPSTONE : dégâts ×2 ET brûlure ×2.',req:['m_fK','m_gK'],ap:e=>{e.dmgMul*=2;e.burnMul*=2}},
-    {id:'m_GR2',nm:'Cataclysme',em:'💠',ds:'CAPSTONE : brûlure ×2 ET +100% dégâts critiques.',req:['m_fK','m_lK'],ap:e=>{e.burnMul*=2;e.critMultAdd+=1}},
-    {id:'m_GR3',nm:'Ère glaciaire',em:'💠',ds:'CAPSTONE : vulnérabilité ×2 ET dégâts ×1,8.',req:['m_gK','m_lK'],ap:e=>{e.vulnMul*=2;e.dmgMul*=1.8}},
+  mage:{nodes:[
+    {id:'m_A',gx:2,gy:0,req:[],nm:'Arcanes',em:'🔮',max:5,ds:'Dégâts ×1,15 par niv',ap:(e,l)=>e.dmgMul*=P(1.15,l)},
+    {id:'m_B',gx:1,gy:1,req:['m_A'],nm:'Enflammer',em:'🔥',max:1,ds:'Ouvre : brûlure (40% ATK/s).',ap:e=>e.burnBase+=0.40},
+    {id:'m_C',gx:3,gy:1,req:['m_A'],nm:'Givrer',em:'❄️',max:1,ds:'Ouvre : Vulnérabilité (+15%).',ap:e=>e.vulnBase+=0.15},
+    {id:'m_D',gx:0,gy:2,req:['m_B'],nm:'Combustion',em:'🌋',max:5,ds:'Brûlure ×1,20 par niv',ap:(e,l)=>e.burnMul*=P(1.20,l)},
+    {id:'m_E',gx:2,gy:2,req:['m_B','m_C'],nm:'Fulguration',em:'✨',max:5,ds:'Dégâts ×1,14 par niv (exige Enflammer + Givrer)',ap:(e,l)=>e.dmgMul*=P(1.14,l)},
+    {id:'m_F',gx:4,gy:2,req:['m_C'],nm:'Gel profond',em:'🧊',max:5,ds:'Vulnérabilité ×1,15 par niv',ap:(e,l)=>e.vulnMul*=P(1.15,l)},
+    {id:'m_G',gx:1,gy:3,req:['m_D'],nm:'Fournaise',em:'☄️',max:5,ds:'Brûlure ×1,18 par niv',ap:(e,l)=>e.burnMul*=P(1.18,l)},
+    {id:'m_H',gx:2,gy:3,req:['m_E'],nm:'Décharge',em:'⚡',max:5,ds:'+5% critique par niv',ap:(e,l)=>e.critAdd+=5*l},
+    {id:'m_I',gx:3,gy:3,req:['m_F'],nm:'Carapace de glace',em:'🛡️',max:5,ds:'PV max ×1,15 par niv',ap:(e,l)=>e.hpMul*=P(1.15,l)},
+    {id:'m_K1',gx:0,gy:4,req:['m_G'],key:1,nm:'Immolation',em:'😈',max:1,ds:'★ KEYSTONE : brûlure ×3, mais dégâts directs ×0,6.',ap:e=>{e.burnMul*=3;e.dmgMul*=0.6}},
+    {id:'m_K2',gx:2,gy:4,req:['m_H'],key:1,nm:'Surcharge',em:'⚡',max:1,ds:'★ KEYSTONE : +150% dégâts critiques (×2 → ×3,5).',ap:e=>e.critMultAdd+=1.5},
+    {id:'m_K3',gx:4,gy:4,req:['m_I'],key:1,syn:'conflag',nm:'Zéro absolu',em:'🔷',max:1,ds:'★ SYNERGIE : brûlure ×(1+vulnérabilité×2).'},
+    {id:'m_C1',gx:1,gy:5,req:['m_K1','m_K2'],cap:1,nm:'Cataclysme',em:'💠',max:1,ds:'CAPSTONE : brûlure ×2 ET +100% dégâts critiques.',ap:e=>{e.burnMul*=2;e.critMultAdd+=1}},
+    {id:'m_C2',gx:3,gy:5,req:['m_K2','m_K3'],cap:1,nm:'Ère glaciaire',em:'💠',max:1,ds:'CAPSTONE : vulnérabilité ×2 ET dégâts ×1,8.',ap:e=>{e.vulnMul*=2;e.dmgMul*=1.8}},
+    {id:'m_C3',gx:2,gy:6,req:['m_K1','m_K3'],cap:1,nm:'Avatar élémentaire',em:'💠',max:1,ds:'CAPSTONE : dégâts ×2 ET brûlure ×2.',ap:e=>{e.dmgMul*=2;e.burnMul*=2}},
   ]},
-  rodeur:{branches:[
-    {nm:'Poison',col:'var(--nutrition)',nodes:[
-      {id:'r_p1',nm:'Empoisonner',em:'☠️',max:1,ds:'Ouvre : poison (1,5% PV max/s).',ap:e=>e.poisonBase+=0.015},
-      {id:'r_p2',nm:'Virulence',em:'🧪',max:5,ds:'Poison ×1,20 par niv',ap:(e,l)=>e.poisonMul*=P(1.20,l)},
-      {id:'r_p3',nm:'Corrosion',em:'🐍',max:5,ds:'Poison ×1,18 par niv',ap:(e,l)=>e.poisonMul*=P(1.18,l)},
-      {id:'r_p4',nm:'Gangrène',em:'🦠',max:5,ds:'Poison ×1,16 par niv',ap:(e,l)=>e.poisonMul*=P(1.16,l)},
-      {id:'r_pK',key:1,nm:'Peste',em:'🧫',max:1,ds:'★ KEYSTONE : poison ×2,5.',ap:e=>e.poisonMul*=2.5},
-    ]},
-    {nm:'Précision',col:'var(--gold)',nodes:[
-      {id:'r_c1',nm:'Visée',em:'🎯',max:5,ds:'+5% critique par niv',ap:(e,l)=>e.critAdd+=5*l},
-      {id:'r_c2',nm:'Tir puissant',em:'🏹',max:5,ds:'Dégâts ×1,15 par niv',ap:(e,l)=>e.dmgMul*=P(1.15,l)},
-      {id:'r_c3',nm:'Précision',em:'👁️',max:5,ds:'+4% critique par niv',ap:(e,l)=>e.critAdd+=4*l},
-      {id:'r_c4',nm:'Coup fatal',em:'💥',max:4,ds:'Dégâts critiques +25% par niv (×2 → ×3)',ap:(e,l)=>e.critMultAdd+=0.25*l},
-      {id:'r_cK',key:1,syn:'assassin',nm:'Assassin',em:'🗡️',max:1,ds:'★ SYNERGIE : ton crit augmente ta vitesse d’attaque.'},
-    ]},
-    {nm:'Chasse',col:'var(--sport)',nodes:[
-      {id:'r_h1',nm:'Cupidité',em:'🪙',max:5,ds:'Or ×1,18 par niv',ap:(e,l)=>e.goldMul*=P(1.18,l)},
-      {id:'r_h2',nm:'Pièges',em:'🪤',max:5,ds:'Dégâts ×1,13 par niv',ap:(e,l)=>e.dmgMul*=P(1.13,l)},
-      {id:'r_h3',nm:'Butin',em:'💰',max:5,ds:'Or/sec ×1,18 par niv',ap:(e,l)=>e.goldSecMul*=P(1.18,l)},
-      {id:'r_h4',nm:'Traque',em:'🐾',max:5,ds:'Dégâts ×1,12 par niv',ap:(e,l)=>e.dmgMul*=P(1.12,l)},
-      {id:'r_hK',key:1,syn:'bounty',nm:'Chasseur de primes',em:'🎖️',max:1,ds:'★ SYNERGIE : ta cupidité augmente tes dégâts.'},
-    ]},
-  ],grand:[
-    {id:'r_GR1',nm:'Prédateur apex',em:'💠',ds:'CAPSTONE : poison ×2 ET dégâts ×2.',req:['r_pK','r_cK'],ap:e=>{e.poisonMul*=2;e.dmgMul*=2}},
-    {id:'r_GR2',nm:'Contrebandier mortel',em:'💠',ds:'CAPSTONE : poison ×2 ET or ×2.',req:['r_pK','r_hK'],ap:e=>{e.poisonMul*=2;e.goldMul*=2}},
-    {id:'r_GR3',nm:'Œil du faucon',em:'💠',ds:'CAPSTONE : +100% dégâts critiques ET vitesse d’attaque ×1,4.',req:['r_cK','r_hK'],ap:e=>{e.critMultAdd+=1;e.atkSpeedMul*=1.4}},
+  rodeur:{nodes:[
+    {id:'r_A',gx:2,gy:0,req:[],nm:'Tir puissant',em:'🏹',max:5,ds:'Dégâts ×1,15 par niv',ap:(e,l)=>e.dmgMul*=P(1.15,l)},
+    {id:'r_B',gx:1,gy:1,req:['r_A'],nm:'Empoisonner',em:'☠️',max:1,ds:'Ouvre : poison (1,5% PV max/s).',ap:e=>e.poisonBase+=0.015},
+    {id:'r_C',gx:3,gy:1,req:['r_A'],nm:'Visée',em:'🎯',max:5,ds:'+5% critique par niv',ap:(e,l)=>e.critAdd+=5*l},
+    {id:'r_D',gx:0,gy:2,req:['r_B'],nm:'Virulence',em:'🧪',max:5,ds:'Poison ×1,20 par niv',ap:(e,l)=>e.poisonMul*=P(1.20,l)},
+    {id:'r_E',gx:2,gy:2,req:['r_B','r_C'],nm:'Coup fatal',em:'💥',max:4,ds:'Dégâts critiques +25% par niv (exige Empoisonner + Visée)',ap:(e,l)=>e.critMultAdd+=0.25*l},
+    {id:'r_F',gx:4,gy:2,req:['r_C'],nm:'Cupidité',em:'🪙',max:5,ds:'Or ×1,18 par niv',ap:(e,l)=>e.goldMul*=P(1.18,l)},
+    {id:'r_G',gx:1,gy:3,req:['r_D'],nm:'Corrosion',em:'🐍',max:5,ds:'Poison ×1,18 par niv',ap:(e,l)=>e.poisonMul*=P(1.18,l)},
+    {id:'r_H',gx:2,gy:3,req:['r_E'],nm:'Précision',em:'👁️',max:5,ds:'+4% critique par niv',ap:(e,l)=>e.critAdd+=4*l},
+    {id:'r_I',gx:3,gy:3,req:['r_F'],nm:'Butin',em:'💰',max:5,ds:'Or/sec ×1,18 par niv',ap:(e,l)=>e.goldSecMul*=P(1.18,l)},
+    {id:'r_K1',gx:0,gy:4,req:['r_G'],key:1,nm:'Peste',em:'🧫',max:1,ds:'★ KEYSTONE : poison ×2,5.',ap:e=>e.poisonMul*=2.5},
+    {id:'r_K2',gx:2,gy:4,req:['r_H'],key:1,syn:'assassin',nm:'Assassin',em:'🗡️',max:1,ds:'★ SYNERGIE : ton crit augmente ta vitesse d’attaque.'},
+    {id:'r_K3',gx:4,gy:4,req:['r_I'],key:1,syn:'bounty',nm:'Chasseur de primes',em:'🎖️',max:1,ds:'★ SYNERGIE : ta cupidité augmente tes dégâts.'},
+    {id:'r_C1',gx:1,gy:5,req:['r_K1','r_K2'],cap:1,nm:'Prédateur apex',em:'💠',max:1,ds:'CAPSTONE : poison ×2 ET dégâts ×2.',ap:e=>{e.poisonMul*=2;e.dmgMul*=2}},
+    {id:'r_C2',gx:3,gy:5,req:['r_K2','r_K3'],cap:1,nm:'Œil du faucon',em:'💠',max:1,ds:'CAPSTONE : +100% dégâts critiques ET vitesse d’attaque ×1,4.',ap:e=>{e.critMultAdd+=1;e.atkSpeedMul*=1.4}},
+    {id:'r_C3',gx:2,gy:6,req:['r_K1','r_K3'],cap:1,nm:'Contrebandier mortel',em:'💠',max:1,ds:'CAPSTONE : poison ×2 ET or ×2.',ap:e=>{e.poisonMul*=2;e.goldMul*=2}},
   ]},
-  paladin:{branches:[
-    {nm:'Sacré',col:'var(--gold)',nodes:[
-      {id:'p_s1',nm:'Feu sacré',em:'✨',max:1,ds:'Ouvre : brûlure sacrée (35% ATK/s).',ap:e=>e.burnBase+=0.35},
-      {id:'p_s2',nm:'Ferveur',em:'🔥',max:5,ds:'Brûlure ×1,18 par niv',ap:(e,l)=>e.burnMul*=P(1.18,l)},
-      {id:'p_s3',nm:'Zèle',em:'⚔️',max:5,ds:'Dégâts ×1,14 par niv',ap:(e,l)=>e.dmgMul*=P(1.14,l)},
-      {id:'p_s4',nm:'Lumière punitive',em:'🌟',max:5,ds:'Brûlure ×1,15 par niv',ap:(e,l)=>e.burnMul*=P(1.15,l)},
-      {id:'p_sK',key:1,syn:'croisade',nm:'Croisade',em:'🔆',max:1,ds:'★ SYNERGIE : tes dégâts amplifient ta brûlure sacrée.'},
-    ]},
-    {nm:'Foi',col:'var(--regen)',nodes:[
-      {id:'p_f1',nm:'Bouclier',em:'🛡️',max:5,ds:'PV max ×1,18 par niv',ap:(e,l)=>e.hpMul*=P(1.18,l)},
-      {id:'p_f2',nm:'Dévotion',em:'❤️',max:5,ds:'PV ×1,12 & +2 régén par niv',ap:(e,l)=>{e.hpMul*=P(1.12,l);e.regenAdd+=2*l}},
-      {id:'p_f3',nm:'Sanctuaire',em:'⛪',max:1,ds:'Ouvre : Vulnérabilité (+15%).',ap:e=>e.vulnBase+=0.15},
-      {id:'p_f4',nm:'Serment',em:'📜',max:5,ds:'Dégâts ×1,12 par niv',ap:(e,l)=>e.dmgMul*=P(1.12,l)},
-      {id:'p_fK',key:1,nm:'Rempart',em:'🏰',max:1,ds:'★ KEYSTONE : PV max ×2, +10 régén/s.',ap:e=>{e.hpMul*=2;e.regenAdd+=10}},
-    ]},
-    {nm:'Prospérité',col:'var(--ember)',nodes:[
-      {id:'p_p1',nm:'Dîme',em:'💰',max:5,ds:'Or/sec ×1,18 par niv',ap:(e,l)=>e.goldSecMul*=P(1.18,l)},
-      {id:'p_p2',nm:'Offrande',em:'🪙',max:5,ds:'Or ×1,15 par niv',ap:(e,l)=>e.goldMul*=P(1.15,l)},
-      {id:'p_p3',nm:'Trésor',em:'💎',max:5,ds:'Or/sec ×1,18 par niv',ap:(e,l)=>e.goldSecMul*=P(1.18,l)},
-      {id:'p_p4',nm:'Bénédiction',em:'🙏',max:5,ds:'Dégâts ×1,10 par niv',ap:(e,l)=>e.dmgMul*=P(1.10,l)},
-      {id:'p_pK',key:1,syn:'prosperite',nm:'Prospérité sacrée',em:'👑',max:1,ds:'★ SYNERGIE : ton or/sec augmente tes dégâts.'},
-    ]},
-  ],grand:[
-    {id:'p_GR1',nm:'Avatar divin',em:'💠',ds:'CAPSTONE : dégâts ×2 ET brûlure ×2.',req:['p_sK','p_fK'],ap:e=>{e.dmgMul*=2;e.burnMul*=2}},
-    {id:'p_GR2',nm:'Templier d’or',em:'💠',ds:'CAPSTONE : brûlure ×2 ET or ×2.',req:['p_sK','p_pK'],ap:e=>{e.burnMul*=2;e.goldMul*=2}},
-    {id:'p_GR3',nm:'Gardien éternel',em:'💠',ds:'CAPSTONE : PV max ×2 ET or/sec ×2.',req:['p_fK','p_pK'],ap:e=>{e.hpMul*=2;e.goldSecMul*=2}},
+  paladin:{nodes:[
+    {id:'p_A',gx:2,gy:0,req:[],nm:'Zèle',em:'⚔️',max:5,ds:'Dégâts ×1,14 par niv',ap:(e,l)=>e.dmgMul*=P(1.14,l)},
+    {id:'p_B',gx:1,gy:1,req:['p_A'],nm:'Feu sacré',em:'✨',max:1,ds:'Ouvre : brûlure sacrée (35% ATK/s).',ap:e=>e.burnBase+=0.35},
+    {id:'p_C',gx:3,gy:1,req:['p_A'],nm:'Bouclier',em:'🛡️',max:5,ds:'PV max ×1,18 par niv',ap:(e,l)=>e.hpMul*=P(1.18,l)},
+    {id:'p_D',gx:0,gy:2,req:['p_B'],nm:'Ferveur',em:'🔥',max:5,ds:'Brûlure ×1,18 par niv',ap:(e,l)=>e.burnMul*=P(1.18,l)},
+    {id:'p_E',gx:2,gy:2,req:['p_B','p_C'],nm:'Serment',em:'📜',max:5,ds:'Dégâts ×1,13 par niv (exige Feu sacré + Bouclier)',ap:(e,l)=>e.dmgMul*=P(1.13,l)},
+    {id:'p_F',gx:4,gy:2,req:['p_C'],nm:'Dîme',em:'💰',max:5,ds:'Or/sec ×1,18 par niv',ap:(e,l)=>e.goldSecMul*=P(1.18,l)},
+    {id:'p_G',gx:1,gy:3,req:['p_D'],nm:'Lumière punitive',em:'🌟',max:5,ds:'Brûlure ×1,15 par niv',ap:(e,l)=>e.burnMul*=P(1.15,l)},
+    {id:'p_H',gx:2,gy:3,req:['p_E'],nm:'Dévotion',em:'❤️',max:5,ds:'PV ×1,12 & +2 régén par niv',ap:(e,l)=>{e.hpMul*=P(1.12,l);e.regenAdd+=2*l}},
+    {id:'p_I',gx:3,gy:3,req:['p_F'],nm:'Offrande',em:'🪙',max:5,ds:'Or ×1,15 par niv',ap:(e,l)=>e.goldMul*=P(1.15,l)},
+    {id:'p_K1',gx:0,gy:4,req:['p_G'],key:1,syn:'croisade',nm:'Croisade',em:'🔆',max:1,ds:'★ SYNERGIE : tes dégâts amplifient ta brûlure sacrée.'},
+    {id:'p_K2',gx:2,gy:4,req:['p_H'],key:1,nm:'Rempart',em:'🏰',max:1,ds:'★ KEYSTONE : PV max ×2, +10 régén/s.',ap:e=>{e.hpMul*=2;e.regenAdd+=10}},
+    {id:'p_K3',gx:4,gy:4,req:['p_I'],key:1,syn:'prosperite',nm:'Prospérité sacrée',em:'👑',max:1,ds:'★ SYNERGIE : ton or/sec augmente tes dégâts.'},
+    {id:'p_C1',gx:1,gy:5,req:['p_K1','p_K2'],cap:1,nm:'Avatar divin',em:'💠',max:1,ds:'CAPSTONE : dégâts ×2 ET brûlure ×2.',ap:e=>{e.dmgMul*=2;e.burnMul*=2}},
+    {id:'p_C2',gx:3,gy:5,req:['p_K2','p_K3'],cap:1,nm:'Gardien éternel',em:'💠',max:1,ds:'CAPSTONE : PV max ×2 ET or/sec ×2.',ap:e=>{e.hpMul*=2;e.goldSecMul*=2}},
+    {id:'p_C3',gx:2,gy:6,req:['p_K1','p_K3'],cap:1,nm:'Templier d’or',em:'💠',max:1,ds:'CAPSTONE : brûlure ×2 ET or ×2.',ap:e=>{e.burnMul*=2;e.goldMul*=2}},
   ]},
 };
 // Synergies (lisent tes effets accumulés → multiplicatif)
@@ -589,27 +551,17 @@ const SYN={
   croisade:e=>{e.burnMul*=(1+Math.min(3,(e.dmgMul-1)*0.8));},
   prosperite:e=>{e.dmgMul*=(1+(e.goldSecMul-1)*0.6);},
 };
-const KEY_REQ=7;
 // Budget de points LIMITÉ : on ne peut pas tout prendre, il faut choisir un
 // build. Le respec est gratuit → on expérimente librement.
-const POINT_CAP=35;
-function branchSpent(cls,bi){const a=S.classTal[cls]||{};return CLASS_TREES[cls].branches[bi].nodes.reduce((s,n)=>s+(a[n.id]||0),0);}
-function classSpent(cls){const a=S.classTal[cls]||{},t=CLASS_TREES[cls];let s=0;for(const b of t.branches)for(const n of b.nodes)s+=a[n.id]||0;for(const n of(t.grand||[]))s+=a[n.id]||0;return s;}
+const POINT_CAP=28;
+const nodeById=(cls,id)=>CLASS_TREES[cls].nodes.find(n=>n.id===id);
+function classSpent(cls){const a=S.classTal[cls]||{},t=CLASS_TREES[cls];let s=0;for(const n of t.nodes)s+=a[n.id]||0;return s;}
 function classPoints(cls){const total=Math.min(POINT_CAP,classLevelOf(S.classXp[cls]||0));const spent=classSpent(cls);return{total,spent,avail:total-spent};}
-function nodeUnlocked(cls,bi,ni){
-  const a=S.classTal[cls]||{};
-  if(bi===-1){const n=CLASS_TREES[cls].grand[ni];return (n.req||[]).every(id=>(a[id]||0)>0);}
-  const b=CLASS_TREES[cls].branches[bi],n=b.nodes[ni];
-  if(ni===0)return true;
-  const prev=(a[b.nodes[ni-1].id]||0)>0;
-  if(n.key)return prev&&branchSpent(cls,bi)>=KEY_REQ;
-  return prev;
-}
+function nodeUnlocked(cls,id){const a=S.classTal[cls]||{};const n=nodeById(cls,id);if(!n)return false;const req=n.req||[];if(!req.length)return true;return req.every(r=>(a[r]||0)>0);}
 function classEff(cls){
   const e={dmgMul:1,hpMul:1,goldMul:1,goldSecMul:1,atkSpeedMul:1,clickMul:1,burnMul:1,bleedMul:1,poisonMul:1,vulnMul:1,burnBase:0,bleedBase:0,poisonBase:0,vulnBase:0,critAdd:0,critMultAdd:0,regenAdd:0,dmgLowHp:0};
   const t=CLASS_TREES[cls]; if(!t)return e; const a=S.classTal&&S.classTal[cls]||{}; const syns=[];
-  const all=[...t.branches.flatMap(b=>b.nodes),...(t.grand||[])];
-  for(const n of all){const l=a[n.id]||0;if(l>0){if(n.ap)n.ap(e,l);if(n.syn)syns.push(n.syn);}}
+  for(const n of t.nodes){const l=a[n.id]||0;if(l>0){if(n.ap)n.ap(e,l);if(n.syn)syns.push(n.syn);}}
   for(const s of syns) SYN[s]&&SYN[s](e);
   return e;
 }
@@ -642,25 +594,28 @@ function doPrestige(){
 // ============ Succès ============
 const compTot=s=>Object.values(s.comp||{}).reduce((a,n)=>a+n,0);
 const talTot=s=>Object.values(s.classTal||{}).reduce((a,tree)=>a+Object.values(tree||{}).reduce((x,n)=>x+n,0),0);
+// Chaque succès débloqué donne un bonus PERMANENT de +6% dégâts & or (cumulatif),
+// en plus de sa récompense en gemmes/reliques.
+const ACH_BONUS=0.06;
 const ACH=[
-  {id:'floor5',name:'Premiers pas',ds:'Atteindre l’étage 5',em:'🏰',done:s=>s.bestFloor>=5,gems:3},
-  {id:'floor10',name:'Explorateur',ds:'Atteindre l’étage 10',em:'🗺️',done:s=>s.bestFloor>=10,gems:5},
-  {id:'floor25',name:'Aventurier',ds:'Atteindre l’étage 25',em:'🧭',done:s=>s.bestFloor>=25,gems:10},
-  {id:'floor50',name:'Conquérant',ds:'Atteindre l’étage 50',em:'👑',done:s=>s.bestFloor>=50,reliques:3},
-  {id:'kills100',name:'Nettoyeur',ds:'Vaincre 100 monstres',em:'⚔️',done:s=>s.kills>=100,gems:3},
-  {id:'kills1000',name:'Fléau du donjon',ds:'Vaincre 1 000 monstres',em:'💀',done:s=>s.kills>=1000,gems:8},
-  {id:'level10',name:'Aguerri',ds:'Héros niveau 10',em:'⭐',done:s=>s.level>=10,gems:4},
-  {id:'level25',name:'Vétéran',ds:'Héros niveau 25',em:'🌟',done:s=>s.level>=25,gems:8},
-  {id:'comp10',name:'Petite troupe',ds:'Posséder 10 compagnons',em:'🤝',done:s=>compTot(s)>=10,gems:4},
-  {id:'comp50',name:'Armée de l’ombre',ds:'Posséder 50 compagnons',em:'🏴',done:s=>compTot(s)>=50,gems:10},
-  {id:'tal10',name:'Éveil',ds:'10 niveaux de talents',em:'🌀',done:s=>talTot(s)>=10,gems:6},
-  {id:'reliq1',name:'Renaissance',ds:'Obtenir ta 1ère relique',em:'🏵️',done:s=>(s.reliques||0)>=1,gems:5},
-  {id:'streak3',name:'On s’y tient',ds:'3 jours de check-in d’affilée',em:'🔥',done:s=>s.streak>=3,gems:4},
-  {id:'streak7',name:'Une semaine !',ds:'7 jours d’affilée',em:'📅',done:s=>s.streak>=7,gems:8},
-  {id:'streak30',name:'Discipline de fer',ds:'30 jours d’affilée',em:'🏆',done:s=>s.streak>=30,reliques:3},
-  {id:'chap1',name:'En chemin',ds:'Franchir 1 palier d’objectif',em:'🎯',done:s=>!!s.body&&s.body.chapters>=1,gems:5},
-  {id:'chap5',name:'Transformation',ds:'Franchir 5 paliers d’objectif',em:'💪',done:s=>!!s.body&&s.body.chapters>=5,reliques:2},
-  {id:'weigh10',name:'Suivi régulier',ds:'Enregistrer 10 pesées',em:'⚖️',done:s=>!!s.body&&s.body.history.length>=10,gems:6},
+  {id:'floor5',name:'Premiers pas',ds:'Atteindre l’étage 5',em:'🏰',done:s=>s.bestFloor>=5,gems:6},
+  {id:'floor10',name:'Explorateur',ds:'Atteindre l’étage 10',em:'🗺️',done:s=>s.bestFloor>=10,gems:10},
+  {id:'floor25',name:'Aventurier',ds:'Atteindre l’étage 25',em:'🧭',done:s=>s.bestFloor>=25,gems:18},
+  {id:'floor50',name:'Conquérant',ds:'Atteindre l’étage 50',em:'👑',done:s=>s.bestFloor>=50,reliques:5},
+  {id:'kills100',name:'Nettoyeur',ds:'Vaincre 100 monstres',em:'⚔️',done:s=>s.kills>=100,gems:6},
+  {id:'kills1000',name:'Fléau du donjon',ds:'Vaincre 1 000 monstres',em:'💀',done:s=>s.kills>=1000,gems:15},
+  {id:'level10',name:'Aguerri',ds:'Héros niveau 10',em:'⭐',done:s=>s.level>=10,gems:8},
+  {id:'level25',name:'Vétéran',ds:'Héros niveau 25',em:'🌟',done:s=>s.level>=25,gems:15},
+  {id:'comp10',name:'Petite troupe',ds:'Posséder 10 compagnons',em:'🤝',done:s=>compTot(s)>=10,gems:8},
+  {id:'comp50',name:'Armée de l’ombre',ds:'Posséder 50 compagnons',em:'🏴',done:s=>compTot(s)>=50,gems:18},
+  {id:'tal10',name:'Éveil',ds:'10 niveaux de talents',em:'🌀',done:s=>talTot(s)>=10,gems:12},
+  {id:'reliq1',name:'Renaissance',ds:'Obtenir ta 1ère relique',em:'🏵️',done:s=>(s.reliques||0)>=1,gems:10},
+  {id:'streak3',name:'On s’y tient',ds:'3 jours de check-in d’affilée',em:'🔥',done:s=>s.streak>=3,gems:8},
+  {id:'streak7',name:'Une semaine !',ds:'7 jours d’affilée',em:'📅',done:s=>s.streak>=7,gems:15},
+  {id:'streak30',name:'Discipline de fer',ds:'30 jours d’affilée',em:'🏆',done:s=>s.streak>=30,reliques:5},
+  {id:'chap1',name:'En chemin',ds:'Franchir 1 palier d’objectif',em:'🎯',done:s=>!!s.body&&s.body.chapters>=1,gems:10},
+  {id:'chap5',name:'Transformation',ds:'Franchir 5 paliers d’objectif',em:'💪',done:s=>!!s.body&&s.body.chapters>=5,reliques:4},
+  {id:'weigh10',name:'Suivi régulier',ds:'Enregistrer 10 pesées',em:'⚖️',done:s=>!!s.body&&s.body.history.length>=10,gems:12},
 ];
 function achToast(a){
   const rw=a.reliques?('+'+a.reliques+' 🏵️'):('+'+(a.gems||0)+' 💎');
@@ -762,17 +717,22 @@ function D(){
   else if(voie==='force'){vHp=1+0.05*ch; vDmg=1+0.03*ch;}
   else if(voie==='equilibre'){vGold=1+0.04*ch; vDmg=1+0.01*ch;}
   const pres=1+0.04*(S.reliques||0);
+  const achMult=1+ACH_BONUS*((S.unlocked||[]).length); // chaque succès = bonus permanent
   const vuln=1+ce.vulnBase*ce.vulnMul; // givre/faiblesse (base × multiplicateurs)
-  const goldMult=c.gold*ce.goldMul*b*vGold*pres;
-  const crit=Math.min(80,BASE.crit+c.crit+ce.critAdd+(S.up.crit||0)*UP_GAIN.crit+vCrit);
-  const critMult=CRIT_MULT+(ce.critMultAdd||0); // Surcharge : ×3
+  const goldMult=c.gold*ce.goldMul*b*vGold*pres*achMult;
+  const crit=Math.min(100,BASE.crit+c.crit+ce.critAdd+(S.up.crit||0)*UP_GAIN.crit+vCrit);
+  const critMult=CRIT_MULT+(ce.critMultAdd||0)+(S.up.critdmg||0)*UP_GAIN.critdmg; // dégâts critiques (×base + talents + forge)
   const critF=1+(crit/100)*(critMult-1);
   const atk=BASE.atk+S.habit.atk+(S.up.atk||0)*UP_GAIN.atk;
   const maxHp=(BASE.maxHp+S.habit.maxHp+(S.up.maxHp||0)*UP_GAIN.maxHp)*c.hp*vHp*ce.hpMul;
   const regen=(BASE.regen+S.habit.regen+(S.up.regen||0)*UP_GAIN.regen)*c.regen+ce.regenAdd;
   const lowHp=(maxHp>0&&S.hp/maxHp<0.5)?(1+(ce.dmgLowHp||0)):1; // Berserker
-  const dmgMult=c.dmg*ce.dmgMul*b*vDmg*pres*lowHp;
-  const spd=ce.atkSpeedMul; // vitesse d'attaque (synergies saignement/crit)
+  // Paliers de compagnons : chaque tranche de 10 compagnons recrutés = +5% dégâts.
+  const compCount=COMPANIONS.reduce((a,cp)=>a+(S.comp[cp.id]||0),0);
+  const compTier=Math.floor(compCount/COMP_TIER_SIZE);
+  const compDmg=1+COMP_TIER_BONUS*compTier;
+  const dmgMult=c.dmg*ce.dmgMul*b*vDmg*pres*lowHp*(1+(S.up.power||0)*UP_GAIN.power)*compDmg*achMult;
+  const spd=ce.atkSpeedMul*(1+(S.up.speed||0)*UP_GAIN.speed); // vitesse d'attaque
   const hitBase=atk*critF*dmgMult*vuln;
   const dps=hitBase*spd;
   const clickBase=2+S.level+(S.up.click||0)*3;
@@ -784,7 +744,7 @@ function D(){
   const burnDps=ce.burnBase*hitBase*ce.burnMul*spd;
   const bleedDps=ce.bleedBase*hitBase*ce.bleedMul*spd;
   const poisonPct=ce.poisonBase*ce.poisonMul;
-  return{c,ce,dmgMult,goldMult,crit,critF,atk,maxHp,regen,dps,clickDmg,goldSec,offCap,vuln,spd,burnDps,bleedDps,poisonPct};
+  return{c,ce,dmgMult,goldMult,crit,critMult,critF,atk,maxHp,regen,dps,clickDmg,goldSec,offCap,vuln,spd,burnDps,bleedDps,poisonPct,compCount,compTier,compDmg};
 }
 
 // gains hors-ligne
@@ -852,6 +812,7 @@ function renderDungeon(){
     </div>
     <div class="card" style="padding:11px 13px"><div class="bar" style="height:9px"><i id="hbar" style="background:var(--regen)"></i></div><div class="s" id="hlbl" style="color:var(--muted);font-size:11px;margin-top:5px;font-variant-numeric:tabular-nums"></div></div>
     <div class="section"><span>${ic('anvil',14)} Compagnons · or/sec</span></div>
+    <div id="compbanner"></div>
     <div class="amtsel" id="amtsel"></div>
     <div id="companions"></div>
     <div class="section"><span>${ic('scroll',14)} Journal</span></div>
@@ -878,8 +839,14 @@ function renderComps(){
   const box=document.getElementById('comps'); if(!box)return;
   const owned=COMPANIONS.filter(cp=>(S.comp[cp.id]||0)>0);
   box.innerHTML=owned.length
-    ? owned.map(cp=>`<span class="cpill">${pixImg(compFrames(cp.id),18)||cp.em}<b>${fmt(S.comp[cp.id])}</b></span>`).join('')
+    ? owned.map(cp=>`<span class="cpill">${pixImg(compFrames(cp.id),18)||cp.em}<span class="cpname">${cp.nm}</span><b>×${fmt(S.comp[cp.id])}</b></span>`).join('')
     : '<span class="cnone">Recrute des compagnons ↓</span>';
+}
+function compBonusBanner(){
+  const d=D(), cnt=d.compCount, nextAt=(d.compTier+1)*COMP_TIER_SIZE, need=nextAt-cnt, pct=Math.round(d.compDmg*100-100);
+  return `<div class="compbonus"><div class="cbline"><span>${ic('sword',13)} Bonus de troupe</span><b style="color:var(--gem)">+${pct}% dégâts</b></div>
+    <div class="bar" style="height:6px;margin-top:5px"><i style="background:var(--gem);width:${Math.round((cnt%COMP_TIER_SIZE)/COMP_TIER_SIZE*100)}%"></i></div>
+    <div class="sub" style="font-size:10px;margin-top:4px">${cnt} compagnons · encore <b style="color:var(--gold)">${need}</b> pour +${Math.round(COMP_TIER_BONUS*100)}% (palier ${d.compTier+1})</div></div>`;
 }
 let buyAmt=1;
 function renderAmt(){
@@ -894,6 +861,7 @@ function amountFor(cp){
 }
 function bulkCost(cp,amt){let c=0,have=S.comp[cp.id]||0;for(let k=0;k<amt;k++)c+=compCost(cp,have+k);return c;}
 function renderCompanions(){
+  const bn=document.getElementById('compbanner'); if(bn)bn.innerHTML=compBonusBanner();
   const box=document.getElementById('companions'); if(!box)return;
   box.innerHTML=COMPANIONS.map(cp=>{
     const have=S.comp[cp.id]||0, amt=Math.max(1,amountFor(cp)), cost=bulkCost(cp,amt), can=S.gold>=cost;
@@ -945,6 +913,12 @@ function heroSwing(){
   h.classList.remove('atk'); void h.offsetWidth; h.classList.add('atk');
   const wsrc=WEAP[WEAPON_SPR[S.cls||'guerrier']];
   if(wsrc){ const w=document.createElement('img'); w.className='swing'; w.src=wsrc; h.appendChild(w); setTimeout(()=>w.remove(),280); }
+}
+function mobAttack(){
+  const mo=document.getElementById('mob'); if(mo){mo.classList.remove('mattack');void mo.offsetWidth;mo.classList.add('mattack');}
+  const h=document.getElementById('hero'); if(h){h.classList.remove('flinch');void h.offsetWidth;h.classList.add('flinch');}
+  const sc=document.querySelector('.scene'); if(sc){const c=document.createElement('div');c.className='clash';sc.appendChild(c);setTimeout(()=>c.remove(),320);}
+  haptic(4);
 }
 function slashMob(crit){
   const m=document.getElementById('mob'); if(!m)return;
@@ -1051,69 +1025,56 @@ function celebrate(tx,tg){
 }
 
 // ============ TALENTS (arbre à branches par classe) ============
-let selTal=null; // {bi,ni} nœud sélectionné
+let selTal=null; // id du nœud sélectionné
 function renderTalents(){
   const cls=S.cls||'guerrier', c=CLASSES[cls], p=classPoints(cls), t=CLASS_TREES[cls], a=S.classTal[cls]||{};
   const clvl=classLevelOf(S.classXp[cls]||0), cur=classXpForLevel(clvl), nxt=classXpForLevel(clvl+1);
-  const cols=t.branches.map((b,bi)=>{
-    const nodes=b.nodes.map((n,ni)=>{
-      const lv=a[n.id]||0, unlocked=nodeUnlocked(cls,bi,ni), maxed=lv>=n.max;
-      const st=lv>0?'alloc':(unlocked?'avail':'lock');
-      const sel=(selTal&&selTal.bi===bi&&selTal.ni===ni)?'sel':'';
-      return `<div class="tnode ${st} ${n.key?'key':''} ${sel} ${ni===0?'top':''}" data-node="${bi}-${ni}"><span class="tem">${spr('',0)||n.em}</span><span class="tlv">${lv}/${n.max}</span></div>`;
-    }).join('');
-    return `<div class="tcol"><div class="tcolh" style="color:${b.col}">${b.nm}</div>${nodes}</div>`;
-  }).join('');
-  const grand=(t.grand||[]).map((n,ni)=>{
-    const lv=a[n.id]||0, unlocked=nodeUnlocked(cls,-1,ni), maxed=lv>0;
-    const st=lv>0?'alloc':(unlocked?'avail':'lock');
-    const sel=(selTal&&selTal.bi===-1&&selTal.ni===ni)?'sel':'';
-    return `<div class="gnode ${st} ${sel}" data-node="g-${ni}"><span class="gem2">${n.em}</span><div class="gtxt"><b>${n.nm}</b><span>💠 Capstone ultime</span></div></div>`;
-  }).join('');
+  const nodes=t.nodes;
+  const maxGy=Math.max.apply(null,nodes.map(n=>n.gy));
+  const rowH=64, padTop=14, H=maxGy*rowH+padTop+56;
+  const cx=gx=>12+gx*19, cy=gy=>padTop+gy*rowH+24;
+  let edges='';
+  nodes.forEach(n=>{(n.req||[]).forEach(rid=>{const r=nodeById(cls,rid);if(!r)return;const cA=(a[n.id]||0)>0,rA=(a[rid]||0)>0;const col=(cA&&rA)?'var(--gem)':(rA?'var(--goldDim)':'var(--border)');edges+=`<line x1="${cx(r.gx)}%" y1="${cy(r.gy)}" x2="${cx(n.gx)}%" y2="${cy(n.gy)}" stroke="${col}" stroke-width="${(cA&&rA)?3:2}"/>`;});});
+  const svg=`<svg width="100%" height="${H}" style="position:absolute;left:0;top:0;pointer-events:none" preserveAspectRatio="none">${edges}</svg>`;
+  const nhtml=nodes.map(n=>{const lv=a[n.id]||0,unl=nodeUnlocked(cls,n.id),maxed=lv>=n.max;const st=lv>0?'alloc':(unl?'avail':'lock');const kind=n.cap?'cap':(n.key?'key':'');const sel=selTal===n.id?'sel':'';return `<div class="snode ${st} ${kind} ${sel}" data-nid="${n.id}" style="left:${cx(n.gx)}%;top:${cy(n.gy)-24}px"><span class="sem">${n.em}</span><span class="slv">${lv}/${n.max}</span></div>`;}).join('');
   screen.innerHTML=headerHTML('Talents',`<div class="chapbadge">🎓 ${Math.max(0,p.avail)} pt</div>`)+
     `<div class="card">
        <div style="display:flex;align-items:center;gap:10px"><span style="width:40px;display:flex;justify-content:center">${pixImg(SPR[(HERO_SPR[cls]||'knight_m')+'_idle'],40)||c.em}</span>
        <div style="flex:1"><div style="font-family:var(--serif);font-size:17px;font-weight:700">${c.name} · Niv. ${clvl}</div><div class="sub"><b style="color:var(--gold)">${p.spent}/${p.total}</b> points utilisés · ${Math.max(0,p.avail)} dispo</div></div></div>
        <div class="bar" style="margin-top:8px;height:8px"><i style="background:var(--gem);width:${Math.min(100,p.spent/POINT_CAP*100)}%"></i></div>
-       <div class="sub" style="margin-top:5px">Budget <b style="color:var(--gold)">limité (${POINT_CAP} pts)</b> : tu ne peux pas tout prendre — choisis ton build. Chaque talent est <b style="color:var(--gold)">multiplicatif</b> ; combine 2 <b style="color:var(--gold)">Keystones</b> (★) pour débloquer un <b style="color:var(--gem)">Capstone</b> (💠). Respec gratuit.</div>
+       <div class="sub" style="margin-top:5px">Arbre <b style="color:var(--gold)">à branches</b> : suis les liens, certains nœuds exigent <b>2 parents</b>. Budget <b style="color:var(--gold)">limité (${POINT_CAP} pts)</b> — tu ne peux pas tout prendre. Combine 2 <b style="color:var(--gold)">Keystones</b> (●) pour débloquer un <b style="color:var(--gem)">Capstone</b> (💠). Respec gratuit.</div>
      </div>
-     <div class="tree3">${cols}</div>
-     <div class="grandrow">${grand}</div>
+     <div class="skilltree" style="height:${H}px">${svg}${nhtml}</div>
      <div id="tdetail"></div>
      <button class="link" id="respec" style="display:block;margin:12px auto">Réinitialiser l'arbre (gratuit)</button>`;
   talDetail();
-  screen.querySelectorAll('[data-node]').forEach(el=>el.onclick=()=>{const v=el.dataset.node;let bi,ni;if(v[0]==='g'){bi=-1;ni=+v.slice(2);}else{const parts=v.split('-');bi=+parts[0];ni=+parts[1];}selTal={bi,ni};renderTalents();});
+  screen.querySelectorAll('[data-nid]').forEach(el=>el.onclick=()=>{selTal=el.dataset.nid;renderTalents();});
   document.getElementById('respec').onclick=()=>{S.classTal[cls]={};selTal=null;save();renderTalents();};
 }
 function talDetail(){
   const box=document.getElementById('tdetail'); if(!box)return;
-  const cls=S.cls||'guerrier', p=classPoints(cls);
+  const cls=S.cls||'guerrier', p=classPoints(cls), a=S.classTal[cls]||{};
   if(!selTal){box.innerHTML=`<div class="tdet"><div class="sub" style="text-align:center">👆 Touche un nœud pour voir son effet et l'allouer.</div></div>`;return;}
-  const t=CLASS_TREES[cls], a=S.classTal[cls]||{};
-  const isGrand=selTal.bi===-1;
-  const n=isGrand?t.grand[selTal.ni]:t.branches[selTal.bi].nodes[selTal.ni];
-  const nmax=isGrand?1:n.max;
-  const lv=a[n.id]||0;
-  const unlocked=nodeUnlocked(cls,selTal.bi,selTal.ni), maxed=lv>=nmax, can=unlocked&&!maxed&&p.avail>0;
-  const badge=isGrand?'<span style="color:var(--gem);font-size:10px;font-weight:800">💠 CAPSTONE ULTIME</span>':(n.key?'<span style="color:var(--gold);font-size:10px;font-weight:800">★ KEYSTONE</span>':'');
-  let lockMsg='Débloque d’abord le nœud au-dessus';
-  if(isGrand){const reqNames=(n.req||[]).map(id=>{for(const b of t.branches)for(const nn of b.nodes)if(nn.id===id)return nn.nm;return id;});lockMsg='Requiert : '+reqNames.map(x=>'« '+x+' »').join(' + ');}
-  else if(n.key)lockMsg='Requiert '+KEY_REQ+' points dans cette branche + le nœud précédent';
-  box.innerHTML=`<div class="tdet ${isGrand?'grandd':(n.key?'keyd':'')}">
+  const n=nodeById(cls,selTal); if(!n){box.innerHTML='';return;}
+  const lv=a[n.id]||0, unlocked=nodeUnlocked(cls,n.id), maxed=lv>=n.max, can=unlocked&&!maxed&&p.avail>0;
+  const badge=n.cap?'<span style="color:var(--gem);font-size:10px;font-weight:800">💠 CAPSTONE</span>':(n.key?'<span style="color:var(--gold);font-size:10px;font-weight:800">● KEYSTONE</span>':'');
+  const reqNames=(n.req||[]).map(id=>{const r=nodeById(cls,id);return r?r.nm:id;});
+  const lockMsg=reqNames.length?('Requiert '+(n.cap?'les 2 keystones':'').replace(/^$/,'')+' : '+reqNames.map(x=>'« '+x+' »').join(' + ')):'';
+  box.innerHTML=`<div class="tdet ${n.cap?'grandd':(n.key?'keyd':'')}">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="font-size:26px">${n.em}</span>
-      <div style="flex:1"><b style="font-size:15px">${n.nm}</b> ${badge}<div class="sub">${lv}/${nmax}${nmax>1?' niveaux':''}</div></div></div>
+      <div style="flex:1"><b style="font-size:15px">${n.nm}</b> ${badge}<div class="sub">${lv}/${n.max}${n.max>1?' niveaux':''}</div></div></div>
     <div style="font-size:13px;color:var(--muted);line-height:1.45;margin-bottom:10px">${n.ds}</div>
     ${!unlocked?`<div class="sub" style="color:var(--faint)">🔒 ${lockMsg}</div>`
-      :maxed?`<div class="sub" style="color:var(--success)">✓ ${isGrand?'Capstone activé':'Maximisé'}</div>`
+      :maxed?`<div class="sub" style="color:var(--success)">✓ ${n.cap?'Capstone activé':'Maximisé'}</div>`
       :`<button class="btn-gold" id="alloc" ${can?'':'disabled'}>${can?('Allouer 1 point ('+p.avail+' dispo)'):'Aucun point disponible'}</button>`}
   </div>`;
-  const al=document.getElementById('alloc'); if(al)al.onclick=()=>{const pp=classPoints(cls);if(nodeUnlocked(cls,selTal.bi,selTal.ni)&&pp.avail>0&&lv<nmax){S.classTal[cls][n.id]=lv+1;save();renderTalents();SND.buy();haptic(9);}};
+  const al=document.getElementById('alloc'); if(al)al.onclick=()=>{const pp=classPoints(cls);if(nodeUnlocked(cls,n.id)&&pp.avail>0&&lv<n.max){S.classTal[cls][n.id]=lv+1;save();renderTalents();SND.buy();haptic(9);}};
 }
 
 // ============ HÉROS ============
 function renderHero(){
   const d=D(),cur=xpForLevel(S.level),nxt=xpForLevel(S.level+1);
-  const UPG=[{k:'atk',em:'⚔️',nm:'Aiguiser la lame',ds:'+3 attaque',col:'var(--hp)'},{k:'click',em:'🗡️',nm:'Dague affûtée',ds:'+3 dégâts de clic',col:'var(--xp)'},{k:'maxHp',em:'🛡️',nm:"Armure",ds:'+20 PV max',col:'var(--regen)'},{k:'regen',em:'🧪',nm:'Élixir de régén.',ds:'+2 régén./s',col:'var(--sommeil)'},{k:'crit',em:'🎯',nm:"Œil du chasseur",ds:'+2% critique',col:'var(--gold)'}];
+  const UPG=[{k:'atk',em:'⚔️',nm:'Aiguiser la lame',ds:'+3 attaque',col:'var(--hp)'},{k:'power',em:'💪',nm:'Puissance',ds:'+6% dégâts',col:'var(--hp)'},{k:'critdmg',em:'💥',nm:'Cruauté',ds:'+10% dégâts critiques',col:'var(--ember)'},{k:'crit',em:'🎯',nm:"Œil du chasseur",ds:'+2% critique',col:'var(--gold)'},{k:'speed',em:'⚡',nm:'Célérité',ds:"+3% vitesse d'attaque",col:'var(--xp)'},{k:'click',em:'🗡️',nm:'Dague affûtée',ds:'+3 dégâts de clic',col:'var(--xp)'},{k:'maxHp',em:'🛡️',nm:"Armure",ds:'+20 PV max',col:'var(--regen)'},{k:'regen',em:'🧪',nm:'Élixir de régén.',ds:'+2 régén./s',col:'var(--sommeil)'}];
   screen.innerHTML=`<div class="header"><h1>Héros</h1><div class="goldpill"><span style="color:var(--gold);display:inline-flex;vertical-align:middle">${ic('coin',15)}</span> ${fmt(S.gold)}</div></div>
     <div class="card" style="text-align:center"><div style="display:flex;justify-content:center;height:72px;align-items:flex-end">${pixImg(heroFrames(false),68)||('<span style="font-size:52px">'+d.c.em+'</span>')}</div>
       <div style="font-family:var(--serif);font-size:20px;font-weight:700;margin-top:4px">Niveau ${S.level} · ${d.c.name} <span style="color:var(--gem);font-size:14px">(classe niv. ${classLevelOf(S.classXp[S.cls||'guerrier']||0)})</span></div>
@@ -1125,15 +1086,19 @@ function renderHero(){
       <div><b style="color:var(--xp)">${fmt(d.clickDmg)}</b><span>Dégâts/clic</span></div>
       <div><b style="color:var(--gold)">${fmt(d.goldSec)}</b><span>Or/sec</span></div></div>
       <div class="stat3" style="margin-top:12px">
+      <div><b style="color:var(--gold)">${Math.round(d.crit)}%</b><span>Chance crit</span></div>
+      <div><b style="color:var(--ember)">×${d.critMult.toFixed(2)}</b><span>Dégâts crit</span></div>
+      <div><b style="color:var(--xp)">×${d.spd.toFixed(2)}</b><span>Vit. attaque</span></div></div>
+      <div class="stat3" style="margin-top:12px">
       <div><b style="color:var(--regen)">${Math.round(d.maxHp)}</b><span>PV max</span></div>
-      <div><b style="color:var(--gold)">${Math.round(d.crit)}%</b><span>Critique</span></div>
-      <div><b style="color:var(--muted)">${fmt(S.totalDmg)}</b><span>Dégâts cumulés</span></div></div></div>
+      <div><b style="color:var(--ember)">${fmt(d.burnDps+d.bleedDps+d.poisonPct*monsterMaxHp(S.floor,S.mi))}</b><span>Effets/s</span></div>
+      <div><b style="color:var(--gem)">+${Math.round(d.compDmg*100-100)}%</b><span>Bonus troupe</span></div></div></div>
     <div class="section"><span>${ic('sword',14)} Classe</span></div>
     <div class="classgrid" id="classgrid"></div>
     <div class="section"><span>${ic('anvil',14)} Forge · dépense ton or</span></div>
     <div id="forge"></div>
     <div class="section"><span>${ic('trophy',14)} Succès</span></div>
-    <button class="buy can" id="achbtn" style="width:100%;justify-content:space-between"><span class="nm">Voir les succès</span><span class="cnt" style="font-size:16px">${(S.unlocked||[]).length}/${ACH.length}</span></button>
+    <button class="buy can" id="achbtn" style="width:100%;justify-content:space-between"><div style="text-align:left"><div class="nm">Voir les succès</div><div class="ds">Bonus permanent : <b style="color:var(--gem)">+${Math.round(ACH_BONUS*100*(S.unlocked||[]).length)}% dégâts & or</b></div></div><span class="cnt" style="font-size:16px">${(S.unlocked||[]).length}/${ACH.length}</span></button>
     <div class="section"><span>${ic('star',14)} Renaissance</span></div>
     <div class="card"><div class="sub" style="line-height:1.5">Recommence la run (or, compagnons, forge, étage) contre des <b style="color:var(--gold)">Reliques</b> permanentes : <b>+4% dégâts & or</b> chacune. Tu gardes gemmes, talents, classe, objectif et streak.</div>
       <div class="stat3" style="margin-top:12px"><div><b style="color:var(--gold)">🏵️ ${S.reliques||0}</b><span>Reliques</span></div><div><b style="color:var(--regen)">+${4*(S.reliques||0)}%</b><span>Bonus</span></div><div><b style="color:var(--xp)">+${reliquesGain(S.floor)}</b><span>Si tu renais</span></div></div>
@@ -1266,7 +1231,7 @@ function coffreOverlay(r){
 }
 
 // ============ Boucle idle (100ms) ============
-let autoAcc=0, floatAcc=0, swingAcc=0;
+let autoAcc=0, floatAcc=0, swingAcc=0, mAtkAcc=0;
 setInterval(()=>{
   const d=D(),dt=0.1;
   S.gold+=d.goldSec*dt;
@@ -1284,10 +1249,12 @@ setInterval(()=>{
     const dot=d.burnDps+d.bleedDps+d.poisonPct*monsterMaxHp(S.floor,S.mi);
     const total=d.dps+dot;
     S.mhp-=total*dt; S.totalDmg+=total*dt;
-    floatAcc+=dt; swingAcc+=dt;
+    floatAcc+=dt; swingAcc+=dt; mAtkAcc+=dt;
     // le héros frappe en rythme (cadence ×vitesse d'attaque)
     const cadence=Math.max(0.28,0.62/Math.min(3,d.spd||1));
     if(swingAcc>=cadence){ if(tab==='dungeon'&&d.dps>0){heroSwing();slashMob(false);} swingAcc=0; }
+    // le monstre riposte périodiquement (animation d'attaque + le héros encaisse)
+    if(mAtkAcc>=1.15){ if(tab==='dungeon')mobAttack(); mAtkAcc=0; }
     if(floatAcc>=0.5){ if(tab==='dungeon'){spawnFloat(fmt(d.dps*0.5),'var(--hp)',false); if(dot>0)spawnFloat(fmt(dot*0.5),'var(--ember)',false,null,'flame');} floatAcc=0; }
     if(S.mhp<=0)killMonster(); else updateDungeon(false);
   }
