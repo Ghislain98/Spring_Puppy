@@ -294,6 +294,10 @@
   /* ---- Juice / game-feel ---- */
   .brandbar { position:relative; }
   .mutebtn { position:absolute; right:12px; top:8px; background:none; border:0; font-size:18px; cursor:pointer; opacity:.85; }
+  .switch { width:46px; height:26px; border-radius:999px; background:var(--card); border:1.5px solid var(--border); position:relative; cursor:pointer; flex:0 0 auto; transition:background .15s,border-color .15s; }
+  .switch i { position:absolute; top:2px; left:2px; width:20px; height:20px; border-radius:50%; background:var(--faint); transition:left .15s,background .15s; }
+  .switch.on { background:linear-gradient(90deg,var(--goldDim),var(--gold)); border-color:var(--gold); }
+  .switch.on i { left:22px; background:#2a1c00; }
   .flt { position:absolute; font-weight:900; font-variant-numeric:tabular-nums; text-shadow:0 1px 4px #000; --dx:0px; --rot:0deg; animation:flt .85s cubic-bezier(.2,.7,.3,1) forwards; will-change:transform,opacity; z-index:5; }
   .flt.crit { filter:drop-shadow(0 0 9px var(--gold)); }
   @keyframes flt { 0%{opacity:0;transform:translate(-50%,0) scale(.5)} 14%{opacity:1;transform:translate(calc(-50% + var(--dx)*.3),-12px) scale(1.3) rotate(var(--rot))} 100%{opacity:0;transform:translate(calc(-50% + var(--dx)),-64px) scale(1) rotate(var(--rot))} }
@@ -332,7 +336,7 @@
 </style>
 
 <div class="phone">
-  <div class="brandbar"><svg class="brandmark" viewBox="0 0 24 24" width="19" height="19"><path d="M12 1.8l1.5 2.8v9.6h-3V4.6z" fill="#f4b942"/><path d="M11 14h2v6.2h-2z" fill="#f4b942"/><path d="M6.8 14.4h10.4v2H6.8z" fill="#f4b942"/><circle cx="12" cy="21" r="1.7" fill="#f4b942"/></svg>Habit<b>Quest</b> <span class="tag">· fantasy</span><button id="mute" class="mutebtn">🔊</button></div>
+  <div class="brandbar"><svg class="brandmark" viewBox="0 0 24 24" width="19" height="19"><path d="M12 1.8l1.5 2.8v9.6h-3V4.6z" fill="#f4b942"/><path d="M11 14h2v6.2h-2z" fill="#f4b942"/><path d="M6.8 14.4h10.4v2H6.8z" fill="#f4b942"/><circle cx="12" cy="21" r="1.7" fill="#f4b942"/></svg>Habit<b>Quest</b> <span class="tag">· fantasy</span><button id="settings" class="mutebtn" style="right:42px">⚙️</button><button id="mute" class="mutebtn">🔊</button></div>
   <div class="cur" id="cur"></div>
   <div class="screen" id="screen"></div>
   <div class="nav" id="nav"></div>
@@ -512,7 +516,7 @@ function fresh(){return{
   floor:1,mi:0,mhp:monsterMaxHp(1,0),hp:BASE.maxHp,
   streak:0,streakBest:0,lastCheckin:null,buffUntil:0,buffMult:1.5,freezes:2,
   week:{key:null,prog:{}},perfectDays:0,checkinsTotal:0,moodLog:[],
-  customHabits:[],history:[],
+  customHabits:[],history:[],reminder:{enabled:false,h:20,m:0},
   totalDmg:0,kills:0,log:['✨ Ton héros pénètre dans le donjon…'],
   body:null,
   reliques:0,unlocked:[],bestFloor:1,
@@ -527,6 +531,7 @@ S.ascUp=Object.assign({power:0,fortune:0,start:0,wisdom:0},S.ascUp);
 S.week=Object.assign({key:null,prog:{}},S.week); if(!S.week.prog)S.week.prog={};
 if(typeof S.buffMult!=='number')S.buffMult=1.5; if(typeof S.freezes!=='number')S.freezes=2;
 if(!Array.isArray(S.customHabits))S.customHabits=[]; if(!Array.isArray(S.history))S.history=[];
+S.reminder=Object.assign({enabled:false,h:20,m:0},S.reminder);
 // Gel de série : un jour manqué consomme un jeton « gel » plutôt que de casser le streak.
 let streakMsg=null;
 (function(){
@@ -752,6 +757,55 @@ const HAB_TIERS={leger:{lbl:'Léger',g:3,xp:25,gold:15},modere:{lbl:'Modéré',g
 const HAB_EMOJI=['🧘','📖','💊','🚭','🦷','🚶','🏊','🚴','🧹','☀️','🌙','🙏','📵','🥛','🧠','✍️','🎯','❤️','🧴','🍵'];
 let habForm={em:'🧘',nm:'',cat:'sport',tier:'modere'};
 function sheet(inner){const ov=document.createElement('div');ov.className='overlay';ov.style.justifyContent='flex-end';ov.style.padding='0';ov.innerHTML=`<div class="btmsheet">${inner}</div>`;document.querySelector('.phone').appendChild(ov);ov.onclick=e=>{if(e.target===ov)ov.remove();};return ov;}
+// ===== Pont natif (WebView) : envoie les réglages de rappel à l'app native =====
+function nativePost(obj){ try{ if(window.ReactNativeWebView&&window.ReactNativeWebView.postMessage) window.ReactNativeWebView.postMessage(JSON.stringify(obj)); }catch(e){} }
+function syncReminder(){ nativePost({type:'reminder',enabled:!!S.reminder.enabled,hour:S.reminder.h|0,minute:S.reminder.m|0}); }
+// ===== Sauvegarde : export / import (ne jamais perdre sa progression) =====
+function exportSave(){ try{ return btoa(unescape(encodeURIComponent(JSON.stringify(S)))); }catch(e){ return ''; } }
+function importSave(code){ try{ const o=JSON.parse(decodeURIComponent(escape(atob((code||'').trim())))); if(!o||typeof o!=='object')return false; S=Object.assign(fresh(),o); save(); return true; }catch(e){ return false; } }
+function openSettings(){
+  const R=S.reminder||{enabled:false,h:20,m:0}; const hh=String(R.h||0).padStart(2,'0'), mm=String(R.m||0).padStart(2,'0');
+  const ov=sheet(`
+    <div class="shhead"><div style="font-family:var(--serif);font-size:18px;font-weight:700">⚙️ Réglages</div><button class="link" id="sclose" style="font-size:20px">✕</button></div>
+    <div class="section"><span>🔔 Rappel quotidien</span></div>
+    <div class="card"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <div style="flex:1"><div class="nm">Me rappeler mon check-in</div><div class="ds">Une notification chaque jour à l'heure choisie (app installée).</div></div>
+      <div class="switch ${R.enabled?'on':''}" id="remtoggle"><i></i></div></div>
+      <div id="remtime" style="${R.enabled?'':'opacity:.4;pointer-events:none'};margin-top:12px;display:flex;align-items:center;gap:10px">
+        <span class="sub">Heure :</span><input class="winput" id="remt" type="time" value="${hh}:${mm}" style="margin-top:0;max-width:140px"></div></div>
+    <div class="section"><span>💾 Sauvegarde</span></div>
+    <div class="card"><div class="sub" style="margin-bottom:8px">Ta progression est stockée sur cet appareil. <b>Exporte un code</b> pour la sauvegarder ou la transférer.</div>
+      <button class="btn-gold" id="expbtn">Exporter ma sauvegarde</button>
+      <button class="buy can" id="impbtn" style="width:100%;justify-content:center;margin-top:8px"><span class="nm">Importer une sauvegarde</span></button></div>
+    <div class="section"><span>🔊 Son</span></div>
+    <div class="card"><div style="display:flex;align-items:center;justify-content:space-between"><div class="nm">Effets sonores</div><div class="switch ${SND.isOn()?'on':''}" id="sndtoggle"><i></i></div></div></div>
+    <div style="height:8px"></div>`);
+  const close=()=>ov.remove();
+  ov.querySelector('#sclose').onclick=close;
+  const tog=ov.querySelector('#remtoggle');
+  tog.onclick=()=>{ S.reminder.enabled=!S.reminder.enabled; save(); syncReminder(); close(); openSettings(); if(S.reminder.enabled)nativePost({type:'reqPerm'}); };
+  const remt=ov.querySelector('#remt'); if(remt)remt.onchange=()=>{ const p=remt.value.split(':'); S.reminder.h=+p[0]||0; S.reminder.m=+p[1]||0; save(); syncReminder(); uiToast('Rappel réglé à '+remt.value); };
+  const snd=ov.querySelector('#sndtoggle'); snd.onclick=()=>{ const on=SND.toggle(); const mb=document.getElementById('mute'); if(mb)mb.textContent=on?'🔊':'🔇'; close(); openSettings(); };
+  ov.querySelector('#expbtn').onclick=()=>{ const code=exportSave();
+    const s2=sheet(`<div class="shhead"><div style="font-family:var(--serif);font-size:17px;font-weight:700">💾 Ta sauvegarde</div><button class="link" id="e2c" style="font-size:20px">✕</button></div>
+      <div class="sub" style="margin-bottom:8px">Copie ce code et garde-le en lieu sûr (notes, mail…). Colle-le dans « Importer » pour restaurer.</div>
+      <textarea class="winput" id="ecode" readonly style="height:120px;font-size:11px;resize:none">${code}</textarea>
+      <button class="btn-gold" id="ecopy" style="margin-top:10px">Copier le code</button>
+      <a id="edl" download="habitquest-save.txt" href="data:text/plain;charset=utf-8,${encodeURIComponent(code)}" class="buy can" style="width:100%;justify-content:center;margin-top:8px;text-decoration:none"><span class="nm">Télécharger le fichier</span></a>
+      <div style="height:8px"></div>`);
+    s2.querySelector('#e2c').onclick=()=>s2.remove();
+    s2.querySelector('#ecopy').onclick=()=>{ const ta=s2.querySelector('#ecode'); ta.select(); try{document.execCommand('copy');}catch(e){} if(navigator.clipboard)navigator.clipboard.writeText(code).catch(()=>{}); uiToast('Code copié !'); };
+  };
+  ov.querySelector('#impbtn').onclick=()=>{
+    const s2=sheet(`<div class="shhead"><div style="font-family:var(--serif);font-size:17px;font-weight:700">📥 Importer</div><button class="link" id="i2c" style="font-size:20px">✕</button></div>
+      <div class="sub" style="margin-bottom:8px;color:var(--hp)">⚠️ Ceci remplacera ta progression actuelle par celle du code.</div>
+      <textarea class="winput" id="icode" placeholder="Colle ton code de sauvegarde ici" style="height:120px;font-size:11px;resize:none"></textarea>
+      <button class="btn-gold" id="ido" style="margin-top:10px">Restaurer cette sauvegarde</button><div style="height:8px"></div>`);
+    s2.querySelector('#i2c').onclick=()=>s2.remove();
+    s2.querySelector('#ido').onclick=()=>{ const code=s2.querySelector('#icode').value; if(!code.trim()){uiToast('Colle un code d’abord.');return;}
+      uiConfirm('Remplacer ta progression par cette sauvegarde ?',()=>{ if(importSave(code)){ s2.remove(); close(); uiToast('Sauvegarde restaurée !'); render(); syncReminder(); } else uiToast('Code invalide.'); },'Restaurer'); };
+  };
+}
 function openHabitsEditor(){
   const list=(S.customHabits||[]).map(h=>`<div class="buy"><span class="em">${h.em}</span><div style="flex:1"><div class="nm">${h.nm}</div><div class="ds">${CATS[h.cat].em} ${CATS[h.cat].label} · +${h.g} ${CATS[h.cat].power}</div></div><button class="link hdel" data-id="${h.id}" style="color:var(--hp)">Suppr.</button></div>`).join('')||'<div class="sub" style="text-align:center;padding:8px 0">Aucune habitude perso pour l’instant.</div>';
   const emojis=HAB_EMOJI.map(e=>`<span class="hemoji ${habForm.em===e?'sel':''}" data-em="${e}">${e}</span>`).join('');
@@ -1568,8 +1622,10 @@ render();
 (function(){
   const mb=document.getElementById('mute');
   if(mb){ mb.textContent=SND.isOn()?'🔊':'🔇'; mb.onclick=()=>{const on=SND.toggle();mb.textContent=on?'🔊':'🔇';SND.unlock();}; }
+  const sb=document.getElementById('settings'); if(sb)sb.onclick=openSettings;
   window.addEventListener('pointerdown',()=>SND.unlock(),{once:true});
 })();
+syncReminder(); // au démarrage : (re)programme le rappel côté natif
 if(!S.cls){
   const ov=document.createElement('div');ov.className='overlay';
   ov.innerHTML=`<div style="color:var(--gold);filter:drop-shadow(0 0 10px rgba(244,185,66,.5));margin-bottom:2px">${ic('sword',52)}</div><h2>Choisis ta classe</h2><div class="sub" style="margin:6px 0 16px">Tu pourras en changer plus tard (5 ${ic('gem',12)}).</div><div class="classgrid" id="pick" style="width:100%;max-width:340px"></div>`;
