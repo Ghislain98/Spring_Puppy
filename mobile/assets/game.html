@@ -149,6 +149,9 @@
   .scene .fighter .tag { position:absolute; top:-13px; font-size:9px; font-weight:800; color:var(--gold); white-space:nowrap; text-shadow:0 1px 2px #000; }
   .scene .mnameplate { position:absolute; top:-15px; font-size:10px; font-weight:800; color:#ffe9c2; white-space:nowrap; text-shadow:0 1px 3px #000; }
   .scene .mnameplate.bossnm { color:var(--gold); font-size:12px; letter-spacing:.5px; }
+  .scene .mnameplate.elitenm { color:#ffe08a; text-shadow:0 0 8px #ffb800, 0 1px 3px #000; animation:elitepulse 1s ease-in-out infinite; }
+  @keyframes elitepulse { 0%,100%{opacity:.9} 50%{opacity:1} }
+  .scene .mob.elite .pix { filter:drop-shadow(0 0 8px #ffcc4d) drop-shadow(0 0 16px #ff9a00) drop-shadow(0 3px 2px rgba(0,0,0,.55)); }
   .pix { image-rendering:pixelated; display:block; filter:drop-shadow(0 3px 2px rgba(0,0,0,.55)); }
   .pix.flip { transform:scaleX(-1); }
   .scene .hero .pix { height:60px; animation:idlebob 2.4s ease-in-out infinite; }
@@ -420,9 +423,10 @@ const MOB_KEYS=['mob_0','mob_1','mob_2','mob_3','mob_4','mob_5','mob_6','mob_7']
 const mobKey=(f,i)=> isBoss(f,i)?'boss':MOB_KEYS[(f+i)%8];
 const spr=(k,s)=> (typeof ICON!=='undefined'&&ICON[k])?`<img class="spr" src="${ICON[k]}" style="width:${s}px;height:${s}px">`:'';
 const isBoss=(f,i)=> i>=regularMobs(f);
+const isElite=(f,i)=> isBoss(f,i)&&f%5===0; // boss d'élite tous les 5 étages
 const xpForLevel=l=>Math.floor(50*(l-1)*l);
 const levelFromXp=xp=>{let l=1;while(xpForLevel(l+1)<=xp)l++;return l;};
-const monsterMaxHp=(f,i)=>Math.ceil(42*Math.pow(1.33,f-1)*(1+i*0.09)*(isBoss(f,i)?4.5:1));
+const monsterMaxHp=(f,i)=>Math.ceil(42*Math.pow(1.33,f-1)*(1+i*0.09)*(isBoss(f,i)?4.5:1)*(isElite(f,i)?2.2:1));
 const monsterAtk=(f,i)=>Math.ceil(3*Math.pow(1.28,f-1)*(isBoss(f,i)?2.2:1));
 const goldPerKill=(f,i)=>Math.ceil(6*Math.pow(1.3,f-1)*(isBoss(f,i)?6:1));
 const xpPerKill=(f,i)=>Math.ceil(8*Math.pow(1.25,f-1)*(isBoss(f,i)?5:1));
@@ -456,12 +460,14 @@ function fresh(){return{
   totalDmg:0,kills:0,log:['✨ Ton héros pénètre dans le donjon…'],
   body:null,
   reliques:0,unlocked:[],bestFloor:1,
+  astres:0,ascUp:{power:0,fortune:0,start:0,wisdom:0},ascensions:0,
   lastActive:Date.now(),
 };}
 let S; try{S=JSON.parse(localStorage.getItem('habitquest-demo2'))||fresh();}catch(e){S=fresh();}
 S=Object.assign(fresh(),S);
 S.habit=Object.assign({atk:0,maxHp:0,regen:0,crit:0},S.habit);
 S.up=Object.assign({atk:0,maxHp:0,regen:0,crit:0,click:0,critdmg:0,speed:0,power:0,multi:0},S.up);
+S.ascUp=Object.assign({power:0,fortune:0,start:0,wisdom:0},S.ascUp);
 S.classXp=Object.assign({guerrier:0,mage:0,rodeur:0,paladin:0},S.classXp);
 S.classTal=Object.assign({guerrier:{},mage:{},rodeur:{},paladin:{}},S.classTal);
 function save(){S.lastActive=Date.now();localStorage.setItem('habitquest-demo2',JSON.stringify(S));}
@@ -560,7 +566,8 @@ const SYN={
 const POINT_CAP=28;
 const nodeById=(cls,id)=>CLASS_TREES[cls].nodes.find(n=>n.id===id);
 function classSpent(cls){const a=S.classTal[cls]||{},t=CLASS_TREES[cls];let s=0;for(const n of t.nodes)s+=a[n.id]||0;return s;}
-function classPoints(cls){const total=Math.min(POINT_CAP,classLevelOf(S.classXp[cls]||0));const spent=classSpent(cls);return{total,spent,avail:total-spent};}
+function pointCap(){return POINT_CAP+2*((S.ascUp&&S.ascUp.wisdom)||0);} // Sagesse astrale relève le plafond
+function classPoints(cls){const total=Math.min(pointCap(),classLevelOf(S.classXp[cls]||0));const spent=classSpent(cls);return{total,spent,avail:total-spent};}
 function nodeUnlocked(cls,id){const a=S.classTal[cls]||{};const n=nodeById(cls,id);if(!n)return false;const req=n.req||[];if(!req.length)return true;return req.every(r=>(a[r]||0)>0);}
 function classEff(cls){
   const e={dmgMul:1,hpMul:1,goldMul:1,goldSecMul:1,atkSpeedMul:1,clickMul:1,burnMul:1,bleedMul:1,poisonMul:1,vulnMul:1,burnBase:0,bleedBase:0,poisonBase:0,vulnBase:0,critAdd:0,critMultAdd:0,regenAdd:0,dmgLowHp:0,multiAdd:0,overcritMulti:0};
@@ -585,13 +592,36 @@ const STEP=1.0; // kg par palier
 const BIOMES=['Cryptes moisies','Caverne des Braises','Forêt Hantée','Cavernes de Glace','Ruines Maudites','Marais des Ombres','Nécropole',"Antre du Dragon"];
 const biomeName=f=>BIOMES[Math.floor((f-1)/5)%BIOMES.length];
 
-// ============ Renaissance (prestige) ============
+// ============ Renaissance (prestige 1) & Ascension (prestige 2) ============
+const FRESH_UP=()=>({atk:0,maxHp:0,regen:0,crit:0,click:0,critdmg:0,speed:0,power:0,multi:0});
+const startFloor=()=>1+5*((S.ascUp&&S.ascUp.start)||0); // « Départ avancé »
 const reliquesGain=f=>Math.floor(Math.pow(Math.max(0,f)/5,1.5));
 function doPrestige(){
   const gain=reliquesGain(S.floor); if(gain<=0)return 0;
-  S.reliques=(S.reliques||0)+gain; S.gold=0; S.comp={}; S.up={atk:0,maxHp:0,regen:0,crit:0,click:0};
-  S.floor=1; S.mi=0; S.mhp=monsterMaxHp(1,0); S.hp=1e9;
+  S.reliques=(S.reliques||0)+gain; S.gold=0; S.comp={}; S.up=FRESH_UP();
+  const sf=startFloor(); S.floor=sf; S.mi=0; S.mhp=monsterMaxHp(sf,0); S.hp=1e9;
   pushLog('🌟 Renaissance ! +'+gain+' reliques. Ton héros repart plus fort.');
+  save(); return gain;
+}
+// Ascension : 2e couche. On sacrifie ses reliques + la run pour des Astres,
+// dépensés dans un tableau de bonus PERMANENTS et infinis (paragon astral).
+const ASC_REQ=40; // reliques minimum pour ascensionner
+const astresGain=rel=>rel>=ASC_REQ?Math.max(1,Math.floor(Math.pow(rel/10,1.1))):0;
+const ASC_DEFS={
+  power  :{nm:'Puissance astrale',ds:'Dégâts globaux ×1,30 par niveau',em:'💥',col:'var(--hp)',base:4,grow:1.7,mult:l=>Math.pow(1.30,l)},
+  fortune:{nm:'Fortune astrale', ds:'Or global ×1,30 par niveau',    em:'🪙',col:'var(--gold)',base:4,grow:1.7,mult:l=>Math.pow(1.30,l)},
+  start  :{nm:'Départ avancé',   ds:'Commence 5 étages plus haut/niv',em:'🚀',col:'var(--xp)',base:6,grow:2.0},
+  wisdom :{nm:'Sagesse astrale', ds:'+2 points de talent max par niv',em:'🧠',col:'var(--gem)',base:8,grow:2.2},
+};
+const ascCost=(k,lvl)=>Math.ceil(ASC_DEFS[k].base*Math.pow(ASC_DEFS[k].grow,lvl));
+const ascPowerMult=()=>ASC_DEFS.power.mult((S.ascUp&&S.ascUp.power)||0);
+const ascFortuneMult=()=>ASC_DEFS.fortune.mult((S.ascUp&&S.ascUp.fortune)||0);
+function doAscend(){
+  const gain=astresGain(S.reliques||0); if(gain<=0)return 0;
+  S.astres=(S.astres||0)+gain; S.ascensions=(S.ascensions||0)+1;
+  S.reliques=0; S.gold=0; S.comp={}; S.up=FRESH_UP();
+  const sf=startFloor(); S.floor=sf; S.mi=0; S.mhp=monsterMaxHp(sf,0); S.hp=1e9;
+  pushLog('✦ ASCENSION ! +'+gain+' astres. Ton âme s’élève au-delà du donjon.');
   save(); return gain;
 }
 
@@ -723,7 +753,7 @@ function D(){
   const pres=1+0.04*(S.reliques||0);
   const achMult=1+ACH_BONUS*((S.unlocked||[]).length); // chaque succès = bonus permanent
   const vuln=1+ce.vulnBase*ce.vulnMul; // givre/faiblesse (base × multiplicateurs)
-  const goldMult=c.gold*ce.goldMul*b*vGold*pres*achMult;
+  const goldMult=c.gold*ce.goldMul*b*vGold*pres*achMult*ascFortuneMult();
   const crit=Math.max(0,BASE.crit+c.crit+ce.critAdd+(S.up.crit||0)*UP_GAIN.crit+vCrit); // NON plafonné : au-delà de 100% → surcritiques
   const critMult=CRIT_MULT+(ce.critMultAdd||0)+(S.up.critdmg||0)*UP_GAIN.critdmg; // dégâts critiques (×base + talents + forge)
   // Surcritique : chaque tranche de 100% au-dessus de 100% garantit une couche de crit
@@ -739,7 +769,7 @@ function D(){
   const compCount=COMPANIONS.reduce((a,cp)=>a+(S.comp[cp.id]||0),0);
   const compTier=Math.floor(compCount/COMP_TIER_SIZE);
   const compDmg=1+COMP_TIER_BONUS*compTier;
-  const dmgMult=c.dmg*ce.dmgMul*b*vDmg*pres*lowHp*(1+(S.up.power||0)*UP_GAIN.power)*compDmg*achMult;
+  const dmgMult=c.dmg*ce.dmgMul*b*vDmg*pres*lowHp*(1+(S.up.power||0)*UP_GAIN.power)*compDmg*achMult*ascPowerMult();
   const spd=ce.atkSpeedMul*(1+(S.up.speed||0)*UP_GAIN.speed); // vitesse d'attaque
   // Multi-attaque : chance (%) de frapper plusieurs fois. >100% = coups garantis + chance.
   // Le talent « Œil du faucon » convertit ta chance de crit au-delà de 100% en multi-attaque.
@@ -842,10 +872,10 @@ let advT=null;
 function advanceScene(){const sc=document.getElementById('scene');if(!sc)return;sc.classList.add('adv');heroRun(true);clearTimeout(advT);advT=setTimeout(()=>{sc.classList.remove('adv');heroRun(false);},700);}
 function heroRun(on){const img=document.getElementById('heroimg');if(img)regAnim(img,heroFrames(on),on?110:200);}
 function swapMob(noSlide){
-  const mo=document.getElementById('mob');if(!mo)return;const boss=isBoss(S.floor,S.mi);
-  mo.classList.toggle('boss',boss);
+  const mo=document.getElementById('mob');if(!mo)return;const boss=isBoss(S.floor,S.mi),elite=isElite(S.floor,S.mi);
+  mo.classList.toggle('boss',boss); mo.classList.toggle('elite',elite);
   const img=document.getElementById('mobimg');regAnim(img,mobFrames(S.floor,S.mi),220);
-  const nm=document.getElementById('mobnm');if(nm){nm.textContent=boss?'⚜ BOSS ⚜':'Étage '+S.floor+' · '+(S.mi+1)+'/'+totalMobs(S.floor);nm.classList.toggle('bossnm',boss);}
+  const nm=document.getElementById('mobnm');if(nm){nm.textContent=elite?'★ ÉLITE ★':(boss?'⚜ BOSS ⚜':'Étage '+S.floor+' · '+(S.mi+1)+'/'+totalMobs(S.floor));nm.classList.toggle('bossnm',boss||elite);nm.classList.toggle('elitenm',elite);}
   if(!noSlide){mo.classList.remove('slidein');void mo.offsetWidth;mo.classList.add('slidein');}
 }
 function renderComps(){
@@ -977,15 +1007,16 @@ function damageMonster(amount){
 }
 function ghostMobPix(frames){const sc=document.querySelector('.scene');if(!sc)return;const g=document.createElement('div');g.className='ghost';g.innerHTML=`<img class="pix flip" src="${(frames&&frames[0])||''}" style="height:54px">`;sc.appendChild(g);setTimeout(()=>g.remove(),560);}
 function killMonster(){
-  const d=D(),boss=isBoss(S.floor,S.mi),oldFrames=mobFrames(S.floor,S.mi),oldLvl=S.level;
+  const d=D(),boss=isBoss(S.floor,S.mi),elite=isElite(S.floor,S.mi),oldFrames=mobFrames(S.floor,S.mi),oldLvl=S.level;
   const g=Math.round(goldPerKill(S.floor,S.mi)*d.goldMult);
   const gx=xpPerKill(S.floor,S.mi); S.gold+=g; S.xp+=gx; if(S.cls)S.classXp[S.cls]=(S.classXp[S.cls]||0)+gx; S.kills++;
   const nl=levelFromXp(S.xp); if(nl>oldLvl){S.gems+=(nl-oldLvl);S.level=nl;pushLog('⭐ Niveau '+nl+' atteint ! +'+(nl-oldLvl)+' 💎');}
   spawnFloat('+'+fmt(g),'var(--gold)',false,50,'coin');
   ghostMobPix(oldFrames); spawnSparks(boss?20:9,boss?'#ffcc4d':'#ff5d7a'); coinFly(boss?9:4);
   if(boss){
-    const gem=1+Math.floor(S.floor/2); S.gems+=gem;
-    pushLog('👑 Boss étage '+S.floor+' vaincu ! +'+gem+' 💎, descente étage '+(S.floor+1)+'.');
+    let gem=1+Math.floor(S.floor/2); if(elite)gem*=3; S.gems+=gem;
+    if(elite){ const bonusG=Math.round(g*4); S.gold+=bonusG; pushLog('★ BOSS D’ÉLITE étage '+S.floor+' terrassé ! +'+gem+' 💎 & butin ×5 !'); spawnFloat('BUTIN ×5','var(--gold)',true,50,'coin'); }
+    else pushLog('👑 Boss étage '+S.floor+' vaincu ! +'+gem+' 💎, descente étage '+(S.floor+1)+'.');
     S.floor++; S.mi=0;
     const ar=document.querySelector('.scene'); if(ar){ar.classList.remove('shake');void ar.offsetWidth;ar.classList.add('shake');}
     spawnFloat('+'+gem,'var(--gem)',true,50,'gem'); SND.boss(); haptic([30,40,70]); bump(document.getElementById('gemsbox'));
@@ -1071,8 +1102,8 @@ function renderTalents(){
     `<div class="card">
        <div style="display:flex;align-items:center;gap:10px"><span style="width:40px;display:flex;justify-content:center">${pixImg(SPR[(HERO_SPR[cls]||'knight_m')+'_idle'],40)||c.em}</span>
        <div style="flex:1"><div style="font-family:var(--serif);font-size:17px;font-weight:700">${c.name} · Niv. ${clvl}</div><div class="sub"><b style="color:var(--gold)">${p.spent}/${p.total}</b> points utilisés · ${Math.max(0,p.avail)} dispo</div></div></div>
-       <div class="bar" style="margin-top:8px;height:8px"><i style="background:var(--gem);width:${Math.min(100,p.spent/POINT_CAP*100)}%"></i></div>
-       <div class="sub" style="margin-top:5px">Arbre <b style="color:var(--gold)">à branches</b> : suis les liens, certains nœuds exigent <b>2 parents</b>. Budget <b style="color:var(--gold)">limité (${POINT_CAP} pts)</b> — tu ne peux pas tout prendre. Combine 2 <b style="color:var(--gold)">Keystones</b> (●) pour débloquer un <b style="color:var(--gem)">Capstone</b> (💠). Respec gratuit.</div>
+       <div class="bar" style="margin-top:8px;height:8px"><i style="background:var(--gem);width:${Math.min(100,p.spent/pointCap()*100)}%"></i></div>
+       <div class="sub" style="margin-top:5px">Arbre <b style="color:var(--gold)">à branches</b> : suis les liens, certains nœuds exigent <b>2 parents</b>. Budget <b style="color:var(--gold)">limité (${pointCap()} pts)</b> — tu ne peux pas tout prendre. Combine 2 <b style="color:var(--gold)">Keystones</b> (●) pour débloquer un <b style="color:var(--gem)">Capstone</b> (💠). Respec gratuit.</div>
      </div>
      <div class="skilltree" style="height:${H}px">${svg}${nhtml}</div>
      <div id="tdetail"></div>
@@ -1137,6 +1168,8 @@ function renderHero(){
     <div class="card"><div class="sub" style="line-height:1.5">Recommence la run (or, compagnons, forge, étage) contre des <b style="color:var(--gold)">Reliques</b> permanentes : <b>+4% dégâts & or</b> chacune. Tu gardes gemmes, talents, classe, objectif et streak.</div>
       <div class="stat3" style="margin-top:12px"><div><b style="color:var(--gold)">🏵️ ${S.reliques||0}</b><span>Reliques</span></div><div><b style="color:var(--regen)">+${4*(S.reliques||0)}%</b><span>Bonus</span></div><div><b style="color:var(--xp)">+${reliquesGain(S.floor)}</b><span>Si tu renais</span></div></div>
       <button class="btn-gold" id="prestigebtn" style="margin-top:12px" ${reliquesGain(S.floor)<=0?'disabled':''}>${reliquesGain(S.floor)>0?('Renaître (+'+reliquesGain(S.floor)+' 🏵️)'):"Atteins l'étage 5 pour renaître"}</button></div>
+    <div class="section"><span>✦ Ascension</span></div>
+    <div id="ascension"></div>
     <button class="link" id="reset" style="display:block;margin:12px auto">Réinitialiser (démo)</button>
     <div class="sub" style="text-align:center;font-size:10px;color:var(--faint);margin-top:6px">Sprites : « DungeonTileset II » par 0x72 (CC BY 4.0) · Icônes : Delapouite & Lorc — game-icons.net (CC BY 3.0)</div>`;
   document.getElementById('classgrid').innerHTML=Object.entries(CLASSES).map(([id,c])=>`<div class="classcard ${S.cls===id?'sel':''}" data-cl="${id}"><div class="em">${pixImg(SPR[(HERO_SPR[id]||'knight_m')+'_idle'],40)||c.em}</div><div class="nm">${c.name} <span style="color:var(--gem);font-size:11px">niv.${classLevelOf(S.classXp[id]||0)}</span></div><div class="ds">${c.ds}</div></div>`).join('');
@@ -1153,6 +1186,26 @@ function renderHero(){
   document.getElementById('achbtn').onclick=openAch;
   document.getElementById('prestigebtn').onclick=()=>{const g=reliquesGain(S.floor);if(g<=0)return;uiConfirm(`Renaître ? Tu gagnes <b>${g} reliques</b> permanentes (+${4*g}% dégâts & or) et tu réinitialises ta run (or, compagnons, forge, étage). Tu gardes gemmes, talents, classe, objectif et streak.`,()=>{doPrestige();SND.boss();haptic([30,40,70]);renderHero();renderCur();uiToast('Renaissance ! +'+g+' reliques');},'Renaître (+'+g+' 🏵️)');};
   document.getElementById('reset').onclick=()=>{uiConfirm('Effacer <b>toute</b> la progression ? Action irréversible.',()=>{S=fresh();save();go('dungeon');},'Tout effacer');};
+  renderAscension();
+}
+function renderAscension(){
+  const box=document.getElementById('ascension'); if(!box)return;
+  const gain=astresGain(S.reliques||0), canAsc=gain>0;
+  const board=Object.entries(ASC_DEFS).map(([k,def])=>{
+    const lv=(S.ascUp&&S.ascUp[k])||0, cost=ascCost(k,lv), can=(S.astres||0)>=cost;
+    const eff=k==='start'?('+'+(5*lv)+' étages'):k==='wisdom'?('+'+(2*lv)+' pts talent'):('×'+def.mult(lv).toFixed(2));
+    return `<div class="buy ${can?'can':'no'}" data-asc="${k}" style="${can?'border-color:'+def.col:''}"><span class="em">${def.em}</span>
+      <div style="flex:1"><div class="nm">${def.nm} <small>Niv. ${lv}</small></div><div class="ds">${def.ds} · <b style="color:${def.col}">actuel ${eff}</b></div></div>
+      <div class="right"><div class="cost" style="color:${can?'var(--gem)':'var(--faint)'}">✦ ${fmt(cost)}</div></div></div>`;
+  }).join('');
+  box.innerHTML=`<div class="card">
+      <div class="sub" style="line-height:1.5">La <b style="color:var(--gem)">2ᵉ couche</b> : sacrifie tes reliques + ta run pour des <b style="color:var(--gem)">Astres ✦</b>, dépensés dans des bonus <b>permanents et infinis</b>. Il faut <b>${ASC_REQ}</b> reliques pour ascensionner.</div>
+      <div class="stat3" style="margin-top:12px"><div><b style="color:var(--gem)">✦ ${fmt(S.astres||0)}</b><span>Astres</span></div><div><b style="color:var(--gold)">${S.reliques||0}/${ASC_REQ}</b><span>Reliques</span></div><div><b style="color:var(--gem)">${S.ascensions||0}</b><span>Ascensions</span></div></div>
+      <button class="btn-gold" id="ascendbtn" style="margin-top:12px" ${canAsc?'':'disabled'}>${canAsc?('Ascensionner (+'+gain+' ✦)'):('Atteins '+ASC_REQ+' reliques pour ascensionner')}</button>
+    </div>
+    <div style="margin-top:8px">${board}</div>`;
+  const ab=document.getElementById('ascendbtn'); if(ab)ab.onclick=()=>{const g=astresGain(S.reliques||0);if(g<=0)return;uiConfirm(`Ascensionner ? Tu gagnes <b>${g} astres ✦</b> mais tu perds tes <b>${S.reliques} reliques</b>, ton or, tes compagnons, ta forge et ton étage. Tu gardes talents, classe, gemmes, astres et bonus d’ascension.`,()=>{doAscend();SND.boss();haptic([40,60,40,60]);renderHero();renderCur();uiToast('✦ Ascension ! +'+g+' astres');},'Ascensionner (+'+g+' ✦)');};
+  box.querySelectorAll('[data-asc]').forEach(el=>el.onclick=()=>{const k=el.dataset.asc,lv=(S.ascUp[k]||0),cost=ascCost(k,lv);if((S.astres||0)>=cost){S.astres-=cost;S.ascUp[k]=lv+1;save();renderHero();SND.buy();haptic(9);}});
 }
 
 function render(){renderNav();renderCur();
