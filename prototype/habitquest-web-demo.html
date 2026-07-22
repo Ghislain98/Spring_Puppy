@@ -482,6 +482,9 @@ const upCost=(st)=>Math.ceil(UP_BASE[st]*Math.pow(1.18,S.up[st]||0));
 function bulkUpCost(st,n){let c=0,lv=S.up[st]||0;for(let k=0;k<n;k++)c+=Math.ceil(UP_BASE[st]*Math.pow(1.18,lv+k));return c;}
 function maxUpAffordable(st){let n=0,g=S.gold,lv=S.up[st]||0;while(n<100000){const c=Math.ceil(UP_BASE[st]*Math.pow(1.18,lv+n));if(g<c)break;g-=c;n++;}return n;}
 function forgeAmountFor(st){return forgeAmt==='max'?Math.max(1,maxUpAffordable(st)):forgeAmt;}
+// Total cumulé d'une amélioration de forge, ex. Armure niv 75 → +20×75 = +1 500 PV.
+const FORGE_UNIT={atk:{u:' ATK'},power:{u:'% dégâts',pct:1},critdmg:{u:'% dégâts crit',pct:1},crit:{u:'% crit'},speed:{u:'% vitesse',pct:1},multi:{u:'% multi'},click:{u:' dégâts/clic'},maxHp:{u:' PV max'},regen:{u:'/s régén'}};
+function forgeTotalStr(st,lvl){const g=UP_GAIN[st]||0,cfg=FORGE_UNIT[st]||{u:''};const v=g*lvl*(cfg.pct?100:1);return '+'+fmt(v)+cfg.u;}
 
 // Formatage infini : suffixes jusqu'à ~1e63 puis notation scientifique.
 const FMT_U=['K','M','B','T','Qa','Qi','Sx','Sp','Oc','No','Dc','UD','DD','TD','QaD','QiD','SxD','SpD','OcD','NoD','Vg'];
@@ -516,6 +519,7 @@ function fresh(){return{
   tal:{},comp:{},
   classXp:{guerrier:0,mage:0,rodeur:0,paladin:0},
   classTal:{guerrier:{},mage:{},rodeur:{},paladin:{}},
+  parangon:{guerrier:{},mage:{},rodeur:{},paladin:{}},rampStacks:0,
   floor:1,mi:0,mhp:monsterMaxHp(1,0),hp:BASE.maxHp,
   streak:0,streakBest:0,lastCheckin:null,buffUntil:0,buffMult:1.5,freezes:2,
   week:{key:null,prog:{}},perfectDays:0,checkinsTotal:0,moodLog:[],
@@ -546,107 +550,170 @@ let streakMsg=null;
 })();
 S.classXp=Object.assign({guerrier:0,mage:0,rodeur:0,paladin:0},S.classXp);
 S.classTal=Object.assign({guerrier:{},mage:{},rodeur:{},paladin:{}},S.classTal);
+S.parangon=Object.assign({guerrier:{},mage:{},rodeur:{},paladin:{}},S.parangon); if(typeof S.rampStacks!=='number')S.rampStacks=0;
 function save(){S.lastActive=Date.now();localStorage.setItem('habitquest-demo2',JSON.stringify(S));}
 
 // ============ Arbres de talents par classe ============
 const classXpForLevel=l=>Math.floor(80*(l-1)*l);
 const classLevelOf=xp=>{let l=1;while(classXpForLevel(l+1)<=xp)l++;return l;};
-// Chaque classe : 3 branches, chacune se terminant par un Keystone (nœud
-// ultime). Certains keystones sont des synergies qui font interagir tes
-// mécaniques (saignement→vitesse d'attaque, givre→brûlure, crit→vitesse…).
-// Effets MULTIPLICATIFS : chaque talent multiplie une stat. En bout de branche,
-// un Keystone (★) transforme le build ; et un CAPSTONE ULTIME (💠) par classe
-// exige 2 keystones (dépendances). Un enabler ouvre chaque mécanique (DoT).
+// Chaque classe : 1 racine qui s'ouvre en 4 BRANCHES indépendantes qui ne se
+// rejoignent JAMAIS. Chaque branche = un chemin linéaire de 5 nœuds :
+//   enabler (ouvre une mécanique) → montée (scaling de CETTE mécanique) →
+//   ★ Keystone (transforme / synergie) → montée → 💠 Capstone (grosse synergie).
+// Les nœuds ajoutent ou font INTERAGIR des mécaniques (saignement, fureur
+// montante, exécution, vulnérabilité, brûlure, poison, crit, vol de vie…),
+// pas de simples « +% plats ». L'arbre est FINI ; le scaling générique infini
+// se dépense ensuite dans le PARANGON. Respec gratuit.
 const P=(x,l)=>Math.pow(x,l); // helper multiplicatif
 const CLASS_TREES={
   guerrier:{nodes:[
-    {id:'g_A',gx:2,gy:0,req:[],nm:'Colère',em:'💢',max:5,ds:'Dégâts ×1,15 par niv',ap:(e,l)=>e.dmgMul*=P(1.15,l)},
-    {id:'g_B',gx:1,gy:1,req:['g_A'],nm:'Saigner',em:'🩸',max:1,ds:'Ouvre : saignement (30% ATK/s).',ap:e=>e.bleedBase+=0.30},
-    {id:'g_C',gx:3,gy:1,req:['g_A'],nm:'Cuirasse',em:'🛡️',max:5,ds:'PV max ×1,18 par niv',ap:(e,l)=>e.hpMul*=P(1.18,l)},
-    {id:'g_D',gx:0,gy:2,req:['g_B'],nm:'Lames affûtées',em:'🔪',max:5,ds:'Saignement ×1,20 par niv',ap:(e,l)=>e.bleedMul*=P(1.20,l)},
-    {id:'g_E',gx:2,gy:2,req:['g_B','g_C'],nm:'Fureur',em:'🗡️',max:5,ds:'Dégâts ×1,16 par niv (exige Saigner + Cuirasse)',ap:(e,l)=>e.dmgMul*=P(1.16,l)},
-    {id:'g_F',gx:4,gy:2,req:['g_C'],nm:'Faiblesse',em:'☠️',max:1,ds:'Ouvre : Vulnérabilité (+20% dégâts subis).',ap:e=>e.vulnBase+=0.20},
-    {id:'g_G',gx:1,gy:3,req:['g_D'],nm:'Plaies ouvertes',em:'🩹',max:5,ds:'Saignement ×1,18 par niv',ap:(e,l)=>e.bleedMul*=P(1.18,l)},
-    {id:'g_H',gx:2,gy:3,req:['g_E'],nm:'Mise à mort',em:'💥',max:4,ds:'Dégâts critiques +20% par niv',ap:(e,l)=>e.critMultAdd+=0.2*l},
-    {id:'g_I',gx:3,gy:3,req:['g_F'],nm:'Broyer',em:'🔨',max:5,ds:'Vulnérabilité ×1,15 par niv',ap:(e,l)=>e.vulnMul*=P(1.15,l)},
-    {id:'g_K1',gx:0,gy:4,req:['g_G'],key:1,syn:'bloodrage',nm:'Saignée furieuse',em:'🌀',max:1,ds:'★ SYNERGIE : vitesse d’attaque ×(1+saignement), jusqu’à ×3.'},
-    {id:'g_K2',gx:2,gy:4,req:['g_H'],key:1,nm:'Berserker',em:'😡',max:1,ds:'★ KEYSTONE : dégâts ×2 quand PV < 50%.',ap:e=>e.dmgLowHp=1.0},
-    {id:'g_K3',gx:4,gy:4,req:['g_I'],key:1,nm:'Colosse',em:'🗿',max:1,ds:'★ KEYSTONE : PV max ×2 et dégâts ×1,5.',ap:e=>{e.hpMul*=2;e.dmgMul*=1.5}},
-    {id:'g_C1',gx:1,gy:5,req:['g_K1','g_K2'],cap:1,nm:'Titan de sang',em:'💠',max:1,ds:'CAPSTONE : dégâts ×2 ET saignement ×2.',ap:e=>{e.dmgMul*=2;e.bleedMul*=2}},
-    {id:'g_C2',gx:3,gy:5,req:['g_K2','g_K3'],cap:1,nm:'Bourreau colossal',em:'💠',max:1,ds:'CAPSTONE : dégâts ×2,5 ET +30% vulnérabilité.',ap:e=>{e.dmgMul*=2.5;e.vulnBase+=0.30}},
-    {id:'g_C3',gx:2,gy:6,req:['g_K1','g_K3'],cap:1,nm:'Rempart écarlate',em:'💠',max:1,ds:'CAPSTONE : PV max ×2 ET saignement ×2.',ap:e=>{e.hpMul*=2;e.bleedMul*=2}},
+    {id:'g0',gx:3,gy:0,req:[],nm:'Soif de sang',em:'🩸',max:1,ds:'Ouvre l’arbre. +20% dégâts et tu VOLES 12% de tes dégâts en PV.',ap:e=>{e.dmgMul*=1.2;e.lifestealPct+=0.12}},
+    // ── Branche SANG (saignement) ──
+    {id:'gS1',gx:1,gy:1,req:['g0'],nm:'Saigner',em:'🩹',max:1,ds:'MÉCANIQUE : ouvre le SAIGNEMENT — 45% de ton ATK infligés sur la durée.',ap:e=>e.bleedBase+=0.45},
+    {id:'gS2',gx:0,gy:2,req:['gS1'],nm:'Plaies profondes',em:'🔪',max:6,ds:'Saignement ×1,5 par rang.',ap:(e,l)=>e.bleedMul*=P(1.5,l)},
+    {id:'gS3',gx:1,gy:3,req:['gS2'],key:1,syn:'bloodrage',nm:'Saignée furieuse',em:'🌀',max:1,ds:'★ SYNERGIE : ton saignement accélère tes attaques (jusqu’à ×3 vitesse).'},
+    {id:'gS4',gx:0,gy:4,req:['gS3'],nm:'Hémorragie',em:'🌊',max:6,ds:'Saignement ×1,4 par rang.',ap:(e,l)=>e.bleedMul*=P(1.4,l)},
+    {id:'gS5',gx:1,gy:5,req:['gS4'],cap:1,syn:'rend',nm:'Lacération',em:'💠',max:1,ds:'CAPSTONE : ton saignement DÉCHIRE l’ennemi et le rend vulnérable — amplifie TOUS tes dégâts.'},
+    // ── Branche FUREUR (montée en puissance sur le même ennemi) ──
+    {id:'gF1',gx:2,gy:1,req:['g0'],nm:'Fureur montante',em:'😤',max:1,ds:'MÉCANIQUE : à force de frapper le même ennemi, tes dégâts montent (+7% par palier, max 15).',ap:e=>e.rampRate+=0.07},
+    {id:'gF2',gx:2,gy:2,req:['gF1'],nm:'Frénésie',em:'🔥',max:6,ds:'Par rang : +4% dégâts ET +2% vitesse par palier de fureur.',ap:(e,l)=>{e.rampRate+=0.04*l;e.atkRampRate+=0.02*l}},
+    {id:'gF3',gx:2,gy:3,req:['gF2'],key:1,nm:'Rage indomptable',em:'💢',max:1,ds:'★ KEYSTONE : la fureur monte 2× plus fort (dégâts ET vitesse par palier doublés).',ap:e=>{e.rampRate*=2;e.atkRampRate*=2}},
+    {id:'gF4',gx:2,gy:4,req:['gF3'],nm:'Sang-froid',em:'🌡️',max:6,ds:'Par rang : +3% dégâts par palier de fureur.',ap:(e,l)=>e.rampRate+=0.03*l},
+    {id:'gF5',gx:2,gy:5,req:['gF4'],cap:1,nm:'Berserker',em:'😡',max:1,ds:'CAPSTONE : sous 50% PV, +150% dégâts et tu voles +18% de tes dégâts en PV.',ap:e=>{e.dmgLowHp+=1.5;e.lifestealPct+=0.18}},
+    // ── Branche EXÉCUTION (bourreau) ──
+    {id:'gE1',gx:4,gy:1,req:['g0'],nm:'Exécution',em:'🪓',max:1,ds:'MÉCANIQUE : frappe fatale — +150% dégâts contre un ennemi sous 25% PV.',ap:e=>{e.execThresh=Math.max(e.execThresh,0.25);e.execMul*=2.5}},
+    {id:'gE2',gx:4,gy:2,req:['gE1'],nm:'Bourreau',em:'⚔️',max:6,ds:'+40% dégâts d’exécution par rang.',ap:(e,l)=>e.execMul+=0.4*l},
+    {id:'gE3',gx:4,gy:3,req:['gE2'],key:1,nm:'Décapitation',em:'💀',max:1,ds:'★ KEYSTONE : le seuil d’exécution passe à 40% PV.',ap:e=>{e.execThresh=Math.max(e.execThresh,0.40)}},
+    {id:'gE4',gx:4,gy:4,req:['gE3'],nm:'Moisson',em:'🌾',max:6,ds:'+35% dégâts d’exécution par rang.',ap:(e,l)=>e.execMul+=0.35*l},
+    {id:'gE5',gx:4,gy:5,req:['gE4'],cap:1,nm:'Faucheur',em:'💠',max:1,ds:'CAPSTONE : seuil d’exécution à 55% PV et +300% dégâts d’exécution.',ap:e=>{e.execThresh=Math.max(e.execThresh,0.55);e.execMul+=3}},
+    // ── Branche COLOSSE (vulnérabilité & tank) ──
+    {id:'gC1',gx:5,gy:1,req:['g0'],nm:'Faiblesse',em:'🎯',max:1,ds:'MÉCANIQUE : ouvre la VULNÉRABILITÉ — l’ennemi subit +25% de TOUS tes dégâts.',ap:e=>e.vulnBase+=0.25},
+    {id:'gC2',gx:6,gy:2,req:['gC1'],nm:'Broyer',em:'🔨',max:6,ds:'Vulnérabilité ×1,35 par rang.',ap:(e,l)=>e.vulnMul*=P(1.35,l)},
+    {id:'gC3',gx:5,gy:3,req:['gC2'],key:1,nm:'Titan',em:'🗿',max:1,ds:'★ KEYSTONE : PV max ×2 et +20 régén/s.',ap:e=>{e.hpMul*=2;e.regenAdd+=20}},
+    {id:'gC4',gx:6,gy:4,req:['gC3'],nm:'Faille béante',em:'🕳️',max:6,ds:'Vulnérabilité ×1,3 par rang.',ap:(e,l)=>e.vulnMul*=P(1.3,l)},
+    {id:'gC5',gx:5,gy:5,req:['gC4'],cap:1,syn:'crush',nm:'Écrasement',em:'💠',max:1,ds:'CAPSTONE : ta vulnérabilité amplifie AUSSI tes dégâts directs.'},
   ]},
   mage:{nodes:[
-    {id:'m_A',gx:2,gy:0,req:[],nm:'Arcanes',em:'🔮',max:5,ds:'Dégâts ×1,15 par niv',ap:(e,l)=>e.dmgMul*=P(1.15,l)},
-    {id:'m_B',gx:1,gy:1,req:['m_A'],nm:'Enflammer',em:'🔥',max:1,ds:'Ouvre : brûlure (40% ATK/s).',ap:e=>e.burnBase+=0.40},
-    {id:'m_C',gx:3,gy:1,req:['m_A'],nm:'Givrer',em:'❄️',max:1,ds:'Ouvre : Vulnérabilité (+15%).',ap:e=>e.vulnBase+=0.15},
-    {id:'m_D',gx:0,gy:2,req:['m_B'],nm:'Combustion',em:'🌋',max:5,ds:'Brûlure ×1,20 par niv',ap:(e,l)=>e.burnMul*=P(1.20,l)},
-    {id:'m_E',gx:2,gy:2,req:['m_B','m_C'],nm:'Fulguration',em:'✨',max:5,ds:'Dégâts ×1,14 par niv (exige Enflammer + Givrer)',ap:(e,l)=>e.dmgMul*=P(1.14,l)},
-    {id:'m_F',gx:4,gy:2,req:['m_C'],nm:'Gel profond',em:'🧊',max:5,ds:'Vulnérabilité ×1,15 par niv',ap:(e,l)=>e.vulnMul*=P(1.15,l)},
-    {id:'m_G',gx:1,gy:3,req:['m_D'],nm:'Fournaise',em:'☄️',max:5,ds:'Brûlure ×1,18 par niv',ap:(e,l)=>e.burnMul*=P(1.18,l)},
-    {id:'m_H',gx:2,gy:3,req:['m_E'],nm:'Décharge',em:'⚡',max:5,ds:'+5% critique par niv',ap:(e,l)=>e.critAdd+=5*l},
-    {id:'m_I',gx:3,gy:3,req:['m_F'],nm:'Carapace de glace',em:'🛡️',max:5,ds:'PV max ×1,15 par niv',ap:(e,l)=>e.hpMul*=P(1.15,l)},
-    {id:'m_K1',gx:0,gy:4,req:['m_G'],key:1,nm:'Immolation',em:'😈',max:1,ds:'★ KEYSTONE : brûlure ×3, mais dégâts directs ×0,6.',ap:e=>{e.burnMul*=3;e.dmgMul*=0.6}},
-    {id:'m_K2',gx:2,gy:4,req:['m_H'],key:1,nm:'Surcharge',em:'⚡',max:1,ds:'★ KEYSTONE : +150% dégâts critiques (×2 → ×3,5).',ap:e=>e.critMultAdd+=1.5},
-    {id:'m_K3',gx:4,gy:4,req:['m_I'],key:1,syn:'conflag',nm:'Zéro absolu',em:'🔷',max:1,ds:'★ SYNERGIE : brûlure ×(1+vulnérabilité×2).'},
-    {id:'m_C1',gx:1,gy:5,req:['m_K1','m_K2'],cap:1,nm:'Cataclysme',em:'💠',max:1,ds:'CAPSTONE : brûlure ×2 ET +100% dégâts critiques.',ap:e=>{e.burnMul*=2;e.critMultAdd+=1}},
-    {id:'m_C2',gx:3,gy:5,req:['m_K2','m_K3'],cap:1,nm:'Ère glaciaire',em:'💠',max:1,ds:'CAPSTONE : vulnérabilité ×2 ET dégâts ×1,8.',ap:e=>{e.vulnMul*=2;e.dmgMul*=1.8}},
-    {id:'m_C3',gx:2,gy:6,req:['m_K1','m_K3'],cap:1,nm:'Avatar élémentaire',em:'💠',max:1,ds:'CAPSTONE : dégâts ×2 ET brûlure ×2.',ap:e=>{e.dmgMul*=2;e.burnMul*=2}},
+    {id:'m0',gx:3,gy:0,req:[],nm:'Éveil arcanique',em:'🔮',max:1,ds:'Ouvre l’arbre. +20% dégâts et +8% de chance de critique.',ap:e=>{e.dmgMul*=1.2;e.critAdd+=8}},
+    // ── Branche FEU (brûlure) ──
+    {id:'mB1',gx:1,gy:1,req:['m0'],nm:'Enflammer',em:'🔥',max:1,ds:'MÉCANIQUE : ouvre la BRÛLURE — 50% de ton ATK sur la durée.',ap:e=>e.burnBase+=0.50},
+    {id:'mB2',gx:0,gy:2,req:['mB1'],nm:'Combustion',em:'🌋',max:6,ds:'Brûlure ×1,5 par rang.',ap:(e,l)=>e.burnMul*=P(1.5,l)},
+    {id:'mB3',gx:1,gy:3,req:['mB2'],key:1,nm:'Immolation',em:'😈',max:1,ds:'★ KEYSTONE : brûlure ×3, mais dégâts directs ×0,7 (build DoT pur).',ap:e=>{e.burnMul*=3;e.dmgMul*=0.7}},
+    {id:'mB4',gx:0,gy:4,req:['mB3'],nm:'Fournaise',em:'☄️',max:6,ds:'Brûlure ×1,4 par rang.',ap:(e,l)=>e.burnMul*=P(1.4,l)},
+    {id:'mB5',gx:1,gy:5,req:['mB4'],cap:1,syn:'croisade',nm:'Cataclysme ardent',em:'💠',max:1,ds:'CAPSTONE : tes dégâts directs amplifient encore ta brûlure.'},
+    // ── Branche GIVRE (vulnérabilité) ──
+    {id:'mF1',gx:2,gy:1,req:['m0'],nm:'Givrer',em:'❄️',max:1,ds:'MÉCANIQUE : ouvre la VULNÉRABILITÉ — l’ennemi subit +20% de tes dégâts.',ap:e=>e.vulnBase+=0.20},
+    {id:'mF2',gx:2,gy:2,req:['mF1'],nm:'Gel profond',em:'🧊',max:6,ds:'Vulnérabilité ×1,35 par rang.',ap:(e,l)=>e.vulnMul*=P(1.35,l)},
+    {id:'mF3',gx:2,gy:3,req:['mF2'],key:1,syn:'conflag',nm:'Zéro absolu',em:'🔷',max:1,ds:'★ SYNERGIE : ta vulnérabilité amplifie ta brûlure.'},
+    {id:'mF4',gx:2,gy:4,req:['mF3'],nm:'Éclats de glace',em:'🩸',max:6,ds:'Vulnérabilité ×1,3 par rang.',ap:(e,l)=>e.vulnMul*=P(1.3,l)},
+    {id:'mF5',gx:2,gy:5,req:['mF4'],cap:1,syn:'crush',nm:'Ère glaciaire',em:'💠',max:1,ds:'CAPSTONE : ta vulnérabilité amplifie AUSSI tes dégâts directs.'},
+    // ── Branche FOUDRE (crit) ──
+    {id:'mC1',gx:4,gy:1,req:['m0'],nm:'Décharge',em:'⚡',max:1,ds:'MÉCANIQUE : +15% crit et +50% dégâts critiques.',ap:e=>{e.critAdd+=15;e.critMultAdd+=0.5}},
+    {id:'mC2',gx:4,gy:2,req:['mC1'],nm:'Haute tension',em:'🌩️',max:6,ds:'+50% dégâts critiques par rang.',ap:(e,l)=>e.critMultAdd+=0.5*l},
+    {id:'mC3',gx:4,gy:3,req:['mC2'],key:1,syn:'assassin',nm:'Vélocité foudroyante',em:'💫',max:1,ds:'★ SYNERGIE : ta chance de crit accélère tes attaques.'},
+    {id:'mC4',gx:4,gy:4,req:['mC3'],nm:'Surcharge',em:'🔋',max:6,ds:'+6% crit par rang (peut surcritiquer au-delà de 100%).',ap:(e,l)=>e.critAdd+=6*l},
+    {id:'mC5',gx:4,gy:5,req:['mC4'],cap:1,nm:'Tempête',em:'💠',max:1,ds:'CAPSTONE : ta chance de crit AU-DELÀ de 100% se convertit en multi-attaque, +25% multi.',ap:e=>{e.overcritMulti=1;e.multiAdd+=25}},
+    // ── Branche ARCANE (multi-attaque) ──
+    {id:'mA1',gx:5,gy:1,req:['m0'],nm:'Missiles arcaniques',em:'✨',max:1,ds:'MÉCANIQUE : +30% multi-attaque (chance de frapper 2×).',ap:e=>e.multiAdd+=30},
+    {id:'mA2',gx:6,gy:2,req:['mA1'],nm:'Barrage',em:'🎇',max:6,ds:'+12% multi-attaque par rang.',ap:(e,l)=>e.multiAdd+=12*l},
+    {id:'mA3',gx:5,gy:3,req:['mA2'],key:1,nm:'Bouclier de mana',em:'🛡️',max:1,ds:'★ KEYSTONE : PV max ×1,8 et tu voles 12% de tes dégâts en PV.',ap:e=>{e.hpMul*=1.8;e.lifestealPct+=0.12}},
+    {id:'mA4',gx:6,gy:4,req:['mA3'],nm:'Puissance brute',em:'💥',max:6,ds:'Dégâts directs ×1,2 par rang.',ap:(e,l)=>e.dmgMul*=P(1.2,l)},
+    {id:'mA5',gx:5,gy:5,req:['mA4'],cap:1,nm:'Singularité',em:'💠',max:1,ds:'CAPSTONE : multi-attaque au-delà de 100% = coups GARANTIS, +40% multi.',ap:e=>e.multiAdd+=40},
   ]},
   rodeur:{nodes:[
-    {id:'r_A',gx:2,gy:0,req:[],nm:'Tir puissant',em:'🏹',max:5,ds:'Dégâts ×1,15 par niv',ap:(e,l)=>e.dmgMul*=P(1.15,l)},
-    {id:'r_B',gx:1,gy:1,req:['r_A'],nm:'Empoisonner',em:'☠️',max:1,ds:'Ouvre : poison (1,5% PV max/s).',ap:e=>e.poisonBase+=0.015},
-    {id:'r_C',gx:3,gy:1,req:['r_A'],nm:'Visée',em:'🎯',max:5,ds:'+5% critique par niv',ap:(e,l)=>e.critAdd+=5*l},
-    {id:'r_D',gx:0,gy:2,req:['r_B'],nm:'Virulence',em:'🧪',max:5,ds:'Poison ×1,20 par niv',ap:(e,l)=>e.poisonMul*=P(1.20,l)},
-    {id:'r_E',gx:2,gy:2,req:['r_B','r_C'],nm:'Coup fatal',em:'💥',max:4,ds:'Dégâts critiques +25% par niv (exige Empoisonner + Visée)',ap:(e,l)=>e.critMultAdd+=0.25*l},
-    {id:'r_F',gx:4,gy:2,req:['r_C'],nm:'Cupidité',em:'🪙',max:5,ds:'Or ×1,18 par niv',ap:(e,l)=>e.goldMul*=P(1.18,l)},
-    {id:'r_G',gx:1,gy:3,req:['r_D'],nm:'Corrosion',em:'🐍',max:5,ds:'Poison ×1,18 par niv',ap:(e,l)=>e.poisonMul*=P(1.18,l)},
-    {id:'r_H',gx:2,gy:3,req:['r_E'],nm:'Précision',em:'👁️',max:5,ds:'+4% critique par niv',ap:(e,l)=>e.critAdd+=4*l},
-    {id:'r_I',gx:3,gy:3,req:['r_F'],nm:'Butin',em:'💰',max:5,ds:'Or/sec ×1,18 par niv',ap:(e,l)=>e.goldSecMul*=P(1.18,l)},
-    {id:'r_K1',gx:0,gy:4,req:['r_G'],key:1,nm:'Peste',em:'🧫',max:1,ds:'★ KEYSTONE : poison ×2,5.',ap:e=>e.poisonMul*=2.5},
-    {id:'r_K2',gx:2,gy:4,req:['r_H'],key:1,syn:'assassin',nm:'Assassin',em:'🗡️',max:1,ds:'★ SYNERGIE : ton crit augmente ta vitesse d’attaque.'},
-    {id:'r_K3',gx:4,gy:4,req:['r_I'],key:1,syn:'bounty',nm:'Chasseur de primes',em:'🎖️',max:1,ds:'★ SYNERGIE : ta cupidité augmente tes dégâts.'},
-    {id:'r_C1',gx:1,gy:5,req:['r_K1','r_K2'],cap:1,nm:'Prédateur apex',em:'💠',max:1,ds:'CAPSTONE : poison ×2 ET dégâts ×2.',ap:e=>{e.poisonMul*=2;e.dmgMul*=2}},
-    {id:'r_C2',gx:3,gy:5,req:['r_K2','r_K3'],cap:1,nm:'Œil du faucon',em:'💠',max:1,ds:'CAPSTONE : +100% dégâts crit, +30% multi-attaque, et ta chance de crit AU-DELÀ de 100% te donne autant de multi-attaque (½).',ap:e=>{e.critMultAdd+=1;e.multiAdd+=30;e.overcritMulti=1}},
-    {id:'r_C3',gx:2,gy:6,req:['r_K1','r_K3'],cap:1,nm:'Contrebandier mortel',em:'💠',max:1,ds:'CAPSTONE : poison ×2 ET or ×2.',ap:e=>{e.poisonMul*=2;e.goldMul*=2}},
+    {id:'r0',gx:3,gy:0,req:[],nm:'Instinct du chasseur',em:'🏹',max:1,ds:'Ouvre l’arbre. +15% dégâts et +10% de chance de critique.',ap:e=>{e.dmgMul*=1.15;e.critAdd+=10}},
+    // ── Branche POISON ──
+    {id:'rP1',gx:1,gy:1,req:['r0'],nm:'Empoisonner',em:'☠️',max:1,ds:'MÉCANIQUE : ouvre le POISON — 1,8% des PV max de l’ennemi par seconde.',ap:e=>e.poisonBase+=0.018},
+    {id:'rP2',gx:0,gy:2,req:['rP1'],nm:'Virulence',em:'🧪',max:6,ds:'Poison ×1,5 par rang.',ap:(e,l)=>e.poisonMul*=P(1.5,l)},
+    {id:'rP3',gx:1,gy:3,req:['rP2'],key:1,nm:'Venin fielleux',em:'🐍',max:1,ds:'★ KEYSTONE : ton poison profite désormais de ta chance de critique.',ap:e=>e.dotCrit=1},
+    {id:'rP4',gx:0,gy:4,req:['rP3'],nm:'Peste',em:'🦠',max:6,ds:'Poison ×1,4 par rang.',ap:(e,l)=>e.poisonMul*=P(1.4,l)},
+    {id:'rP5',gx:1,gy:5,req:['rP4'],cap:1,nm:'Fléau grouillant',em:'💠',max:1,ds:'CAPSTONE : ×2,5 la puissance du poison — il ronge tout.',ap:e=>e.poisonMul*=2.5},
+    // ── Branche CRIT ──
+    {id:'rC1',gx:2,gy:1,req:['r0'],nm:'Visée',em:'🎯',max:1,ds:'MÉCANIQUE : +15% crit et +40% dégâts critiques.',ap:e=>{e.critAdd+=15;e.critMultAdd+=0.4}},
+    {id:'rC2',gx:2,gy:2,req:['rC1'],nm:'Point faible',em:'🔎',max:6,ds:'+50% dégâts critiques par rang.',ap:(e,l)=>e.critMultAdd+=0.5*l},
+    {id:'rC3',gx:2,gy:3,req:['rC2'],key:1,syn:'assassin',nm:'Assassin',em:'🗡️',max:1,ds:'★ SYNERGIE : ta chance de crit accélère tes attaques.'},
+    {id:'rC4',gx:2,gy:4,req:['rC3'],nm:'Précision',em:'👁️',max:6,ds:'+6% crit par rang (peut surcritiquer).',ap:(e,l)=>e.critAdd+=6*l},
+    {id:'rC5',gx:2,gy:5,req:['rC4'],cap:1,nm:'Œil du faucon',em:'💠',max:1,ds:'CAPSTONE : ta chance de crit AU-DELÀ de 100% se convertit en multi-attaque, +30% multi.',ap:e=>{e.overcritMulti=1;e.multiAdd+=30}},
+    // ── Branche OR (cupidité) ──
+    {id:'rG1',gx:4,gy:1,req:['r0'],nm:'Cupidité',em:'🪙',max:1,ds:'MÉCANIQUE : or ×1,5 et or/sec ×1,3.',ap:e=>{e.goldMul*=1.5;e.goldSecMul*=1.3}},
+    {id:'rG2',gx:4,gy:2,req:['rG1'],nm:'Rapine',em:'💰',max:6,ds:'Or ×1,25 par rang.',ap:(e,l)=>e.goldMul*=P(1.25,l)},
+    {id:'rG3',gx:4,gy:3,req:['rG2'],key:1,syn:'bounty',nm:'Chasseur de primes',em:'🎖️',max:1,ds:'★ SYNERGIE : ta cupidité (or ×) augmente tes dégâts.'},
+    {id:'rG4',gx:4,gy:4,req:['rG3'],nm:'Trésor de guerre',em:'🏆',max:6,ds:'Or/sec ×1,3 par rang.',ap:(e,l)=>e.goldSecMul*=P(1.3,l)},
+    {id:'rG5',gx:4,gy:5,req:['rG4'],cap:1,syn:'prosperite',nm:'Fortune mortelle',em:'💠',max:1,ds:'CAPSTONE : ton or/sec augmente AUSSI tes dégâts.'},
+    // ── Branche TRAQUE (multi & exécution) ──
+    {id:'rM1',gx:5,gy:1,req:['r0'],nm:'Tir en rafale',em:'🌠',max:1,ds:'MÉCANIQUE : +35% multi-attaque.',ap:e=>e.multiAdd+=35},
+    {id:'rM2',gx:6,gy:2,req:['rM1'],nm:'Salve',em:'🎇',max:6,ds:'+12% multi-attaque par rang.',ap:(e,l)=>e.multiAdd+=12*l},
+    {id:'rM3',gx:5,gy:3,req:['rM2'],key:1,nm:'Coup de grâce',em:'🎯',max:1,ds:'★ KEYSTONE : exécution — +200% dégâts sous 30% PV ennemi.',ap:e=>{e.execThresh=Math.max(e.execThresh,0.30);e.execMul*=3}},
+    {id:'rM4',gx:6,gy:4,req:['rM3'],nm:'Traque',em:'🐾',max:6,ds:'+45% dégâts d’exécution par rang.',ap:(e,l)=>e.execMul+=0.45*l},
+    {id:'rM5',gx:5,gy:5,req:['rM4'],cap:1,nm:'Prédateur',em:'💠',max:1,ds:'CAPSTONE : tu voles 15% de tes dégâts en PV et +25% multi-attaque.',ap:e=>{e.lifestealPct+=0.15;e.multiAdd+=25}},
   ]},
   paladin:{nodes:[
-    {id:'p_A',gx:2,gy:0,req:[],nm:'Zèle',em:'⚔️',max:5,ds:'Dégâts ×1,14 par niv',ap:(e,l)=>e.dmgMul*=P(1.14,l)},
-    {id:'p_B',gx:1,gy:1,req:['p_A'],nm:'Feu sacré',em:'✨',max:1,ds:'Ouvre : brûlure sacrée (35% ATK/s).',ap:e=>e.burnBase+=0.35},
-    {id:'p_C',gx:3,gy:1,req:['p_A'],nm:'Bouclier',em:'🛡️',max:5,ds:'PV max ×1,18 par niv',ap:(e,l)=>e.hpMul*=P(1.18,l)},
-    {id:'p_D',gx:0,gy:2,req:['p_B'],nm:'Ferveur',em:'🔥',max:5,ds:'Brûlure ×1,18 par niv',ap:(e,l)=>e.burnMul*=P(1.18,l)},
-    {id:'p_E',gx:2,gy:2,req:['p_B','p_C'],nm:'Serment',em:'📜',max:5,ds:'Dégâts ×1,13 par niv (exige Feu sacré + Bouclier)',ap:(e,l)=>e.dmgMul*=P(1.13,l)},
-    {id:'p_F',gx:4,gy:2,req:['p_C'],nm:'Dîme',em:'💰',max:5,ds:'Or/sec ×1,18 par niv',ap:(e,l)=>e.goldSecMul*=P(1.18,l)},
-    {id:'p_G',gx:1,gy:3,req:['p_D'],nm:'Lumière punitive',em:'🌟',max:5,ds:'Brûlure ×1,15 par niv',ap:(e,l)=>e.burnMul*=P(1.15,l)},
-    {id:'p_H',gx:2,gy:3,req:['p_E'],nm:'Dévotion',em:'❤️',max:5,ds:'PV ×1,12 & +2 régén par niv',ap:(e,l)=>{e.hpMul*=P(1.12,l);e.regenAdd+=2*l}},
-    {id:'p_I',gx:3,gy:3,req:['p_F'],nm:'Offrande',em:'🪙',max:5,ds:'Or ×1,15 par niv',ap:(e,l)=>e.goldMul*=P(1.15,l)},
-    {id:'p_K1',gx:0,gy:4,req:['p_G'],key:1,syn:'croisade',nm:'Croisade',em:'🔆',max:1,ds:'★ SYNERGIE : tes dégâts amplifient ta brûlure sacrée.'},
-    {id:'p_K2',gx:2,gy:4,req:['p_H'],key:1,nm:'Rempart',em:'🏰',max:1,ds:'★ KEYSTONE : PV max ×2, +10 régén/s.',ap:e=>{e.hpMul*=2;e.regenAdd+=10}},
-    {id:'p_K3',gx:4,gy:4,req:['p_I'],key:1,syn:'prosperite',nm:'Prospérité sacrée',em:'👑',max:1,ds:'★ SYNERGIE : ton or/sec augmente tes dégâts.'},
-    {id:'p_C1',gx:1,gy:5,req:['p_K1','p_K2'],cap:1,nm:'Avatar divin',em:'💠',max:1,ds:'CAPSTONE : dégâts ×2 ET brûlure ×2.',ap:e=>{e.dmgMul*=2;e.burnMul*=2}},
-    {id:'p_C2',gx:3,gy:5,req:['p_K2','p_K3'],cap:1,nm:'Gardien éternel',em:'💠',max:1,ds:'CAPSTONE : PV max ×2 ET or/sec ×2.',ap:e=>{e.hpMul*=2;e.goldSecMul*=2}},
-    {id:'p_C3',gx:2,gy:6,req:['p_K1','p_K3'],cap:1,nm:'Templier d’or',em:'💠',max:1,ds:'CAPSTONE : brûlure ×2 ET or ×2.',ap:e=>{e.burnMul*=2;e.goldMul*=2}},
+    {id:'p0',gx:3,gy:0,req:[],nm:'Serment sacré',em:'⚔️',max:1,ds:'Ouvre l’arbre. +18% dégâts et +12 régén/s.',ap:e=>{e.dmgMul*=1.18;e.regenAdd+=12}},
+    // ── Branche FEU SACRÉ (brûlure) ──
+    {id:'pB1',gx:1,gy:1,req:['p0'],nm:'Feu sacré',em:'✨',max:1,ds:'MÉCANIQUE : ouvre la BRÛLURE sacrée — 45% de ton ATK sur la durée.',ap:e=>e.burnBase+=0.45},
+    {id:'pB2',gx:0,gy:2,req:['pB1'],nm:'Ferveur',em:'🔥',max:6,ds:'Brûlure ×1,45 par rang.',ap:(e,l)=>e.burnMul*=P(1.45,l)},
+    {id:'pB3',gx:1,gy:3,req:['pB2'],key:1,syn:'croisade',nm:'Croisade',em:'🔆',max:1,ds:'★ SYNERGIE : tes dégâts amplifient ta brûlure sacrée.'},
+    {id:'pB4',gx:0,gy:4,req:['pB3'],nm:'Lumière punitive',em:'🌟',max:6,ds:'Brûlure ×1,4 par rang.',ap:(e,l)=>e.burnMul*=P(1.4,l)},
+    {id:'pB5',gx:1,gy:5,req:['pB4'],cap:1,nm:'Jugement',em:'💠',max:1,ds:'CAPSTONE : tu voles 15% de tes dégâts en PV et +12% crit.',ap:e=>{e.lifestealPct+=0.15;e.critAdd+=12}},
+    // ── Branche BOUCLIER (tank & vol de vie) ──
+    {id:'pS1',gx:2,gy:1,req:['p0'],nm:'Bouclier de foi',em:'🛡️',max:1,ds:'MÉCANIQUE : PV max ×1,5 et tu voles 10% de tes dégâts en PV.',ap:e=>{e.hpMul*=1.5;e.lifestealPct+=0.10}},
+    {id:'pS2',gx:2,gy:2,req:['pS1'],nm:'Dévotion',em:'❤️',max:6,ds:'Par rang : PV max ×1,15 et +3 régén/s.',ap:(e,l)=>{e.hpMul*=P(1.15,l);e.regenAdd+=3*l}},
+    {id:'pS3',gx:2,gy:3,req:['pS2'],key:1,nm:'Rempart',em:'🏰',max:1,ds:'★ KEYSTONE : PV max ×2 et +25 régén/s.',ap:e=>{e.hpMul*=2;e.regenAdd+=25}},
+    {id:'pS4',gx:2,gy:4,req:['pS3'],nm:'Sanctuaire',em:'⛪',max:6,ds:'+6% vol de vie par rang.',ap:(e,l)=>e.lifestealPct+=0.06*l},
+    {id:'pS5',gx:2,gy:5,req:['pS4'],cap:1,nm:'Gardien immortel',em:'💠',max:1,ds:'CAPSTONE : sous 50% PV, +120% dégâts et tu voles +20% de tes dégâts en PV.',ap:e=>{e.dmgLowHp+=1.2;e.lifestealPct+=0.20}},
+    // ── Branche MARTEAU (vulnérabilité) ──
+    {id:'pV1',gx:4,gy:1,req:['p0'],nm:'Marteau de justice',em:'🔨',max:1,ds:'MÉCANIQUE : ouvre la VULNÉRABILITÉ — l’ennemi subit +22% de tes dégâts.',ap:e=>e.vulnBase+=0.22},
+    {id:'pV2',gx:4,gy:2,req:['pV1'],nm:'Zèle',em:'📜',max:6,ds:'Vulnérabilité ×1,3 par rang.',ap:(e,l)=>e.vulnMul*=P(1.3,l)},
+    {id:'pV3',gx:4,gy:3,req:['pV2'],key:1,syn:'conflag',nm:'Feu purificateur',em:'🔥',max:1,ds:'★ SYNERGIE : ta vulnérabilité amplifie ta brûlure.'},
+    {id:'pV4',gx:4,gy:4,req:['pV3'],nm:'Condamnation',em:'⚖️',max:6,ds:'Vulnérabilité ×1,28 par rang.',ap:(e,l)=>e.vulnMul*=P(1.28,l)},
+    {id:'pV5',gx:4,gy:5,req:['pV4'],cap:1,syn:'crush',nm:'Damnation',em:'💠',max:1,ds:'CAPSTONE : ta vulnérabilité amplifie AUSSI tes dégâts directs.'},
+    // ── Branche OR (dîme) ──
+    {id:'pG1',gx:5,gy:1,req:['p0'],nm:'Dîme',em:'🪙',max:1,ds:'MÉCANIQUE : or ×1,5 et or/sec ×1,3.',ap:e=>{e.goldMul*=1.5;e.goldSecMul*=1.3}},
+    {id:'pG2',gx:6,gy:2,req:['pG1'],nm:'Offrande',em:'💰',max:6,ds:'Or/sec ×1,3 par rang.',ap:(e,l)=>e.goldSecMul*=P(1.3,l)},
+    {id:'pG3',gx:5,gy:3,req:['pG2'],key:1,syn:'prosperite',nm:'Prospérité sacrée',em:'👑',max:1,ds:'★ SYNERGIE : ton or/sec augmente tes dégâts.'},
+    {id:'pG4',gx:6,gy:4,req:['pG3'],nm:'Aumône',em:'🏆',max:6,ds:'Or ×1,25 par rang.',ap:(e,l)=>e.goldMul*=P(1.25,l)},
+    {id:'pG5',gx:5,gy:5,req:['pG4'],cap:1,syn:'bounty',nm:'Fortune divine',em:'💠',max:1,ds:'CAPSTONE : ta cupidité (or ×) augmente AUSSI tes dégâts.'},
   ]},
 };
-// Synergies (lisent tes effets accumulés → multiplicatif)
+// Synergies (lisent tes effets accumulés → multiplicatif). Elles font
+// INTERAGIR une mécanique avec une autre stat, ce qui crée les vrais builds.
 const SYN={
-  bloodrage:e=>{const bl=e.bleedBase*e.bleedMul;e.atkSpeedMul*=(1+Math.min(2,bl*1.5));},
-  conflag:e=>{const vu=e.vulnBase*e.vulnMul;e.burnMul*=(1+vu*2);},
-  assassin:e=>{e.atkSpeedMul*=(1+Math.min(1.5,(e.critAdd/100)*2));},
-  bounty:e=>{e.dmgMul*=(1+(e.goldMul-1)*0.6);},
-  croisade:e=>{e.burnMul*=(1+Math.min(3,(e.dmgMul-1)*0.8));},
-  prosperite:e=>{e.dmgMul*=(1+(e.goldSecMul-1)*0.6);},
+  bloodrage:e=>{const bl=e.bleedBase*e.bleedMul;e.atkSpeedMul*=(1+Math.min(2,bl*1.2));}, // saignement → vitesse
+  rend:e=>{const bl=e.bleedBase*e.bleedMul;e.vulnBase+=Math.min(2,bl*0.15);e.vulnMul=Math.max(e.vulnMul,1);}, // saignement → vulnérabilité
+  crush:e=>{const vu=e.vulnBase*e.vulnMul;e.dmgMul*=(1+Math.min(4,vu*1.5));}, // vulnérabilité → dégâts directs
+  conflag:e=>{const vu=e.vulnBase*e.vulnMul;e.burnMul*=(1+Math.min(5,vu*2));}, // vulnérabilité → brûlure
+  assassin:e=>{e.atkSpeedMul*=(1+Math.min(2,(e.critAdd/100)*1.5));}, // crit → vitesse
+  bounty:e=>{e.dmgMul*=(1+(e.goldMul-1)*0.5);}, // or → dégâts
+  croisade:e=>{e.burnMul*=(1+Math.min(4,(e.dmgMul-1)*0.5));}, // dégâts → brûlure
+  prosperite:e=>{e.dmgMul*=(1+(e.goldSecMul-1)*0.5);}, // or/sec → dégâts
 };
-// Budget de points LIMITÉ : on ne peut pas tout prendre, il faut choisir un
-// build. Le respec est gratuit → on expérimente librement.
-const POINT_CAP=28;
+// 1 point de talent tous les 10 niveaux de classe. L'ARBRE est fini (effets
+// impactants) ; une fois investi, tu déverses tes points dans le PARANGON,
+// un panneau de bonus génériques INFINIS (dégâts ×, saignement ×, etc.).
 const nodeById=(cls,id)=>CLASS_TREES[cls].nodes.find(n=>n.id===id);
-function classSpent(cls){const a=S.classTal[cls]||{},t=CLASS_TREES[cls];let s=0;for(const n of t.nodes)s+=a[n.id]||0;return s;}
-function pointCap(){return POINT_CAP+2*((S.ascUp&&S.ascUp.wisdom)||0);} // Sagesse astrale relève le plafond
-function classPoints(cls){const total=Math.min(pointCap(),classLevelOf(S.classXp[cls]||0));const spent=classSpent(cls);return{total,spent,avail:total-spent};}
+const PARANGON=[
+  {id:'dmg',nm:'Puissance brute',em:'💥',ds:'Dégâts ×1,5 par rang',col:'var(--hp)',base:1.5},
+  {id:'dot',nm:'Fléau',em:'☠️',ds:'Saignement / brûlure / poison ×1,5 par rang',col:'var(--ember)',base:1.5},
+  {id:'crit',nm:'Précision fatale',em:'🎯',ds:'+5% critique par rang (peut surcritiquer)',col:'var(--gold)',base:5,add:true},
+  {id:'spd',nm:'Célérité',em:'⚡',ds:'Vitesse d’attaque ×1,08 par rang',col:'var(--xp)',base:1.08},
+  {id:'hp',nm:'Titan',em:'🛡️',ds:'PV max ×1,4 par rang',col:'var(--regen)',base:1.4},
+  {id:'gold',nm:'Cupidité',em:'🪙',ds:'Or ×1,5 par rang',col:'var(--gold)',base:1.5},
+  {id:'goldsec',nm:'Rente',em:'💰',ds:'Or/sec ×1,4 par rang',col:'var(--gold)',base:1.4},
+];
+function parRank(cls,id){return (S.parangon&&S.parangon[cls]&&S.parangon[cls][id])||0;}
+function parEff(cls){const p=(S.parangon&&S.parangon[cls])||{};return {
+  dmg:Math.pow(1.5,p.dmg||0), dot:Math.pow(1.5,p.dot||0), crit:5*(p.crit||0),
+  spd:Math.pow(1.08,p.spd||0), hp:Math.pow(1.4,p.hp||0), gold:Math.pow(1.5,p.gold||0), goldsec:Math.pow(1.4,p.goldsec||0)
+};}
+function parSpent(cls){const pa=(S.parangon&&S.parangon[cls])||{};let s=0;for(const k in pa)s+=pa[k]||0;return s;}
+function treeSpent(cls){const a=S.classTal[cls]||{},t=CLASS_TREES[cls];let s=0;for(const n of t.nodes)s+=a[n.id]||0;return s;}
+function classSpent(cls){return treeSpent(cls)+parSpent(cls);}
+function classPoints(cls){const total=Math.floor(classLevelOf(S.classXp[cls]||0)/10)+2*((S.ascUp&&S.ascUp.wisdom)||0);const spent=classSpent(cls);return{total,spent,avail:total-spent};}
+function treeFull(cls){const t=CLASS_TREES[cls],a=S.classTal[cls]||{};return t.nodes.every(n=>(a[n.id]||0)>=(n.max||1));}
 function nodeUnlocked(cls,id){const a=S.classTal[cls]||{};const n=nodeById(cls,id);if(!n)return false;const req=n.req||[];if(!req.length)return true;return req.every(r=>(a[r]||0)>0);}
 function classEff(cls){
-  const e={dmgMul:1,hpMul:1,goldMul:1,goldSecMul:1,atkSpeedMul:1,clickMul:1,burnMul:1,bleedMul:1,poisonMul:1,vulnMul:1,burnBase:0,bleedBase:0,poisonBase:0,vulnBase:0,critAdd:0,critMultAdd:0,regenAdd:0,dmgLowHp:0,multiAdd:0,overcritMulti:0};
+  const e={dmgMul:1,hpMul:1,goldMul:1,goldSecMul:1,atkSpeedMul:1,clickMul:1,burnMul:1,bleedMul:1,poisonMul:1,vulnMul:1,burnBase:0,bleedBase:0,poisonBase:0,vulnBase:0,critAdd:0,critMultAdd:0,regenAdd:0,dmgLowHp:0,multiAdd:0,overcritMulti:0,
+    dotCrit:0,execThresh:0,execMul:1,rampRate:0,atkRampRate:0,lifestealPct:0,critToDmg:0,vulnToPoison:0,goldOnHit:0};
   const t=CLASS_TREES[cls]; if(!t)return e; const a=S.classTal&&S.classTal[cls]||{}; const syns=[];
   for(const n of t.nodes){const l=a[n.id]||0;if(l>0){if(n.ap)n.ap(e,l);if(n.syn)syns.push(n.syn);}}
   for(const s of syns) SYN[s]&&SYN[s](e);
@@ -929,9 +996,10 @@ function D(){
   else if(voie==='equilibre'){vGold=1+0.04*ch; vDmg=1+0.01*ch;}
   const pres=1+0.04*(S.reliques||0);
   const achMult=1+ACH_BONUS*((S.unlocked||[]).length); // chaque succès = bonus permanent
+  const pe=parEff(S.cls||'guerrier'); // parangon (bonus génériques infinis)
   const vuln=1+ce.vulnBase*ce.vulnMul; // givre/faiblesse (base × multiplicateurs)
-  const goldMult=c.gold*ce.goldMul*b*vGold*pres*achMult*ascFortuneMult();
-  const crit=Math.max(0,BASE.crit+c.crit+ce.critAdd+(S.up.crit||0)*UP_GAIN.crit+vCrit); // NON plafonné : au-delà de 100% → surcritiques
+  const goldMult=c.gold*ce.goldMul*b*vGold*pres*achMult*ascFortuneMult()*pe.gold;
+  const crit=Math.max(0,BASE.crit+c.crit+ce.critAdd+(S.up.crit||0)*UP_GAIN.crit+vCrit+pe.crit); // NON plafonné : au-delà de 100% → surcritiques
   const critMult=CRIT_MULT+(ce.critMultAdd||0)+(S.up.critdmg||0)*UP_GAIN.critdmg; // dégâts critiques (×base + talents + forge)
   // Surcritique : chaque tranche de 100% au-dessus de 100% garantit une couche de crit
   // supplémentaire (double, triple, quadruple crit…), le reste est une chance.
@@ -939,15 +1007,19 @@ function D(){
   const critHitMult=Math.pow(critMult,1+gLayers)*((1-fChance)+fChance*critMult); // multiplicateur moyen SUR un crit
   const critF=(1-critChance)+critChance*critHitMult; // facteur de crit moyen (auto-DPS)
   const atk=BASE.atk+S.habit.atk+(S.up.atk||0)*UP_GAIN.atk;
-  const maxHp=(BASE.maxHp+S.habit.maxHp+(S.up.maxHp||0)*UP_GAIN.maxHp)*c.hp*vHp*ce.hpMul;
-  const regen=(BASE.regen+S.habit.regen+(S.up.regen||0)*UP_GAIN.regen)*c.regen+ce.regenAdd;
+  const maxHp=(BASE.maxHp+S.habit.maxHp+(S.up.maxHp||0)*UP_GAIN.maxHp)*c.hp*vHp*ce.hpMul*pe.hp;
   const lowHp=(maxHp>0&&S.hp/maxHp<0.5)?(1+(ce.dmgLowHp||0)):1; // Berserker
+  // Exécution : gros bonus de dégâts quand le monstre est à faible vie.
+  const mFrac=S.mhp/Math.max(1,monsterMaxHp(S.floor,S.mi));
+  const execB=(ce.execThresh>0&&mFrac<ce.execThresh)?ce.execMul:1;
+  // Fureur montante : les dégâts (et la vitesse) grimpent tant que tu frappes le même monstre.
+  const rampD=1+(S.rampStacks||0)*(ce.rampRate||0), rampA=1+(S.rampStacks||0)*(ce.atkRampRate||0);
   // Paliers de compagnons : chaque tranche de 10 compagnons recrutés = +5% dégâts.
   const compCount=COMPANIONS.reduce((a,cp)=>a+(S.comp[cp.id]||0),0);
   const compTier=Math.floor(compCount/COMP_TIER_SIZE);
   const compDmg=1+COMP_TIER_BONUS*compTier;
-  const dmgMult=c.dmg*ce.dmgMul*b*vDmg*pres*lowHp*(1+(S.up.power||0)*UP_GAIN.power)*compDmg*achMult*ascPowerMult();
-  const spd=ce.atkSpeedMul*(1+(S.up.speed||0)*UP_GAIN.speed); // vitesse d'attaque
+  const dmgMult=c.dmg*ce.dmgMul*b*vDmg*pres*lowHp*(1+(S.up.power||0)*UP_GAIN.power)*compDmg*achMult*ascPowerMult()*pe.dmg*execB*rampD;
+  const spd=ce.atkSpeedMul*(1+(S.up.speed||0)*UP_GAIN.speed)*pe.spd*rampA; // vitesse d'attaque
   // Multi-attaque : chance (%) de frapper plusieurs fois. >100% = coups garantis + chance.
   // Le talent « Œil du faucon » convertit ta chance de crit au-delà de 100% en multi-attaque.
   let multi=Math.max(0,(S.up.multi||0)*UP_GAIN.multi+(ce.multiAdd||0));
@@ -955,16 +1027,20 @@ function D(){
   const multiHits=1+multi/100; // nombre de coups moyen (auto-DPS)
   const hitBase=atk*critF*dmgMult*vuln;
   const dps=hitBase*spd*multiHits;
+  // Régénération (+ vol de vie : une part de tes dégâts te soigne).
+  const regen=((BASE.regen+S.habit.regen+(S.up.regen||0)*UP_GAIN.regen)*c.regen+ce.regenAdd)+(ce.lifestealPct||0)*dps;
   const clickBase=2+S.level+(S.up.click||0)*3;
   const clickDmg=clickBase*dmgMult*vuln*c.click*vClick*ce.clickMul*spd;
-  const compMult=ce.goldSecMul*goldMult;
+  const compMult=ce.goldSecMul*goldMult*pe.goldsec;
   const goldSec=COMPANIONS.reduce((a,cp)=>a+(S.comp[cp.id]||0)*cp.rate,0)*compMult;
   const offCap=8*3600;
-  // Effets sur la durée (base × multiplicateurs de keystones/synergies, × vitesse d'attaque × multi)
-  const burnDps=ce.burnBase*hitBase*ce.burnMul*spd*multiHits;
-  const bleedDps=ce.bleedBase*hitBase*ce.bleedMul*spd*multiHits;
-  const poisonPct=ce.poisonBase*ce.poisonMul;
-  return{c,ce,dmgMult,goldMult,crit,critMult,critF,atk,maxHp,regen,dps,clickDmg,goldSec,offCap,vuln,spd,multi,multiHits,burnDps,bleedDps,poisonPct,compCount,compTier,compDmg};
+  // Effets sur la durée (base × multiplicateurs de keystones/synergies × vitesse × multi × parangon fléau)
+  const burnDps=ce.burnBase*hitBase*ce.burnMul*spd*multiHits*pe.dot;
+  const bleedDps=ce.bleedBase*hitBase*ce.bleedMul*spd*multiHits*pe.dot;
+  // Le poison est un % des PV max de l'ennemi (il ne passe pas par hitBase, donc
+  // il ne profite pas du crit). Le talent « dotCrit » le fait profiter des crits.
+  const poisonPct=ce.poisonBase*ce.poisonMul*pe.dot*(ce.dotCrit?critF:1);
+  return{c,ce,dmgMult,goldMult,crit,critMult,critF,atk,maxHp,regen,dps,clickDmg,goldSec,offCap,vuln,spd,multi,multiHits,burnDps,bleedDps,poisonPct,compCount,compTier,compDmg,ramp:S.rampStacks||0};
 }
 
 // gains hors-ligne
@@ -1200,6 +1276,7 @@ function killMonster(){
   } else { S.mi++; SND.kill(); haptic(12); }
   if(nl>oldLvl){ levelToast(S.level); SND.level(); haptic([10,30,10]); }
   S.mhp=monsterMaxHp(S.floor,S.mi); if(S.hp<d.maxHp)S.hp=Math.min(d.maxHp,S.hp+d.maxHp*0.15);
+  S.rampStacks=0; // nouveau monstre → la fureur retombe
   advanceScene(); save(); updateDungeon(true);
   const mo=document.getElementById('mob'); if(mo){mo.classList.remove('slidein');void mo.offsetWidth;mo.classList.add('slidein');}
 }
@@ -1362,25 +1439,48 @@ function renderTalents(){
   const clvl=classLevelOf(S.classXp[cls]||0), cur=classXpForLevel(clvl), nxt=classXpForLevel(clvl+1);
   const nodes=t.nodes;
   const maxGy=Math.max.apply(null,nodes.map(n=>n.gy));
+  const maxGx=Math.max.apply(null,nodes.map(n=>n.gx));
   const rowH=64, padTop=14, H=maxGy*rowH+padTop+56;
-  const cx=gx=>12+gx*19, cy=gy=>padTop+gy*rowH+24;
+  const cx=gx=>((gx+0.5)/(maxGx+1))*100, cy=gy=>padTop+gy*rowH+24;
+  const treePts=t.nodes.reduce((s,n)=>s+(n.max||1),0);
   let edges='';
   nodes.forEach(n=>{(n.req||[]).forEach(rid=>{const r=nodeById(cls,rid);if(!r)return;const cA=(a[n.id]||0)>0,rA=(a[rid]||0)>0;const col=(cA&&rA)?'var(--gem)':(rA?'var(--goldDim)':'var(--border)');edges+=`<line x1="${cx(r.gx)}%" y1="${cy(r.gy)}" x2="${cx(n.gx)}%" y2="${cy(n.gy)}" stroke="${col}" stroke-width="${(cA&&rA)?3:2}"/>`;});});
   const svg=`<svg width="100%" height="${H}" style="position:absolute;left:0;top:0;pointer-events:none" preserveAspectRatio="none">${edges}</svg>`;
   const nhtml=nodes.map(n=>{const lv=a[n.id]||0,unl=nodeUnlocked(cls,n.id),maxed=lv>=n.max;const st=lv>0?'alloc':(unl?'avail':'lock');const kind=n.cap?'cap':(n.key?'key':'');const sel=selTal===n.id?'sel':'';return `<div class="snode ${st} ${kind} ${sel}" data-nid="${n.id}" style="left:${cx(n.gx)}%;top:${cy(n.gy)-24}px"><span class="sem">${n.em}</span><span class="slv">${lv}/${n.max}</span></div>`;}).join('');
+  const tSpent=treeSpent(cls), full=treeFull(cls);
   screen.innerHTML=headerHTML('Talents',`<div class="chapbadge">🎓 ${Math.max(0,p.avail)} pt</div>`)+
     `<div class="card">
        <div style="display:flex;align-items:center;gap:10px"><span style="width:40px;display:flex;justify-content:center">${pixImg(SPR[(HERO_SPR[cls]||'knight_m')+'_idle'],40)||c.em}</span>
-       <div style="flex:1"><div style="font-family:var(--serif);font-size:17px;font-weight:700">${c.name} · Niv. ${clvl}</div><div class="sub"><b style="color:var(--gold)">${p.spent}/${p.total}</b> points utilisés · ${Math.max(0,p.avail)} dispo</div></div></div>
-       <div class="bar" style="margin-top:8px;height:8px"><i style="background:var(--gem);width:${Math.min(100,p.spent/pointCap()*100)}%"></i></div>
-       <div class="sub" style="margin-top:5px">Arbre <b style="color:var(--gold)">à branches</b> : suis les liens, certains nœuds exigent <b>2 parents</b>. Budget <b style="color:var(--gold)">limité (${pointCap()} pts)</b> — tu ne peux pas tout prendre. Combine 2 <b style="color:var(--gold)">Keystones</b> (●) pour débloquer un <b style="color:var(--gem)">Capstone</b> (💠). Respec gratuit.</div>
+       <div style="flex:1"><div style="font-family:var(--serif);font-size:17px;font-weight:700">${c.name} · Niv. ${clvl}</div><div class="sub"><b style="color:var(--gold)">${p.spent}/${p.total}</b> points utilisés · <b style="color:${p.avail>0?'var(--gem)':'var(--faint)'}">${Math.max(0,p.avail)} dispo</b></div></div></div>
+       <div class="bar" style="margin-top:8px;height:8px"><i style="background:var(--gem);width:${Math.min(100,tSpent/treePts*100)}%"></i></div>
+       <div class="sub" style="margin-top:5px">1 point tous les <b>10 niveaux</b> de classe. Arbre à <b style="color:var(--gold)">4 branches</b> qui ne se rejoignent jamais : chaque nœud AJOUTE ou fait <b style="color:var(--gem)">interagir</b> une mécanique. Arbre <b>${tSpent}/${treePts}</b> pts (fini) → au-delà, verse tes points dans le <b style="color:var(--gold)">Parangon</b> (infini). Respec gratuit.</div>
      </div>
      <div class="skilltree" style="height:${H}px">${svg}${nhtml}</div>
      <div id="tdetail"></div>
-     <button class="link" id="respec" style="display:block;margin:12px auto">Réinitialiser l'arbre (gratuit)</button>`;
+     <button class="link" id="respec" style="display:block;margin:10px auto 4px">Réinitialiser l'arbre (gratuit)</button>
+     <div class="section"><span>♾️ Parangon · dépense infinie</span></div>
+     <div class="card" style="padding:10px 12px"><div class="sub" style="line-height:1.45">${full?'<b style="color:var(--gold)">Arbre complété !</b> ':''}Verse tes points dans des bonus <b>génériques et sans limite</b>. Chaque rang coûte 1 point de talent. Idéal quand l’arbre est plein.</div></div>
+     <div id="parboard"></div>`;
   talDetail();
+  renderParangon();
   screen.querySelectorAll('[data-nid]').forEach(el=>el.onclick=()=>{selTal=el.dataset.nid;renderTalents();});
   document.getElementById('respec').onclick=()=>{S.classTal[cls]={};selTal=null;save();renderTalents();};
+}
+function renderParangon(){
+  const box=document.getElementById('parboard'); if(!box)return;
+  const cls=S.cls||'guerrier', p=classPoints(cls);
+  box.innerHTML=PARANGON.map(pn=>{
+    const rk=parRank(cls,pn.id), can=p.avail>0;
+    const cur=pn.add?('+'+(pn.base*rk)+(pn.id==='crit'?'% crit':'')):('×'+Math.pow(pn.base,rk).toFixed(2));
+    return `<div class="buy ${can?'can':'no'}" data-par="${pn.id}" style="${can?'border-color:'+pn.col:''}"><span class="em">${pn.em}</span>
+      <div style="flex:1"><div class="nm">${pn.nm} <small>Rang ${rk}</small></div><div class="ds">${pn.ds} · <b style="color:${pn.col}">actuel ${cur}</b></div></div>
+      <div class="right"><div class="cost" style="color:${can?'var(--gem)':'var(--faint)'}">🎓 1 pt</div></div></div>`;
+  }).join('');
+  box.querySelectorAll('[data-par]').forEach(el=>el.onclick=()=>{
+    const id=el.dataset.par, pp=classPoints(cls);
+    if(pp.avail>0){ if(!S.parangon[cls])S.parangon[cls]={}; S.parangon[cls][id]=(S.parangon[cls][id]||0)+1; save(); renderTalents(); SND.buy(); haptic(9); }
+    else uiToast('Aucun point disponible (1 tous les 10 niveaux de classe).');
+  });
 }
 function talDetail(){
   const box=document.getElementById('tdetail'); if(!box)return;
@@ -1388,9 +1488,9 @@ function talDetail(){
   if(!selTal){box.innerHTML=`<div class="tdet"><div class="sub" style="text-align:center">👆 Touche un nœud pour voir son effet et l'allouer.</div></div>`;return;}
   const n=nodeById(cls,selTal); if(!n){box.innerHTML='';return;}
   const lv=a[n.id]||0, unlocked=nodeUnlocked(cls,n.id), maxed=lv>=n.max, can=unlocked&&!maxed&&p.avail>0;
-  const badge=n.cap?'<span style="color:var(--gem);font-size:10px;font-weight:800">💠 CAPSTONE</span>':(n.key?'<span style="color:var(--gold);font-size:10px;font-weight:800">● KEYSTONE</span>':'');
+  const badge=n.cap?'<span style="color:var(--gem);font-size:10px;font-weight:800">💠 CAPSTONE</span>':(n.key?'<span style="color:var(--gold);font-size:10px;font-weight:800">★ KEYSTONE</span>':'');
   const reqNames=(n.req||[]).map(id=>{const r=nodeById(cls,id);return r?r.nm:id;});
-  const lockMsg=reqNames.length?('Requiert '+(n.cap?'les 2 keystones':'').replace(/^$/,'')+' : '+reqNames.map(x=>'« '+x+' »').join(' + ')):'';
+  const lockMsg=reqNames.length?('Requiert '+reqNames.map(x=>'« '+x+' »').join(' + ')):'';
   box.innerHTML=`<div class="tdet ${n.cap?'grandd':(n.key?'keyd':'')}">
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="font-size:26px">${n.em}</span>
       <div style="flex:1"><b style="font-size:15px">${n.nm}</b> ${badge}<div class="sub">${lv}/${n.max}${n.max>1?' niveaux':''}</div></div></div>
@@ -1455,7 +1555,7 @@ function renderHero(){
   const fga=document.getElementById('forgeamt');
   if(fga){fga.innerHTML=[1,10,100,'max'].map(a=>`<button class="${forgeAmt===a?'on':''}" data-fa="${a}">×${a}</button>`).join('');
     fga.querySelectorAll('button').forEach(bt=>bt.onclick=()=>{forgeAmt=isNaN(+bt.dataset.fa)?'max':+bt.dataset.fa;renderHero();});}
-  document.getElementById('forge').innerHTML=UPG.map(u=>{const amt=Math.max(1,forgeAmountFor(u.k)),cost=bulkUpCost(u.k,amt),can=S.gold>=cost;return `<div class="buy ${can?'can':'no'}" data-u="${u.k}" style="${can?'border-color:'+u.col:''}"><span class="em">${u.em}</span><div style="flex:1"><div class="nm">${u.nm} <small>Niv. ${S.up[u.k]}</small></div><div class="ds">${u.ds}</div></div><div class="right"><div class="cost" style="color:${can?'var(--gold)':'var(--faint)'}"><span style="display:inline-flex;vertical-align:middle;color:var(--gold);opacity:${can?1:.4}">${ic('coin',12)}</span> ${fmt(cost)} ${forgeAmt!==1?`<span style="color:var(--faint)">×${amt}</span>`:''}</div></div></div>`;}).join('');
+  document.getElementById('forge').innerHTML=UPG.map(u=>{const amt=Math.max(1,forgeAmountFor(u.k)),cost=bulkUpCost(u.k,amt),can=S.gold>=cost,tot=forgeTotalStr(u.k,S.up[u.k]||0);return `<div class="buy ${can?'can':'no'}" data-u="${u.k}" style="${can?'border-color:'+u.col:''}"><span class="em">${u.em}</span><div style="flex:1"><div class="nm">${u.nm} <small>Niv. ${S.up[u.k]}</small></div><div class="ds">${u.ds} · <b style="color:${u.col}">total ${tot}</b></div></div><div class="right"><div class="cost" style="color:${can?'var(--gold)':'var(--faint)'}"><span style="display:inline-flex;vertical-align:middle;color:var(--gold);opacity:${can?1:.4}">${ic('coin',12)}</span> ${fmt(cost)} ${forgeAmt!==1?`<span style="color:var(--faint)">×${amt}</span>`:''}</div></div></div>`;}).join('');
   document.querySelectorAll('[data-u]').forEach(el=>el.onclick=()=>{const k=el.dataset.u,amt=Math.max(1,forgeAmountFor(k)),cost=bulkUpCost(k,amt);if(S.gold>=cost){S.gold-=cost;S.up[k]=(S.up[k]||0)+amt;save();renderHero();SND.buy();haptic(9);}});
   document.getElementById('achbtn').onclick=openAch;
   document.getElementById('prestigebtn').onclick=()=>{const g=reliquesGain(S.floor);if(g<=0)return;uiConfirm(`Renaître ? Tu gagnes <b>${g} reliques</b> permanentes (+${4*g}% dégâts & or) et tu réinitialises ta run (or, compagnons, forge, étage). Tu gardes gemmes, talents, classe, objectif et streak.`,()=>{doPrestige();SND.boss();haptic([30,40,70]);renderHero();renderCur();uiToast('Renaissance ! +'+g+' reliques');},'Renaître (+'+g+' 🏵️)');};
@@ -1600,12 +1700,15 @@ setInterval(()=>{
   let hp=Math.min(d.maxHp,S.hp+d.regen*dt)-monsterAtk(S.floor,S.mi)*dt;
   if(hp<=0){
     // Le héros tombe : il recommence l'étage depuis le premier monstre.
-    S.hp=d.maxHp; S.mi=0; S.mhp=monsterMaxHp(S.floor,0);
+    S.hp=d.maxHp; S.mi=0; S.mhp=monsterMaxHp(S.floor,0); S.rampStacks=0;
     pushLog('💀 Héros terrassé à l’étage '+S.floor+' — il repart au début de l’étage.');
     if(tab==='dungeon'){const h=document.getElementById('hero');if(h){h.classList.remove('hurt');void h.offsetWidth;h.classList.add('hurt');} SND.boss&&SND.boss(); haptic([40,60,40]); if(typeof advanceScene==='function')advanceScene();}
     save();updateDungeon(true);
   }
   else{S.hp=hp;
+    // Fureur montante : les paliers grimpent tant que le héros frappe le même
+    // monstre (plafonnés à 15), et se réinitialisent à sa mort.
+    S.rampStacks=Math.min(15,(S.rampStacks||0)+dt*3);
     // dégâts directs + effets élémentaires (brûlure/saignement/poison)
     const dot=d.burnDps+d.bleedDps+d.poisonPct*monsterMaxHp(S.floor,S.mi);
     const total=d.dps+dot;
