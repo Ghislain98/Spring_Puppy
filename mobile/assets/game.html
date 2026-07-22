@@ -271,6 +271,22 @@
   .confirmbox .cmsg b { color:var(--gold); }
   .confirmbox .crow { display:flex; align-items:center; gap:12px; justify-content:flex-end; }
   .uitoast { position:absolute; left:50%; top:70px; transform:translateX(-50%); z-index:60; background:var(--cardAlt); border:1.5px solid var(--gold); color:var(--text); border-radius:12px; padding:11px 16px; font-size:13px; font-weight:700; box-shadow:0 6px 20px rgba(0,0,0,.5); animation:toastin .25s ease; max-width:80%; text-align:center; }
+  .btmsheet { background:var(--bgEl); border-top-left-radius:22px; border-top-right-radius:22px; border:1px solid var(--border); padding:16px; max-height:88%; width:100%; max-width:470px; display:flex; flex-direction:column; overflow-y:auto; animation:slideup .28s ease; }
+  @keyframes slideup { from{transform:translateY(40px);opacity:.4} to{transform:translateY(0);opacity:1} }
+  .shhead { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+  .hrow { display:flex; flex-wrap:wrap; gap:6px; }
+  .hemoji { font-size:22px; width:38px; height:38px; display:flex; align-items:center; justify-content:center; border:1.5px solid var(--border); border-radius:10px; cursor:pointer; }
+  .hemoji.sel { border-color:var(--gold); background:var(--cardAlt); }
+  .hchip { font-size:12px; font-weight:700; padding:7px 11px; border:1.5px solid var(--border); border-radius:999px; cursor:pointer; color:var(--muted); }
+  .hchip.sel { border-color:var(--gold); color:var(--gold); background:var(--cardAlt); }
+  .winput { width:100%; background:var(--card); border:1.5px solid var(--border); border-radius:12px; padding:12px 14px; color:var(--text); font-size:15px; margin-top:8px; }
+  .hmap { display:flex; gap:4px; }
+  .hmapd { width:100%; height:26px; flex:1; border-radius:5px; background:var(--card); border:1px solid var(--border); display:inline-block; }
+  .hmapd.ok { background:var(--success); border-color:var(--success); }
+  .hmapd.perf { background:linear-gradient(180deg,var(--gold),var(--ember)); border-color:var(--gold); }
+  .hmapd.miss { background:var(--card); opacity:.5; }
+  .hmaplegend { display:flex; gap:14px; justify-content:center; margin-top:8px; font-size:10px; color:var(--faint); } .hmaplegend span { display:flex; align-items:center; gap:5px; } .hmaplegend .hmapd { width:12px; height:12px; flex:0 0 auto; }
+  .insbar { display:flex; align-items:center; font-size:12px; font-weight:700; margin-bottom:9px; } .insbar b { color:var(--text); }
   @keyframes toastin { from{opacity:0;transform:translate(-50%,-10px)} to{opacity:1;transform:translate(-50%,0)} }
 
   .ember { position:fixed; bottom:-10px; width:5px; height:5px; border-radius:50%; background:var(--ember); opacity:.5; pointer-events:none; animation:rise linear infinite; box-shadow:0 0 6px var(--ember); }
@@ -496,6 +512,7 @@ function fresh(){return{
   floor:1,mi:0,mhp:monsterMaxHp(1,0),hp:BASE.maxHp,
   streak:0,streakBest:0,lastCheckin:null,buffUntil:0,buffMult:1.5,freezes:2,
   week:{key:null,prog:{}},perfectDays:0,checkinsTotal:0,moodLog:[],
+  customHabits:[],history:[],
   totalDmg:0,kills:0,log:['✨ Ton héros pénètre dans le donjon…'],
   body:null,
   reliques:0,unlocked:[],bestFloor:1,
@@ -509,6 +526,7 @@ S.up=Object.assign({atk:0,maxHp:0,regen:0,crit:0,click:0,critdmg:0,speed:0,power
 S.ascUp=Object.assign({power:0,fortune:0,start:0,wisdom:0},S.ascUp);
 S.week=Object.assign({key:null,prog:{}},S.week); if(!S.week.prog)S.week.prog={};
 if(typeof S.buffMult!=='number')S.buffMult=1.5; if(typeof S.freezes!=='number')S.freezes=2;
+if(!Array.isArray(S.customHabits))S.customHabits=[]; if(!Array.isArray(S.history))S.history=[];
 // Gel de série : un jour manqué consomme un jeton « gel » plutôt que de casser le streak.
 let streakMsg=null;
 (function(){
@@ -728,6 +746,58 @@ function openAch(){
   document.querySelector('.phone').appendChild(ov);
   ov.querySelector('#achclose').onclick=()=>ov.remove();
   ov.onclick=e=>{if(e.target===ov)ov.remove();};
+}
+// ===== Habitudes personnalisées =====
+const HAB_TIERS={leger:{lbl:'Léger',g:3,xp:25,gold:15},modere:{lbl:'Modéré',g:5,xp:45,gold:28},intense:{lbl:'Intense',g:8,xp:70,gold:45}};
+const HAB_EMOJI=['🧘','📖','💊','🚭','🦷','🚶','🏊','🚴','🧹','☀️','🌙','🙏','📵','🥛','🧠','✍️','🎯','❤️','🧴','🍵'];
+let habForm={em:'🧘',nm:'',cat:'sport',tier:'modere'};
+function sheet(inner){const ov=document.createElement('div');ov.className='overlay';ov.style.justifyContent='flex-end';ov.style.padding='0';ov.innerHTML=`<div class="btmsheet">${inner}</div>`;document.querySelector('.phone').appendChild(ov);ov.onclick=e=>{if(e.target===ov)ov.remove();};return ov;}
+function openHabitsEditor(){
+  const list=(S.customHabits||[]).map(h=>`<div class="buy"><span class="em">${h.em}</span><div style="flex:1"><div class="nm">${h.nm}</div><div class="ds">${CATS[h.cat].em} ${CATS[h.cat].label} · +${h.g} ${CATS[h.cat].power}</div></div><button class="link hdel" data-id="${h.id}" style="color:var(--hp)">Suppr.</button></div>`).join('')||'<div class="sub" style="text-align:center;padding:8px 0">Aucune habitude perso pour l’instant.</div>';
+  const emojis=HAB_EMOJI.map(e=>`<span class="hemoji ${habForm.em===e?'sel':''}" data-em="${e}">${e}</span>`).join('');
+  const cats=ORDER.map(c=>`<span class="hchip ${habForm.cat===c?'sel':''}" data-cat="${c}" style="${habForm.cat===c?'border-color:'+CATS[c].color+';color:'+CATS[c].color:''}">${CATS[c].em} ${CATS[c].label}</span>`).join('');
+  const tiers=Object.entries(HAB_TIERS).map(([k,t])=>`<span class="hchip ${habForm.tier===k?'sel':''}" data-tier="${k}">${t.lbl} · +${t.g}</span>`).join('');
+  const ov=sheet(`
+    <div class="shhead"><div style="font-family:var(--serif);font-size:18px;font-weight:700">✎ Mes habitudes</div><button class="link" id="hclose" style="font-size:20px">✕</button></div>
+    <div class="sub" style="margin-bottom:10px">Crée tes propres habitudes : elles apparaissent dans ton check-in et renforcent la catégorie choisie.</div>
+    ${list}
+    <div class="section"><span>➕ Nouvelle habitude</span></div>
+    <div class="hrow">${emojis}</div>
+    <input class="winput" id="hname" placeholder="Nom (ex : Méditer 10 min)" value="${(habForm.nm||'').replace(/"/g,'&quot;')}">
+    <div class="hrow" style="margin-top:8px">${cats}</div>
+    <div class="hrow" style="margin-top:6px">${tiers}</div>
+    <button class="btn-gold" id="hadd" style="margin-top:12px">Ajouter l'habitude</button>`);
+  const close=()=>ov.remove(); const nameEl=ov.querySelector('#hname'); if(nameEl)nameEl.oninput=()=>habForm.nm=nameEl.value;
+  ov.querySelector('#hclose').onclick=close;
+  ov.querySelectorAll('[data-em]').forEach(el=>el.onclick=()=>{habForm.nm=nameEl.value;habForm.em=el.dataset.em;close();openHabitsEditor();});
+  ov.querySelectorAll('[data-cat]').forEach(el=>el.onclick=()=>{habForm.nm=nameEl.value;habForm.cat=el.dataset.cat;close();openHabitsEditor();});
+  ov.querySelectorAll('[data-tier]').forEach(el=>el.onclick=()=>{habForm.nm=nameEl.value;habForm.tier=el.dataset.tier;close();openHabitsEditor();});
+  ov.querySelectorAll('.hdel').forEach(el=>el.onclick=()=>{S.customHabits=S.customHabits.filter(h=>h.id!==el.dataset.id);save();close();openHabitsEditor();});
+  ov.querySelector('#hadd').onclick=()=>{const nm=(nameEl.value||'').trim();if(!nm){uiToast('Donne un nom à ton habitude.');return;}const t=HAB_TIERS[habForm.tier];S.customHabits.push({id:'c'+Math.floor(Date.now()).toString(36),nm,em:habForm.em,cat:habForm.cat,g:t.g,xp:t.xp,gold:t.gold});habForm.nm='';save();close();openHabitsEditor();SND.buy&&SND.buy();uiToast('Habitude ajoutée !');};
+}
+// ===== Insights / statistiques santé =====
+function openInsights(){
+  const H=S.history||[]; const byDay={}; H.forEach(h=>byDay[h.d]=h);
+  const days=[]; for(let i=13;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);const k=d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();days.push({k,e:byDay[k]});}
+  const strip=days.map(x=>`<span class="hmapd ${x.e?(x.e.perfect?'perf':'ok'):'miss'}"></span>`).join('');
+  const done14=days.filter(x=>x.e).length;
+  const recent=H.slice(-30), catPct={}; ORDER.forEach(c=>{const n=recent.filter(h=>h.cats&&h.cats.includes(c)).length;catPct[c]=recent.length?Math.round(n/recent.length*100):0;});
+  const catBars=ORDER.map(c=>`<div class="insbar"><span style="color:${CATS[c].color};min-width:96px">${CATS[c].em} ${CATS[c].label}</span><div class="bar" style="height:8px;flex:1;margin:0 8px"><i style="background:${CATS[c].color};width:${catPct[c]}%"></i></div><b style="min-width:34px;text-align:right">${catPct[c]}%</b></div>`).join('');
+  let bestC=ORDER[0]; ORDER.forEach(c=>{if(catPct[c]>catPct[bestC])bestC=c;});
+  const wt=(S.body&&S.body.history&&S.body.history.length>=2)?`<div class="section"><span>⚖️ Courbe de poids</span></div><div class="card">${sparkline(S.body.history.map(h=>h.w))}<div class="sub" style="text-align:center;margin-top:4px">Départ ${S.body.start.toFixed(1)} → actuel ${S.body.weight.toFixed(1)} kg</div></div>`:'';
+  const smart = recent.length>=3 ? `<div class="card" style="border-color:${CATS[bestC].color}"><div class="sub" style="line-height:1.5">💡 Ta catégorie la plus régulière : <b style="color:${CATS[bestC].color}">${CATS[bestC].label}</b> (${catPct[bestC]}%). ${done14>=10?'Belle régularité sur 2 semaines, continue !':(done14>=4?'Bonne base — vise une journée parfaite cette semaine.':'Reviens chaque jour pour bâtir ta série.')}</div></div>` : '<div class="card sub" style="text-align:center">Fais quelques check-ins pour débloquer tes analyses.</div>';
+  sheet(`
+    <div class="shhead"><div style="font-family:var(--serif);font-size:18px;font-weight:700">📊 Mes statistiques</div><button class="link" onclick="this.closest('.overlay').remove()" style="font-size:20px">✕</button></div>
+    <div class="stat3"><div><b style="color:var(--ember)">${S.streak}</b><span>Série</span></div><div><b style="color:var(--ember)">${S.streakBest||S.streak}</b><span>Record</span></div><div><b style="color:var(--gold)">${S.checkinsTotal||0}</b><span>Check-ins</span></div></div>
+    <div class="stat3" style="margin-top:12px"><div><b style="color:var(--gem)">${S.perfectDays||0}</b><span>Parfaites</span></div><div><b style="color:var(--success)">${done14}/14</b><span>Régularité</span></div><div><b style="color:var(--xp)">🧊 ${S.freezes||0}</b><span>Gels</span></div></div>
+    <div class="section"><span>📅 14 derniers jours</span></div>
+    <div class="hmap">${strip}</div>
+    <div class="hmaplegend"><span><i class="hmapd perf"></i> parfaite</span><span><i class="hmapd ok"></i> check-in</span><span><i class="hmapd miss"></i> manqué</span></div>
+    <div class="section"><span>${ic('sword',14)} Régularité par catégorie</span></div>
+    <div class="card">${catBars}</div>
+    ${smart}
+    ${wt}
+    <div style="height:8px"></div>`);
 }
 
 // ============ Juice : audio + haptique + effets ============
@@ -1079,8 +1149,11 @@ function killMonster(){
 
 // ============ CHECK-IN ============
 let step=0,answers={};
-const itemsOf=cat=>ITEMS.filter(i=>i.cat===cat);
-function entries(){const out=[];ITEMS.forEach(it=>{const a=answers[it.id];if(it.kind==='toggle'){if(a)out.push({cat:it.cat,label:it.label,em:it.em,xp:it.xp,gold:it.gold,g:it.g});}else{const o=it.options.find(o=>o.id===a);if(o&&(o.xp||o.gold))out.push({cat:it.cat,label:it.label+' '+o.label,em:it.em,xp:o.xp,gold:o.gold,g:o.g});}});return out;}
+// habitudes perso : stockées avec un préfixe d'id "c_" et une catégorie choisie
+const customOf=cat=>(S.customHabits||[]).filter(h=>h.cat===cat).map(h=>({id:h.id,cat:h.cat,label:h.nm,em:h.em||'⭐',kind:'toggle',xp:h.xp,gold:h.gold,g:h.g,custom:true}));
+const itemsOf=cat=>ITEMS.filter(i=>i.cat===cat).concat(customOf(cat));
+const allItems=()=>ITEMS.concat(ORDER.flatMap(customOf));
+function entries(){const out=[];allItems().forEach(it=>{const a=answers[it.id];if(it.kind==='toggle'){if(a)out.push({cat:it.cat,label:it.label,em:it.em,xp:it.xp,gold:it.gold,g:it.g});}else{const o=it.options.find(o=>o.id===a);if(o&&(o.xp||o.gold))out.push({cat:it.cat,label:it.label+' '+o.label,em:it.em,xp:o.xp,gold:o.gold,g:o.g});}});return out;}
 // ===== Boucle de récompense (le shot de dopamine du check-in) =====
 const STREAK_MILE={3:5,7:12,14:25,21:40,30:60,50:120,100:300};
 function rollChest(perfect){
@@ -1125,11 +1198,15 @@ function doCheckin(){
   if(perfect)weekBump('perfect',1);
   const claimed=claimWeekly();
   if(S.freezes<3 && S.streak>0 && S.streak%5===0)S.freezes=Math.min(3,(S.freezes||0)+1); // regagne un gel tous les 5 jours
+  // journal quotidien (pour les insights)
+  if(!Array.isArray(S.history))S.history=[];
+  S.history.push({d:todayKey(),cats:[...covered],perfect,sleep:answers['sleep']||null,water:answers['water']||null,sport:answers['spo']||null});
+  if(S.history.length>400)S.history=S.history.slice(-400);
   save();
   return {tx,tg,gems:gems+(chest.gems||0),gains,perfect,streak:S.streak,sMult,pMult,mileGem,chest,claimed};
 }
 function buffHrsLeft(){return Math.max(0,Math.ceil((S.buffUntil-Date.now())/3600000));}
-function coveredNow(){const s=new Set();ITEMS.forEach(it=>{const a=answers[it.id];if(it.kind==='toggle'){if(a)s.add(it.cat);}else{const o=it.options&&it.options.find(o=>o.id===a);if(o&&(o.xp||o.gold))s.add(it.cat);}});return s;}
+function coveredNow(){const s=new Set();allItems().forEach(it=>{const a=answers[it.id];if(it.kind==='toggle'){if(a)s.add(it.cat);}else{const o=it.options&&it.options.find(o=>o.id===a);if(o&&(o.xp||o.gold))s.add(it.cat);}});return s;}
 function weeklyHTML(){
   weekReset();
   return WEEKLY.map(q=>{const p=Math.min(q.goal,S.week.prog[q.id]||0),done=S.week.done&&S.week.done[q.id];
@@ -1153,7 +1230,12 @@ function renderCheckin(){
       <div class="card">${mappingHTML()}<div class="sub" style="margin-top:9px;text-align:center">Chaque jour sain rend ton héros <b style="color:var(--gold)">définitivement</b> plus fort.</div></div>
       <div class="section"><span>📅 Quêtes de la semaine</span></div>
       <div>${weeklyHTML()}</div>
+      <div style="display:flex;gap:8px;margin-top:6px">
+        <button class="buy can" id="habedit" style="flex:1;justify-content:center"><span class="nm">✎ Mes habitudes</span></button>
+        <button class="buy can" id="insights" style="flex:1;justify-content:center"><span class="nm">📊 Statistiques</span></button></div>
       <button class="link" id="replay" style="display:block;margin:14px auto">Rejouer le check-in (démo)</button>`;
+    document.getElementById('habedit').onclick=openHabitsEditor;
+    document.getElementById('insights').onclick=openInsights;
     document.getElementById('replay').onclick=()=>{S.lastCheckin=null;step=0;answers={};save();render();};
     return;
   }
@@ -1164,7 +1246,8 @@ function renderCheckin(){
       itemsOf(cat).map(it=>{let ctl;
         if(it.kind==='toggle'){const sel=answers[it.id]?'sel':'';const bg=answers[it.id]?`style="background:${c.color};border-color:${c.color}"`:'';ctl=`<div class="toggle ${sel}" ${bg} data-t="${it.id}">${answers[it.id]?'✓ Fait':'À cocher'}</div>`;}
         else{ctl=`<div class="opts">`+it.options.map(o=>{const sel=answers[it.id]===o.id?'sel':'';const bg=answers[it.id]===o.id?`style="background:${c.color};border-color:${c.color}"`:'';return `<div class="opt ${sel}" ${bg} data-o="${it.id}|${o.id}">${o.label}</div>`;}).join('')+`</div>`;}
-        return `<div class="card"><div class="itemHead"><span>${it.em}</span><span class="lbl">${it.label}</span></div>${ctl}</div>`;}).join('');
+        return `<div class="card"><div class="itemHead"><span>${it.em}</span><span class="lbl">${it.label}</span></div>${ctl}</div>`;}).join('')
+      +`<button class="link" id="addhab" data-cat="${cat}" style="display:block;margin:2px auto 0">＋ Ajouter une habitude « ${c.label} »</button>`;
   }else{
     const es=entries(),bx=es.reduce((a,e)=>a+e.xp,0),bg=es.reduce((a,e)=>a+e.gold,0);
     const cov=coveredNow(),perfect=ORDER.every(c=>cov.has(c));
@@ -1186,6 +1269,7 @@ function renderCheckin(){
     `<div class="navbar" style="position:static;border-top:0;background:transparent;padding:16px 0 24px">${step>0?'<button class="back" id="back">Précédent</button>':'<div style="flex:1"></div>'}<button class="btn-gold next" id="next" ${isSum&&entries().length===0?'disabled':''}>${nextLbl}</button></div>`;
   document.querySelectorAll('[data-t]').forEach(el=>el.onclick=()=>{answers[el.dataset.t]=!answers[el.dataset.t];renderCheckin();});
   document.querySelectorAll('[data-o]').forEach(el=>el.onclick=()=>{const[i,o]=el.dataset.o.split('|');answers[i]=o;renderCheckin();});
+  const ah=document.getElementById('addhab'); if(ah)ah.onclick=()=>{habForm.cat=ah.dataset.cat;openHabitsEditor();};
   const bk=document.getElementById('back'); if(bk)bk.onclick=()=>{step--;renderCheckin();};
   document.getElementById('next').onclick=()=>{
     if(!isSum){step++;renderCheckin();return;}
