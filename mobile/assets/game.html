@@ -720,9 +720,13 @@ function D(){
   const achMult=1+ACH_BONUS*((S.unlocked||[]).length); // chaque succès = bonus permanent
   const vuln=1+ce.vulnBase*ce.vulnMul; // givre/faiblesse (base × multiplicateurs)
   const goldMult=c.gold*ce.goldMul*b*vGold*pres*achMult;
-  const crit=Math.min(100,BASE.crit+c.crit+ce.critAdd+(S.up.crit||0)*UP_GAIN.crit+vCrit);
+  const crit=Math.max(0,BASE.crit+c.crit+ce.critAdd+(S.up.crit||0)*UP_GAIN.crit+vCrit); // NON plafonné : au-delà de 100% → surcritiques
   const critMult=CRIT_MULT+(ce.critMultAdd||0)+(S.up.critdmg||0)*UP_GAIN.critdmg; // dégâts critiques (×base + talents + forge)
-  const critF=1+(crit/100)*(critMult-1);
+  // Surcritique : chaque tranche de 100% au-dessus de 100% garantit une couche de crit
+  // supplémentaire (double, triple, quadruple crit…), le reste est une chance.
+  const critChance=Math.min(1,crit/100), over=Math.max(0,crit-100)/100, gLayers=Math.floor(over), fChance=over-gLayers;
+  const critHitMult=Math.pow(critMult,1+gLayers)*((1-fChance)+fChance*critMult); // multiplicateur moyen SUR un crit
+  const critF=(1-critChance)+critChance*critHitMult; // facteur de crit moyen (auto-DPS)
   const atk=BASE.atk+S.habit.atk+(S.up.atk||0)*UP_GAIN.atk;
   const maxHp=(BASE.maxHp+S.habit.maxHp+(S.up.maxHp||0)*UP_GAIN.maxHp)*c.hp*vHp*ce.hpMul;
   const regen=(BASE.regen+S.habit.regen+(S.up.regen||0)*UP_GAIN.regen)*c.regen+ce.regenAdd;
@@ -927,16 +931,26 @@ function slashMob(crit){
   const im=document.createElement('div'); im.className='impact'; const sz=crit?46:30; im.style.cssText+=`left:${-4-(crit?8:0)}px;top:20%;width:${sz}px;height:${sz}px`; if(crit)im.style.background='radial-gradient(circle,#ffe08a 0%,transparent 62%)'; m.appendChild(im); setTimeout(()=>im.remove(),300);
   if(crit){const sc=document.querySelector('.scene'); if(sc){sc.classList.remove('shakeS');void sc.offsetWidth;sc.classList.add('shakeS');}}
 }
+const CRIT_LABELS=['','CRIT','DOUBLE CRIT','TRIPLE CRIT','QUADRA CRIT','PENTA CRIT'];
+function rollCritLayers(d){
+  const chance=Math.min(1,d.crit/100);
+  if(Math.random()>=chance) return 0;
+  const over=Math.max(0,d.crit-100)/100, g=Math.floor(over), f=over-g;
+  return 1+g+(Math.random()<f?1:0); // 1 = crit simple, 2 = double crit, etc.
+}
 function onTapMob(e){
   SND.unlock();
-  const d=D(); const crit=Math.random()*100<d.crit; const amount=d.clickDmg*(crit?CRIT_MULT+d.ce.critMultAdd:1);
+  const d=D(); const layers=rollCritLayers(d); const crit=layers>0;
+  const mult=crit?Math.pow(d.critMult,layers):1; const amount=d.clickDmg*mult;
   const lay=document.getElementById('floats').getBoundingClientRect();
   const cx=(e.clientX!=null?e.clientX:lay.left+lay.width/2);
   const x=Math.max(8,Math.min(92,(cx-lay.left)/lay.width*100));
-  spawnFloat(fmt(amount),crit?'var(--gold)':'var(--xp)',crit,x,crit?'bolt':null);
-  tapRing(x); spawnSparks(crit?11:5,crit?'#ffcc4d':'#7cc4ff');
+  const lbl=layers>=2?(CRIT_LABELS[Math.min(layers,5)]||(layers+'× CRIT')):'';
+  spawnFloat((lbl?lbl+' ':'')+fmt(amount),crit?(layers>=2?'var(--ember)':'var(--gold)'):'var(--xp)',crit,x,crit?'bolt':null);
+  tapRing(x); spawnSparks(crit?(8+layers*4):5,layers>=2?'#ff8a3d':(crit?'#ffcc4d':'#7cc4ff'));
   heroSwing(); slashMob(crit);
-  if(crit){SND.crit();haptic(18);} else {SND.hit();haptic(6);}
+  if(layers>=2){const sc=document.querySelector('.scene');if(sc){sc.classList.remove('shake');void sc.offsetWidth;sc.classList.add('shake');}SND.boss&&SND.boss();haptic([12,20,12]);}
+  else if(crit){SND.crit();haptic(18);} else {SND.hit();haptic(6);}
   damageMonster(amount);
 }
 let killFx=0;
@@ -1086,7 +1100,7 @@ function renderHero(){
       <div><b style="color:var(--xp)">${fmt(d.clickDmg)}</b><span>Dégâts/clic</span></div>
       <div><b style="color:var(--gold)">${fmt(d.goldSec)}</b><span>Or/sec</span></div></div>
       <div class="stat3" style="margin-top:12px">
-      <div><b style="color:var(--gold)">${Math.round(d.crit)}%</b><span>Chance crit</span></div>
+      <div><b style="color:${d.crit>100?'var(--ember)':'var(--gold)'}">${Math.round(d.crit)}%</b><span>${d.crit>100?'Surcrit ⚡':'Chance crit'}</span></div>
       <div><b style="color:var(--ember)">×${d.critMult.toFixed(2)}</b><span>Dégâts crit</span></div>
       <div><b style="color:var(--xp)">×${d.spd.toFixed(2)}</b><span>Vit. attaque</span></div></div>
       <div class="stat3" style="margin-top:12px">
