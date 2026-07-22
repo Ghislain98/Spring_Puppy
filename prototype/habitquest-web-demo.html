@@ -220,6 +220,12 @@
   .opts { display:flex; gap:7px; }
   .opt,.toggle { flex:1; text-align:center; padding:11px 5px; border-radius:13px; border:1.5px solid var(--border); background:var(--bgEl); color:var(--muted); font-weight:800; font-size:12.5px; cursor:pointer; }
   .opt.sel,.toggle.sel { color:#0e0b1a; }
+  .opt.goal { border-color:var(--gem); border-style:dashed; color:var(--gem); box-shadow:0 0 0 1px rgba(159,122,234,.25) inset; }
+  .goalhint { margin-top:9px; font-size:11.5px; color:var(--muted); text-align:center; background:var(--bgEl); border:1px dashed var(--border); border-radius:10px; padding:6px 8px; }
+  .goalhint.met { border-color:var(--success); color:var(--success); }
+  .goalrow { display:flex; align-items:center; gap:10px; padding:9px 2px; border-bottom:1px solid var(--border); }
+  .goalrow:last-child { border-bottom:0; }
+  .trend.up { color:var(--success); } .trend.down { color:var(--hp); } .trend.flat { color:var(--faint); }
   .navbar { position:absolute; left:0; right:0; bottom:0; display:flex; gap:10px; padding:13px 14px; background:var(--bg); border-top:1px solid var(--border); }
   .navbar .back { flex:1; background:none; border:1.5px solid var(--border); color:var(--muted); border-radius:999px; font-weight:800; font-size:15px; cursor:pointer; padding:14px; }
   .navbar .next { flex:2; }
@@ -406,6 +412,29 @@ const ITEMS=[
   {id:'water',cat:'hydratation',label:"Combien d'eau ?",em:'💧',kind:'choice',options:[{id:'n',label:'<1L',xp:0,gold:0,g:0},{id:'a',label:'1L',xp:15,gold:8,g:2},{id:'b',label:'1,5L',xp:25,gold:15,g:3},{id:'c',label:'2L+',xp:40,gold:22,g:4}]},
   {id:'sleep',cat:'sommeil',label:'Combien de sommeil ?',em:'🛌',kind:'choice',options:[{id:'a',label:'<6h',xp:10,gold:5,g:1},{id:'b',label:'6–7h',xp:30,gold:18,g:2},{id:'c',label:'7–8h',xp:50,gold:30,g:4},{id:'d',label:'8h+',xp:60,gold:38,g:5}]},
 ];
+// ===== Objectifs adaptatifs =====
+// Pour les 3 items mesurables, on suit ta moyenne récente et on fixe un objectif
+// personnalisé un cran au-dessus (plafonné à une cible saine). Le battre = petit
+// bonus de gemmes → la récompense colle à un vrai progrès de santé.
+const MEASURE={
+  spo:  {hf:'sport',order:['n','l','m','i'], nums:{n:0,l:1,m:2,i:3},        cap:'m',step:1,   fmt:{n:'repos',l:'léger',m:'modéré',i:'intense'}},
+  water:{hf:'water',order:['n','a','b','c'], nums:{n:0.5,a:1,b:1.5,c:2.25}, cap:'c',step:0.4, fmt:{n:'<1L',a:'1L',b:'1,5L',c:'2L+'}},
+  sleep:{hf:'sleep',order:['a','b','c','d'], nums:{a:5.5,b:6.5,c:7.5,d:8.25},cap:'c',step:0.5, fmt:{a:'<6h',b:'6–7h',c:'7–8h',d:'8h+'}},
+};
+// Moyenne numérique des valeurs loguées (fenêtre = les `n` dernières valeurs
+// enregistrées, en sautant les `skip` plus récentes → sert aussi aux tendances).
+function measureAvg(id,n=14,skip=0){const m=MEASURE[id];if(!m)return null;
+  const vals=(S.history||[]).map(h=>h[m.hf]).filter(v=>v!=null&&m.nums[v]!=null);
+  const end=vals.length-skip, seg=vals.slice(Math.max(0,end-n),end);
+  if(!seg.length)return null; return seg.reduce((a,v)=>a+m.nums[v],0)/seg.length;}
+function personalGoal(id){const m=MEASURE[id];const avg=measureAvg(id);const capN=m.nums[m.cap];
+  const goalN=(avg==null)?m.nums[m.order[1]]:Math.min(capN,avg+m.step); // défaut : le 1er palier utile
+  let optId=m.cap; for(const o of m.order){ if(m.nums[o]>=goalN){optId=o;break;} }
+  if(m.nums[optId]>capN)optId=m.cap;
+  return {optId,label:m.fmt[optId],avg};}
+function metGoal(id,ansId){const m=MEASURE[id];if(!m||!ansId||m.nums[ansId]==null)return false;return m.nums[ansId]>=m.nums[personalGoal(id).optId];}
+function avgLabel(id){const m=MEASURE[id],a=measureAvg(id);if(a==null)return null;let best=m.order[0];for(const o of m.order){if(Math.abs(m.nums[o]-a)<Math.abs(m.nums[best]-a))best=o;}return m.fmt[best];}
+function measureTrend(id){const cur=measureAvg(id,7,0),prev=measureAvg(id,7,7);if(cur==null||prev==null)return null;const d=cur-prev,e=0.15;return d>e?'up':d<-e?'down':'flat';}
 
 
 /* __SPRITES__ */
@@ -923,6 +952,10 @@ function openInsights(){
   let bestC=ORDER[0]; ORDER.forEach(c=>{if(catPct[c]>catPct[bestC])bestC=c;});
   const wt=(S.body&&S.body.history&&S.body.history.length>=2)?`<div class="section"><span>⚖️ Courbe de poids</span></div><div class="card">${sparkline(S.body.history.map(h=>h.w))}<div class="sub" style="text-align:center;margin-top:4px">Départ ${S.body.start.toFixed(1)} → actuel ${S.body.weight.toFixed(1)} kg</div></div>`:'';
   const smart = recent.length>=3 ? `<div class="card" style="border-color:${CATS[bestC].color}"><div class="sub" style="line-height:1.5">💡 Ta catégorie la plus régulière : <b style="color:${CATS[bestC].color}">${CATS[bestC].label}</b> (${catPct[bestC]}%). ${done14>=10?'Belle régularité sur 2 semaines, continue !':(done14>=4?'Bonne base — vise une journée parfaite cette semaine.':'Reviens chaque jour pour bâtir ta série.')}</div></div>` : '<div class="card sub" style="text-align:center">Fais quelques check-ins pour débloquer tes analyses.</div>';
+  const goalRows=['spo','water','sleep'].map(id=>{const g=personalGoal(id),al=avgLabel(id),tr=measureTrend(id),item=ITEMS.find(x=>x.id===id);
+    const trTxt=tr==='up'?'↗ en hausse':tr==='down'?'↘ en baisse':tr==='flat'?'→ stable':'— pas encore de tendance';
+    return `<div class="goalrow"><span style="font-size:20px">${item.em}</span><div style="flex:1"><b style="font-size:13px">${item.label.replace(' ?','').replace('?','')}</b><div class="sub" style="font-size:11px">Moyenne <b>${al||'—'}</b> · <span class="trend ${tr||'flat'}">${trTxt}</span></div></div><div style="text-align:right"><div style="color:var(--gem);font-weight:800;font-size:13px">🎯 ${g.label}</div><div class="sub" style="font-size:10px">objectif du jour</div></div></div>`;}).join('');
+  const goalsCard=`<div class="section"><span>🎯 Objectifs adaptatifs</span></div><div class="card">${goalRows}<div class="sub" style="margin-top:8px;line-height:1.45">Ton objectif se relève d’un cran quand ta moyenne progresse (plafonné à une cible saine). Le battre au check-in = <b style="color:var(--gem)">+2 💎</b> par défi.</div></div>`;
   sheet(`
     <div class="shhead"><div style="font-family:var(--serif);font-size:18px;font-weight:700">📊 Mes statistiques</div><button class="link" onclick="this.closest('.overlay').remove()" style="font-size:20px">✕</button></div>
     <div class="stat3"><div><b style="color:var(--ember)">${S.streak}</b><span>Série</span></div><div><b style="color:var(--ember)">${S.streakBest||S.streak}</b><span>Record</span></div><div><b style="color:var(--gold)">${S.checkinsTotal||0}</b><span>Check-ins</span></div></div>
@@ -933,6 +966,7 @@ function openInsights(){
     <div class="section"><span>${ic('sword',14)} Régularité par catégorie</span></div>
     <div class="card">${catBars}</div>
     ${smart}
+    ${goalsCard}
     ${wt}
     <div style="height:8px"></div>`);
 }
@@ -1332,6 +1366,9 @@ function doCheckin(){
   const tx=Math.round(baseXp*sMult*pMult), tg=Math.round(baseGold*sMult*pMult);
   const gains={}; es.forEach(e=>{const st=CATS[e.cat].stat;S.habit[st]=(S.habit[st]||0)+e.g;gains[e.cat]=(gains[e.cat]||0)+e.g;if(st==='maxHp')S.hp+=e.g;});
   let gems=3+(perfect?5:0); const mileGem=STREAK_MILE[S.streak]||0; gems+=mileGem;
+  // Défis perso : battre ton objectif adaptatif sur un item mesurable = +2 💎.
+  const challenges=[]; for(const id of ['spo','water','sleep']){ if(metGoal(id,answers[id])) challenges.push(id); }
+  const chGems=challenges.length*2; gems+=chGems;
   const chest=rollChest(perfect);
   const chestGold=chest.gold||0;
   S.xp+=tx; S.gold+=tg+chestGold; S.gems+=gems+(chest.gems||0);
@@ -1351,7 +1388,7 @@ function doCheckin(){
   S.history.push({d:todayKey(),cats:[...covered],perfect,sleep:answers['sleep']||null,water:answers['water']||null,sport:answers['spo']||null});
   if(S.history.length>400)S.history=S.history.slice(-400);
   save();
-  return {tx,tg,gems:gems+(chest.gems||0),gains,perfect,streak:S.streak,sMult,pMult,mileGem,chest,claimed};
+  return {tx,tg,gems:gems+(chest.gems||0),gains,perfect,streak:S.streak,sMult,pMult,mileGem,chest,claimed,challenges,chGems};
 }
 function buffHrsLeft(){return Math.max(0,Math.ceil((S.buffUntil-Date.now())/3600000));}
 function coveredNow(){const s=new Set();allItems().forEach(it=>{const a=answers[it.id];if(it.kind==='toggle'){if(a)s.add(it.cat);}else{const o=it.options&&it.options.find(o=>o.id===a);if(o&&(o.xp||o.gold))s.add(it.cat);}});return s;}
@@ -1393,7 +1430,9 @@ function renderCheckin(){
     body=`<div class="catBanner" style="border-color:${c.color}"><span class="em">${c.em}</span><div><div class="t" style="color:${c.color}">${c.label}</div><div class="tag">${c.tag}</div></div></div>`+
       itemsOf(cat).map(it=>{let ctl;
         if(it.kind==='toggle'){const sel=answers[it.id]?'sel':'';const bg=answers[it.id]?`style="background:${c.color};border-color:${c.color}"`:'';ctl=`<div class="toggle ${sel}" ${bg} data-t="${it.id}">${answers[it.id]?'✓ Fait':'À cocher'}</div>`;}
-        else{ctl=`<div class="opts">`+it.options.map(o=>{const sel=answers[it.id]===o.id?'sel':'';const bg=answers[it.id]===o.id?`style="background:${c.color};border-color:${c.color}"`:'';return `<div class="opt ${sel}" ${bg} data-o="${it.id}|${o.id}">${o.label}</div>`;}).join('')+`</div>`;}
+        else{const g=MEASURE[it.id]?personalGoal(it.id):null;
+          ctl=`<div class="opts">`+it.options.map(o=>{const sel=answers[it.id]===o.id?'sel':'';const isGoal=g&&o.id===g.optId&&!sel;const bg=answers[it.id]===o.id?`style="background:${c.color};border-color:${c.color}"`:'';return `<div class="opt ${sel} ${isGoal?'goal':''}" ${bg} data-o="${it.id}|${o.id}">${o.label}</div>`;}).join('')+`</div>`;
+          if(g){const met=metGoal(it.id,answers[it.id]),al=avgLabel(it.id);ctl+=`<div class="goalhint ${met?'met':''}">🎯 Objectif perso : <b>${g.label}</b>${al?` · <span style="opacity:.75">moyenne ${al}</span>`:''}${met?' <b style="color:var(--success)">✓ relevé !</b>':''}</div>`;}}
         return `<div class="card"><div class="itemHead"><span>${it.em}</span><span class="lbl">${it.label}</span></div>${ctl}</div>`;}).join('')
       +`<button class="link" id="addhab" data-cat="${cat}" style="display:block;margin:2px auto 0">＋ Ajouter une habitude « ${c.label} »</button>`;
   }else{
@@ -1437,6 +1476,7 @@ function celebrate(r){
     <div class="powerGains">${powerLines}</div>
     <div class="chestReveal ${chest.jackpot?'jackpot':''}"><span class="chestico">${chest.jackpot?'🎁':'🪙'}</span><div><div class="chestt">${CHEST_LABEL[chest.tier]||'Coffre'}</div><div class="chestv">${cg}</div></div></div>
     ${r.mileGem?`<div class="mileBadge">🔥 Palier ${r.streak} jours · +${r.mileGem} 💎 bonus !</div>`:''}
+    ${r.challenges&&r.challenges.length?`<div class="mileBadge" style="border-color:var(--gem);color:var(--gem)">🎯 ${r.challenges.length} défi${r.challenges.length>1?'s':''} perso relevé${r.challenges.length>1?'s':''} · +${r.chGems} 💎</div>`:''}
     ${r.claimed.length?r.claimed.map(q=>`<div class="questClaim">✅ Quête « ${q.nm} » : +${q.reward.gems?q.reward.gems+' 💎':q.reward.reliques+' 🏵️'}</div>`).join(''):''}
     <div class="streakRow">🔥 <b>${r.streak}</b> jours d’affilée${r.sMult>1?` · récompenses ×${r.sMult.toFixed(2)}`:''}</div>
     <button class="btn-gold" style="max-width:280px;margin-top:12px" id="godg">Dépenser au donjon ⚔️</button>`;
