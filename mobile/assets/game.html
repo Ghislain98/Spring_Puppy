@@ -365,12 +365,12 @@ const CLASSES={
 };
 
 const COMPANIONS=[
-  {id:'torche',nm:'Porteur de torche',em:'🔥',rate:1,base:15},
-  {id:'marchand',nm:'Marchand ambulant',em:'🎒',rate:9,base:120},
+  {id:'torche',nm:'Naine porte-torche',em:'🔥',rate:1,base:15},
+  {id:'marchand',nm:'Marchand masqué',em:'🎒',rate:9,base:120},
   {id:'forgeron',nm:'Forgeron nain',em:'⚒️',rate:55,base:1300},
-  {id:'sorciere',nm:'Sorcière',em:'🧙',rate:300,base:14000},
-  {id:'golem',nm:'Golem porteur',em:'🗿',rate:1650,base:160000},
-  {id:'dragon',nm:'Dragon apprivoisé',em:'🐲',rate:9000,base:2000000},
+  {id:'sorciere',nm:'Mage errant',em:'🧙',rate:300,base:14000},
+  {id:'golem',nm:'Ogre colossal',em:'🗿',rate:1650,base:160000},
+  {id:'dragon',nm:'Grand démon',em:'🐲',rate:9000,base:2000000},
 ];
 
 const TALENTS=[
@@ -479,6 +479,9 @@ const xpPerKill=(f,i)=>Math.ceil(8*Math.pow(1.25,f-1)*(isBoss(f,i)?5:1));
 const compCost=(cp,count)=>Math.ceil(cp.base*Math.pow(1.15,count));
 const talCost=(t,lvl)=>Math.ceil(t.base*Math.pow(1.6,lvl));
 const upCost=(st)=>Math.ceil(UP_BASE[st]*Math.pow(1.18,S.up[st]||0));
+function bulkUpCost(st,n){let c=0,lv=S.up[st]||0;for(let k=0;k<n;k++)c+=Math.ceil(UP_BASE[st]*Math.pow(1.18,lv+k));return c;}
+function maxUpAffordable(st){let n=0,g=S.gold,lv=S.up[st]||0;while(n<100000){const c=Math.ceil(UP_BASE[st]*Math.pow(1.18,lv+n));if(g<c)break;g-=c;n++;}return n;}
+function forgeAmountFor(st){return forgeAmt==='max'?Math.max(1,maxUpAffordable(st)):forgeAmt;}
 
 // Formatage infini : suffixes jusqu'à ~1e63 puis notation scientifique.
 const FMT_U=['K','M','B','T','Qa','Qi','Sx','Sp','Oc','No','Dc','UD','DD','TD','QaD','QiD','SxD','SpD','OcD','NoD','Vg'];
@@ -1065,7 +1068,7 @@ function compBonusBanner(){
     <div class="bar" style="height:6px;margin-top:5px"><i style="background:var(--gem);width:${Math.round((cnt%COMP_TIER_SIZE)/COMP_TIER_SIZE*100)}%"></i></div>
     <div class="sub" style="font-size:10px;margin-top:4px">${cnt} compagnons · encore <b style="color:var(--gold)">${need}</b> pour +${Math.round(COMP_TIER_BONUS*100)}% (palier ${d.compTier+1})</div></div>`;
 }
-let buyAmt=1;
+let buyAmt=1, forgeAmt=1;
 function renderAmt(){
   const el=document.getElementById('amtsel'); if(!el)return;
   el.innerHTML=[1,10,'max'].map(a=>`<button class="${buyAmt===a?'on':''}" data-a="${a}">×${a}</button>`).join('');
@@ -1428,6 +1431,7 @@ function renderHero(){
     <div class="section"><span>${ic('sword',14)} Classe</span></div>
     <div class="classgrid" id="classgrid"></div>
     <div class="section"><span>${ic('anvil',14)} Forge · dépense ton or</span></div>
+    <div class="amtsel" id="forgeamt"></div>
     <div id="forge"></div>
     <div class="section"><span>${ic('trophy',14)} Succès</span></div>
     <button class="buy can" id="achbtn" style="width:100%;justify-content:space-between"><div style="text-align:left"><div class="nm">Voir les succès</div><div class="ds">Bonus permanent : <b style="color:var(--gem)">+${Math.round(ACH_BONUS*100*(S.unlocked||[]).length)}% dégâts & or</b></div></div><span class="cnt" style="font-size:16px">${(S.unlocked||[]).length}/${ACH.length}</span></button>
@@ -1448,8 +1452,11 @@ function renderHero(){
     if(S.gems<5){uiToast('Pas assez de gemmes (5 requises).');return;}
     uiConfirm(`Passer <b>${CLASSES[cl].name}</b> pour <b>5 gemmes</b> ?`,()=>{S.gems-=5;S.cls=cl;selTal=null;save();renderHero();renderCur();SND.buy();haptic(12);uiToast('Classe : '+CLASSES[cl].name);},'Changer (5 💎)');
   });
-  document.getElementById('forge').innerHTML=UPG.map(u=>{const cost=upCost(u.k),can=S.gold>=cost;return `<div class="buy ${can?'can':'no'}" data-u="${u.k}" style="${can?'border-color:'+u.col:''}"><span class="em">${u.em}</span><div style="flex:1"><div class="nm">${u.nm} <small>Niv. ${S.up[u.k]}</small></div><div class="ds">${u.ds}</div></div><div class="right"><div class="cost" style="color:${can?'var(--gold)':'var(--faint)'}"><span style="display:inline-flex;vertical-align:middle;color:var(--gold);opacity:${can?1:.4}">${ic('coin',12)}</span> ${fmt(cost)}</div></div></div>`;}).join('');
-  document.querySelectorAll('[data-u]').forEach(el=>el.onclick=()=>{const k=el.dataset.u,cost=upCost(k);if(S.gold>=cost){S.gold-=cost;S.up[k]++;save();renderHero();SND.buy();haptic(9);}});
+  const fga=document.getElementById('forgeamt');
+  if(fga){fga.innerHTML=[1,10,100,'max'].map(a=>`<button class="${forgeAmt===a?'on':''}" data-fa="${a}">×${a}</button>`).join('');
+    fga.querySelectorAll('button').forEach(bt=>bt.onclick=()=>{forgeAmt=isNaN(+bt.dataset.fa)?'max':+bt.dataset.fa;renderHero();});}
+  document.getElementById('forge').innerHTML=UPG.map(u=>{const amt=Math.max(1,forgeAmountFor(u.k)),cost=bulkUpCost(u.k,amt),can=S.gold>=cost;return `<div class="buy ${can?'can':'no'}" data-u="${u.k}" style="${can?'border-color:'+u.col:''}"><span class="em">${u.em}</span><div style="flex:1"><div class="nm">${u.nm} <small>Niv. ${S.up[u.k]}</small></div><div class="ds">${u.ds}</div></div><div class="right"><div class="cost" style="color:${can?'var(--gold)':'var(--faint)'}"><span style="display:inline-flex;vertical-align:middle;color:var(--gold);opacity:${can?1:.4}">${ic('coin',12)}</span> ${fmt(cost)} ${forgeAmt!==1?`<span style="color:var(--faint)">×${amt}</span>`:''}</div></div></div>`;}).join('');
+  document.querySelectorAll('[data-u]').forEach(el=>el.onclick=()=>{const k=el.dataset.u,amt=Math.max(1,forgeAmountFor(k)),cost=bulkUpCost(k,amt);if(S.gold>=cost){S.gold-=cost;S.up[k]=(S.up[k]||0)+amt;save();renderHero();SND.buy();haptic(9);}});
   document.getElementById('achbtn').onclick=openAch;
   document.getElementById('prestigebtn').onclick=()=>{const g=reliquesGain(S.floor);if(g<=0)return;uiConfirm(`Renaître ? Tu gagnes <b>${g} reliques</b> permanentes (+${4*g}% dégâts & or) et tu réinitialises ta run (or, compagnons, forge, étage). Tu gardes gemmes, talents, classe, objectif et streak.`,()=>{doPrestige();SND.boss();haptic([30,40,70]);renderHero();renderCur();uiToast('Renaissance ! +'+g+' reliques');},'Renaître (+'+g+' 🏵️)');};
   document.getElementById('reset').onclick=()=>{uiConfirm('Effacer <b>toute</b> la progression ? Action irréversible.',()=>{S=fresh();save();go('dungeon');},'Tout effacer');};
