@@ -8,11 +8,11 @@
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Crect width='180' height='180' rx='36' fill='%23181330'/%3E%3Ctext x='50%25' y='60%25' font-size='104' text-anchor='middle' dominant-baseline='middle'%3E%E2%9A%94%EF%B8%8F%3C/text%3E%3C/svg%3E">
 <style>
   :root {
-    --bg:#0e0b1a; --bgEl:#181330; --card:#1f1940; --cardAlt:#272052;
-    --border:#3a2f6e; --glow:#6a4bff; --text:#f5f3ff; --muted:#b3abdd; --faint:#7c74ab;
-    --gold:#ffcc4d; --goldDim:#c99a2e; --xp:#7ce0ff; --hp:#ff5d7a; --regen:#5dffb0;
-    --gem:#63e6ff; --ember:#ff7a3c;
-    --sport:#fb923c; --nutrition:#4ade80; --sommeil:#818cf8; --success:#4ade80;
+    --bg:#120d1c; --bgEl:#1a1526; --card:#221a30; --cardAlt:#2b2140;
+    --border:#3a2f4a; --borderLit:#54446b; --glow:#7a52d8; --text:#f4eefc; --muted:#b0a4c6; --faint:#7d7196;
+    --gold:#f4b942; --goldHi:#ffdd85; --goldDim:#a9791f; --xp:#6fb8ff; --hp:#ff5d6c; --regen:#5fe0a0;
+    --gem:#b98cff; --ember:#ff8a3d;
+    --sport:#ff9a4d; --nutrition:#66d38a; --sommeil:#8f9bff; --success:#66d38a;
     --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,"Times New Roman",serif;
     --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   }
@@ -20,8 +20,8 @@
   html,body { margin:0; padding:0; }
   body {
     background:
-      radial-gradient(900px 500px at 50% -12%, #2a1c5e 0%, transparent 55%),
-      radial-gradient(700px 500px at 50% 115%, #3a1330 0%, transparent 55%),
+      radial-gradient(900px 520px at 50% -14%, #2c2050 0%, transparent 58%),
+      radial-gradient(680px 460px at 50% 116%, #3a1a30 0%, transparent 56%),
       var(--bg);
     color:var(--text); font-family:var(--sans);
     min-height:100dvh; display:flex; justify-content:center; overflow-x:hidden;
@@ -32,26 +32,29 @@
     border-left:1px solid var(--border); border-right:1px solid var(--border);
   }
   .brandbar {
-    text-align:center; padding:11px; border-bottom:1px solid var(--border);
-    font-family:var(--serif); font-weight:700; letter-spacing:.5px; font-size:19px; flex:0 0 auto;
-    background:linear-gradient(180deg,rgba(106,75,255,.14),transparent);
+    display:flex; align-items:center; justify-content:center; gap:7px; padding:11px; border-bottom:1px solid var(--border);
+    font-family:var(--serif); font-weight:700; letter-spacing:.5px; font-size:19px; flex:0 0 auto; position:relative;
+    background:linear-gradient(180deg,rgba(122,82,216,.12),transparent);
   }
+  .brandbar .brandmark { filter:drop-shadow(0 0 5px rgba(244,185,66,.55)); }
   .brandbar b { color:var(--gold); }
   .brandbar .tag { font-family:var(--sans); color:var(--faint); font-size:10px; font-weight:600; letter-spacing:.5px; text-transform:uppercase; }
 
+  .ic-svg { display:inline-block; vertical-align:middle; }
   /* barre de monnaies toujours visible */
   .cur { display:flex; gap:8px; padding:9px 12px; border-bottom:1px solid var(--border); background:var(--bgEl); flex:0 0 auto; }
-  .curbox { flex:1; background:var(--card); border:1px solid var(--border); border-radius:12px; padding:7px 10px; display:flex; align-items:center; gap:8px; }
-  .curbox .ic { font-size:19px; }
-  .curbox .v { font-weight:900; font-size:16px; font-variant-numeric:tabular-nums; line-height:1; }
-  .curbox .s { color:var(--faint); font-size:10px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .curbox { flex:1; background:linear-gradient(180deg,var(--cardAlt),var(--card)); border:1px solid var(--border); border-radius:13px; padding:7px 11px; display:flex; align-items:center; gap:9px; box-shadow:inset 0 1px 0 rgba(255,255,255,.04); transition:transform .12s; }
+  .curbox .ic { display:flex; filter:drop-shadow(0 1px 2px rgba(0,0,0,.4)); }
+  .curbox .v { font-weight:900; font-size:16px; font-variant-numeric:tabular-nums; line-height:1; letter-spacing:-.3px; }
+  .curbox .s { color:var(--faint); font-size:10px; font-weight:700; font-variant-numeric:tabular-nums; margin-top:2px; }
 
   .screen { flex:1 1 auto; overflow-y:auto; padding:14px 14px 92px; }
-  .nav { position:sticky; bottom:0; flex:0 0 auto; display:flex; background:var(--bgEl); border-top:1px solid var(--border); padding:7px 0 max(7px,env(safe-area-inset-bottom)); }
-  .nav button { flex:1; background:none; border:0; color:var(--faint); font-size:10.5px; font-weight:700; padding:3px 0; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:2px; }
-  .nav button .ic { font-size:20px; opacity:.5; }
+  .nav { position:sticky; bottom:0; flex:0 0 auto; display:flex; background:linear-gradient(180deg,var(--bgEl),var(--bg)); border-top:1px solid var(--border); padding:7px 0 max(7px,env(safe-area-inset-bottom)); }
+  .nav button { flex:1; background:none; border:0; color:var(--faint); font-size:10px; font-weight:700; letter-spacing:.2px; padding:3px 0; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:3px; position:relative; transition:color .15s; }
+  .nav button .ic { display:flex; opacity:.55; transform:translateZ(0); transition:opacity .15s, transform .15s; }
   .nav button.active { color:var(--gold); }
-  .nav button.active .ic { opacity:1; filter:drop-shadow(0 0 6px var(--gold)); }
+  .nav button.active .ic { opacity:1; transform:translateY(-1px); filter:drop-shadow(0 0 7px rgba(244,185,66,.7)); }
+  .nav button.active::after { content:""; position:absolute; top:-7px; width:22px; height:3px; border-radius:3px; background:var(--gold); box-shadow:0 0 8px var(--gold); }
 
   h1 { font-family:var(--serif); font-size:26px; font-weight:700; margin:0; }
   .sub { color:var(--muted); font-size:12.5px; margin-top:2px; }
@@ -135,12 +138,16 @@
   .mobname { font-family:var(--serif); font-size:17px; font-weight:700; margin-top:2px; }
   /* ===== Scène donjon : side-scroller pixel-art ===== */
   .scene { position:relative; height:166px; border-radius:14px; overflow:hidden; background:linear-gradient(180deg,#140f1c 0%,#221726 55%,#2b2033 100%); box-shadow:inset 0 0 46px rgba(0,0,0,.65); }
-  .scene .walls { position:absolute; top:0; left:-40px; right:-40px; height:92px; background-repeat:repeat-x; background-size:auto 92px; image-rendering:pixelated; opacity:.9; }
-  .scene .ground { position:absolute; bottom:0; left:-40px; right:-40px; height:58px; background-repeat:repeat; background-size:44px 44px; image-rendering:pixelated; box-shadow:inset 0 10px 16px rgba(0,0,0,.5); }
+  .scene .walls { position:absolute; top:0; left:-50px; right:-50px; height:92px; background-repeat:repeat-x; background-size:auto 92px; image-rendering:pixelated; opacity:.9; animation:walldrift 13s linear infinite; }
+  .scene .ground { position:absolute; bottom:0; left:-50px; right:-50px; height:58px; background-repeat:repeat; background-size:44px 44px; image-rendering:pixelated; box-shadow:inset 0 10px 16px rgba(0,0,0,.5); animation:grounddrift 6s linear infinite; }
+  @keyframes grounddrift { from{background-position-x:0} to{background-position-x:-44px} }
+  @keyframes walldrift { from{background-position-x:0} to{background-position-x:-92px} }
   .scene .vignette { position:absolute; inset:0; pointer-events:none; background:radial-gradient(ellipse at 50% 62%,transparent 40%,rgba(0,0,0,.62)); }
-  .scene .torch { position:absolute; top:24px; font-size:15px; filter:drop-shadow(0 0 8px #ff9a3d); animation:flicker 1.6s ease-in-out infinite; z-index:1; }
-  .scene .torch.t1 { left:26%; } .scene .torch.t2 { left:68%; animation-delay:.5s; }
-  @keyframes flicker { 0%,100%{opacity:.8;transform:scale(1)} 50%{opacity:1;transform:scale(1.15)} }
+  .scene .torch { position:absolute; top:20px; z-index:1; }
+  .scene .torch::before { content:""; position:absolute; left:50%; top:15px; transform:translateX(-50%); width:4px; height:11px; background:linear-gradient(180deg,#6b4a2a,#3d2a17); border-radius:1px; }
+  .scene .torch .tflame { display:block; filter:drop-shadow(0 0 7px #ff8a3d) drop-shadow(0 0 14px #ff5a1d); animation:flicker 1.1s ease-in-out infinite; transform-origin:50% 90%; }
+  .scene .torch.t1 { left:27%; } .scene .torch.t2 { left:67%; } .scene .torch.t2 .tflame { animation-delay:.45s; }
+  @keyframes flicker { 0%,100%{opacity:.85;transform:scale(1) rotate(-2deg)} 50%{opacity:1;transform:scale(1.13) rotate(2deg)} }
   .scene .fighter { position:absolute; bottom:28px; z-index:3; display:flex; flex-direction:column; align-items:center; animation:none; }
   .scene .hero { left:15%; }
   .scene .mob { right:11%; cursor:pointer; }
@@ -157,7 +164,17 @@
   .scene .hero.atk .pix { animation:herolunge2 .28s; }
   @keyframes herolunge2 { 0%{transform:translateX(0)} 45%{transform:translateX(14px)} 100%{transform:translateX(0)} }
   .scene .mob.hit .pix { animation:mobhit2 .2s; }
-  @keyframes mobhit2 { 0%{transform:scaleX(-1)} 50%{transform:scaleX(-1) translateX(6px); filter:brightness(2.6) drop-shadow(0 0 6px #fff)} 100%{transform:scaleX(-1)} }
+  @keyframes mobhit2 { 0%{transform:scaleX(-1)} 30%{transform:scaleX(-1) translateX(9px); filter:brightness(2.8) drop-shadow(0 0 7px #fff)} 100%{transform:scaleX(-1)} }
+  .scene .hero .swing { position:absolute; left:58%; bottom:6px; height:26px; image-rendering:pixelated; transform-origin:50% 88%; animation:swing .26s ease-out forwards; z-index:4; filter:drop-shadow(0 1px 2px rgba(0,0,0,.5)); pointer-events:none; }
+  @keyframes swing { 0%{transform:rotate(-58deg) translateY(3px);opacity:.15} 35%{opacity:1} 100%{transform:rotate(72deg) translateX(7px);opacity:0} }
+  .scene .mob .slash { position:absolute; left:-8px; top:26%; width:44px; height:44px; border:4px solid #fff; border-color:#fff transparent transparent #fff; border-radius:50%; pointer-events:none; opacity:0; animation:slashfx .24s ease-out forwards; z-index:6; filter:drop-shadow(0 0 5px #fff); }
+  @keyframes slashfx { 0%{opacity:0;transform:rotate(8deg) scale(.3)} 40%{opacity:.95} 100%{opacity:0;transform:rotate(62deg) scale(1.15)} }
+  .scene .hero.hurt .pix { animation:hurtflash .3s; }
+  @keyframes hurtflash { 0%,100%{filter:none} 50%{filter:brightness(.4) sepia(1) hue-rotate(-30deg) saturate(4)} }
+  .scene.shakeS { animation:shakeS .16s; }
+  @keyframes shakeS { 0%,100%{transform:translate(0,0)} 25%{transform:translate(-2px,1px)} 75%{transform:translate(2px,-1px)} }
+  .scene .impact { position:absolute; border-radius:50%; pointer-events:none; z-index:5; background:radial-gradient(circle,#fff 0%,transparent 62%); animation:impactfx .28s ease-out forwards; }
+  @keyframes impactfx { 0%{opacity:.9;transform:scale(.3)} 100%{opacity:0;transform:scale(1.6)} }
   .scene.adv .walls { animation:scrollw .7s linear; }
   .scene.adv .ground { animation:scrollg .7s linear; }
   @keyframes scrollw { from{background-position-x:0} to{background-position-x:-150px} }
@@ -263,7 +280,7 @@
 </style>
 
 <div class="phone">
-  <div class="brandbar">⚔️ Habit<b>Quest</b> <span class="tag">· fantasy</span><button id="mute" class="mutebtn">🔊</button></div>
+  <div class="brandbar"><svg class="brandmark" viewBox="0 0 24 24" width="19" height="19"><path d="M12 1.8l1.5 2.8v9.6h-3V4.6z" fill="#f4b942"/><path d="M11 14h2v6.2h-2z" fill="#f4b942"/><path d="M6.8 14.4h10.4v2H6.8z" fill="#f4b942"/><circle cx="12" cy="21" r="1.7" fill="#f4b942"/></svg>Habit<b>Quest</b> <span class="tag">· fantasy</span><button id="mute" class="mutebtn">🔊</button></div>
   <div class="cur" id="cur"></div>
   <div class="screen" id="screen"></div>
   <div class="nav" id="nav"></div>
@@ -330,6 +347,14 @@ const TILE={"floor":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAA
 const HERO_SPR={guerrier:'knight_m',mage:'wizzard_m',rodeur:'elf_m',paladin:'angel'};
 const MOB_ROSTER=['tiny_zombie','goblin','imp','skelet','chort','orc_warrior','masked_orc','wogol','orc_shaman','pumpkin_dude','lizard_m'];
 const BOSS_ROSTER=['ogre','big_zombie','big_demon'];
+Object.assign(SPR,{"coin":["data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAYAAAAHCAYAAAArkDztAAAAAXNSR0IArs4c6QAAAD5JREFUCJljYICCd316//9+f/sfxmeECfLYCjAwMDAwMOusZ2DmFGZkRBaEAWad9QxMDDgATgmcdsBVoLsKAA8zGPpj2JRPAAAAAElFTkSuQmCC","data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAYAAAAHCAYAAAArkDztAAAAAXNSR0IArs4c6QAAAClJREFUCJljYICCv9/f/v/7/e1/GJ8RJsiABJg5hRmZGHAAKkrAAbqrAIyyE4oQ0LrKAAAAAElFTkSuQmCC","data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAYAAAAHCAYAAAArkDztAAAAAXNSR0IArs4c6QAAABxJREFUCJljYICCX6ft/r/r0/sP4zMx4AADKgEAnwkFuL4s7YcAAAAASUVORK5CYII=","data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAYAAAAHCAYAAAArkDztAAAAAXNSR0IArs4c6QAAADNJREFUCJljYICCd316//9+f/sfxmeECfLYCjAwMDAwMOusZ2DmFGZkYsABqCgBB+iuAgCnixEc9jS88AAAAABJRU5ErkJggg=="],"knight_m_hit":["data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAcCAYAAABoMT8aAAAAAXNSR0IArs4c6QAAAQpJREFUOI1jYKAFUFJS+k+sWiZsmnfoiJFkCIrmW34W/ylyAakAbgDM6SIO38gzABmcyeEhOgwwDHhzgIskQ1AM8LjyihhLsRtw7949RmRXmEz5giKGC8AVEOtndENZkDkBW9Zg1dStKM/AwMDAoKptiiHHgiHCwMBwftZuFL4LEhvmUphLsBrAwMDAYJjmiiG2pz0FwyV4UyLMJTDapXIOhhrqJWWaGAALBxgNCwNkgDMQ0WOCgYGBQXXTTOIMwBYD3YryDKqbZmIkJEYGBtRUKO+XjstRDIZprgwbfELg/Hv37jHCXSDvl87wcNNMrLYju2IDkloGBrRAxGc7LjUYXiAFEJNbRwIAAJQYV5od9Ch6AAAAAElFTkSuQmCC"],"wizzard_m_hit":["data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAcCAYAAABoMT8aAAAAAXNSR0IArs4c6QAAAUZJREFUOI1jYBgFOIGSktJ/JSWl/4TUMeHSbG4ymyiLMAwgRTNOFzAwMDD8deJnMClbxUDIGzgNYN73kYF530eChjAic9Cd/9eJH84+0xXGwMDAwHDv3j0UPSgcZEOQNSMDdIPwugCbS5ANunfvHiOGAVitJQbAEs7l/Sv///3+9n9XgN3/v9/f/v/7/e3/rQ3hcAwTg1kGjwX0wGFgYGBQ1TZlUNU2xSoGU48zGokFOA0oXr6eIUNPhiFDTwZFPENPhuH21dPw8GLBZ3rx8vUYYh74XHDv3j1G/+RKhpj4CwzXTuwh4HgsBsDAXyd+huabyjgNIToQ8RmC1QVKSkr/TcpWYRiCDK6d2IOSwTACkXnfR0xr4hHMtukiDMwMCDUYBpw8k8rAwMDAMDnOlCF30Wmore0MWhYuKPJ4AbbyEDn5DjMAAMQQlAXyTEyQAAAAAElFTkSuQmCC"],"elf_m_hit":["data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAcCAYAAABoMT8aAAAAAXNSR0IArs4c6QAAAVtJREFUOI3tk7FKw1AUhv9ItwbiEpBUKgSUZOhS2lHxFTIF+gCZMndxEAeXWpw69Q3qkjdw6VJICoKLOFwQahYXW5JFkDiUe8iJTYo6uPQsyb3n/797cs4NsIv/CdM0sz+ZP8KzTEKU39KfJoew3AVqRXPkq0yonu5XgqiCvHmbCQAsdwEhhFLblEym7+un5dHegX5Huc4ogRBC+VYBAES+SkZD1wgQvy0BAOf+LZkBYE+anydXdKqha8wsYcU9AgghlBP3EhICAL25jd7cZuLimgDFk34SDLCa3tD7sDnDsDlj4uKaAPkRymaV9SHyVXbZaIydUQIA0I7umSkcOGwtdTLYVTZNM7Ovj5kgHtcRDhx0+wEAYPnywMa48SKxsr0U3X4Aw0vXgAuepx5U/USGlyIe11mlUk9TaDitrZVISF7LPqHhtLCKyiFq+xNqmx9EgNfgsbKCXZTHFxQ1drUrwx5XAAAAAElFTkSuQmCC"]});
+const PROP={"column":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAwCAYAAAAYX/pXAAAAAXNSR0IArs4c6QAAAhNJREFUSIntlkFr2zAUx//SalLKHCh0kBBCiEYtejIsO5R8gR57aT7BPkVv22mfYl9g6WW39QuEXrySwyiyQcGYkAzKAm1h6wLRDqs8K3Lstutt+Z+sp/d+1nvPlgSsRZYNjDFVFCClNGKMAWNMffrwvvCNh2+ODUj6oIMvvgwLAXuvfAPyTAf3uh04mBcGA8Dl5Bu2nQomNz/fzmazd1RP9AcBgvOoFBCcR+gPgnS8oR963Y4xsUr9QWD4poDhaHwvSK/bwXA0tleQhRQpGwxkurDzfFu99vdKUwCArxcSyfcpAYC0iO7mFoSIS4OFiPHj1206NlIg1QqiMMFCLXKDKaEg1QpcAJc3Mxvg1WsIMbW/7zupOx9x9XelG8tOXr2GcDKFV68Z9jwbkKnBY2UAhIjhtxsrnf12A1GYGDYjBc5b+Ph5AM5buSA9l+2WVQPOW4jCxGopJRSctyyoBQAA5TrgOUXM09MW8Z8AlDyOlUYt1AJRmJS2cbm4RhF3veZ/28aXL5rqIV2ghKK901AAQPVRplznXj+TEDGU66Q2whhT5HqOXa+JcDKFurrN7cJwNIYQMUi1Aq9eQxQmUK7zZ/PJQvx2AyenZ9a2RgnF0cG+AZJSEsIYU1LKdCUAcHSwn5vCyekZdLr6bLROZwAg1/PcFejc9QullMQ4nTV11R1h+W5QqDxI2eXj4Y5rrfVU+g3JAPTZKwhh4gAAAABJRU5ErkJggg==","crate":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAYCAYAAADzoH0MAAAAAXNSR0IArs4c6QAAAJ9JREFUOI1jYBjygJGBgYFBSUnpPzma7927x8gC4+TKsTMwMDAwXH7MxqAr+wuDjc6f/OgnAwMDAwMTWe5GAqMGDAYD4Okg3o8VyvrPwMCAjY3KnzzlJ6oBCzf9pswFDAyQlEYMQE6dGGGgK/uLQVf2F8OB/5+xstHBwMcC7QyAZW90NjpAiYWebPR4xwb+MyzchMMActIC3ABYCUN3AADxezKLfvoY2QAAAABJRU5ErkJggg==","floor_ladder":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAR1JREFUOI2tkr9KxEAQxn85F62uFO4ICFnw2gjpUohPcF1KH8FHsPIRfATLdD6BXBFBCBjsYhFRwh2ktDrwiMVlLrtJOPDPV+3OfN/sNzvjaK1rGsymE/LlChOz6WR3zperHsfRWtcm6SfwPZfRb8WC0Z/UgJK+BNenFfdfZ4PkuXrm5vXYLiBi33ObUEWcpNydH1hEKSq8rChbB1EYABAnKfNGeLnYdN5vc3GSEoUBWVGizICJrgMpGCepVUQJQRJPbwrYDDhoc4KsKLd/0F0egKuTI+t++77ucYCtgygMdg5ePg6B9aBAcqKB5hPNQPWYA3DhjC3xQ/1p8WQKvVVuxzkMEVot7CPsg++5/7DK5vzldd9zyYqy185Q7BuKiXXwyQ1vKAAAAABJRU5ErkJggg==","floor_stairs":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAANdJREFUOI2lU0sOgjAUHBQDhWiAlSzYdOEFuuMenJJ7sOMculM0CsQoLhB8LT+VSZqm77XTmfdajXNeYQZ0AGCG8dfhvCyxmHN7FIqawLEYAs9F4LnIy7IdzS1jc0fBzt9KElXJKr6y0BxsakWJNM555bsO1qbZBg9ZBvu9eX88jZJPKvBdZzAXhaJuIwBcimKKq4M4ST8E1MJVKRYzDKyWtdjzLZcU/PwONhaT1rMekmRBhWqDgrZzkMAm/+NEfFNIXZjC/fHsjetRKKRAnKSIQtHOfTmKFxFuU2ZxeaUGAAAAAElFTkSuQmCC","doors_leaf_closed":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAxRJREFUWIXFVzFo20AUfRIimTIok0KwSwQJhGAEMV7cpWOHgBNIoLuHUkr3uBQPoZBC6WRC6ZA9bQJNIHs9ZQkJiBACDsTgYOypGjzJizok//zvfJYlN6Vv0enu9P/7/979Oxl4hOu60ae3rwAA23sHONnfpSGUyhVMArJRKldAtsn+3d2dAQCG6nx51RtyulXMAwAOzy5EO+m7Subm0pdIWKpzcswN+c22tp3kneyQ3ZP9XUHCdd3I+PHlfUQpL5UrUrRLcw4AoNHpYhJsFfOCkLcwL+wCEEtiEatSuYKlOUeKgBwHQTARAb4EhKU5B41OF8urHm4ufRhXv75HlB4eMXda9Rzs+F1UPUf07fhdbMxmkcv0xbs6Tt8BgG3bQ2RO9ncfMgA8pIsYk3NuMA2u7qck8kTItm1piUvlCkyeehrkjrmxJA7H4fDsAn6zLbJtqoNp1pvST89x5HS2TWJCGJd2XbS8Ly4bZLvR6QqBW3yLBUEAZIcJcKNx0SYh+8KYQT3qieU2t4p57dqnMRqHXKYvvrm6nxIB+M02/GYbpt9sC/XXWqHWQFqHaSBEuH56JEjUWiFs20atFcZGPEoPRKIe9VBrhahHPUFO/cbkGri9Psf66ZF4jopINcLn5DJ9EQAPjAKiuSREixegxZUCAOB4ZMx66DJBjnn7eG3zcW4odGdR7T9e2wSg2auaXaEil+nj529OJpRsqoSAwalpAoMzIAgCVD0HG7NZAOlLMc/E54Vn0pj6TpDqQBKHXEijFB8EARZXCri9Phd9iyuFh+zOzgAYnLQWPxy4gnlUPMVJQKcgaYpIUWYBDGtgFHRRqmsel4lRIL8WMEhHPeohh2lpYpyDcVDvBzqIOsALUT3qiX2bFknJUh0w+eVTV4ieGkSQziBJA+MK0d8shwpJA0BMIXrcNiqRp4JUiN5lp1H1HCGepHVB1+ZEdRcW0oDhum5Eg5Nev9OCX06lQqS7Ov8rCA1Qg05F/hNJeP3xK759ePNkfdt7B6JtvHxeFEvgLcxLv2SERqc7UV+SOZIG/gf+AAtt9xJoVe7FAAAAAElFTkSuQmCC","skull":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAG5JREFUOI1jYBgFwwAw4pK4vH/l/+vnLsL5YcVtWNViFby8f+V/ZD7MIFyGYAAlJaX/l/ev/K+kpPQfxl7VW/Ufm1omokxkYGDQNNInVinECzCbYVhJSQmrC1hwGXLv3j1GBgaG//7JlcTbPDQBAHe7MF3GxAHqAAAAAElFTkSuQmCC","flask_red":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAKxJREFUOI1jYBjygBFdQElJ6T8+Dffu3UPRw4JNUa4cOwMDAwODmcIfFPHYQ38x1GI1IG/7EYadVx4xfEQSc9eRY2DQNsXnOARQUlL6//f72//bTp//v+30+f9/v7/9j8trWF0AAyrNmRDGyq041TAR46KP0x3JM0DE4RsDAwMDA3/mftIN+DjdkeHNAS7yXYDPVmSAMxA/TndkEHEgbABGSoQB9GhDT4GDBwAAcMQy0R8rwM4AAAAASUVORK5CYII=","flask_blue":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAK1JREFUOI1jYBjygBFdQElJ6T8+Dffu3UPRw4JNUa4cOwMDAwODmcIfFPHYQ38x1GI1IG/7EYadVx4xfEQSc9eRY2DQNsXnOARQUlL6//f72//bTp//v+30+f9/v7/9j8trWF0AA4u730FsXyiHUw0TMS6KXHifPAP+OvEzMDAwMCyPVyTdgMiF9xmY930k3wX4bEUGOAMxcuF9BgaoF/ABjJQIA+jRhp4CBw8AACM5M6IyWPDHAAAAAElFTkSuQmCC","ui_heart_full":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA0AAAAMCAYAAAC5tzfZAAAAAXNSR0IArs4c6QAAAIxJREFUKJFjZICCv9/f/oexmTmFGfGJs8AkdI19GZAVMnMKM+ISZ4FJbFD5B5fUNfZlwCfOxIAFbFD5x4CuARlg1QTTiAvg1IQPMDIwMGB1PzoIuMPEcPnsZgZmTmFGlKDFpRFZA9wmfBrRNWAFf7+//a+lZfX/lp/Ffy0tq//IkYsXwDQSrQFZIy45ANElaa4sIirgAAAAAElFTkSuQmCC","ui_heart_empty":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA0AAAAMCAYAAAC5tzfZAAAAAXNSR0IArs4c6QAAAINJREFUKJGNkjEOgCAMRX/FhdGwewASJzfv4Gk9h5M3cDeOTAYHxVSkjW8i//eFhkC4OcIW09lYR1pep6LrR/BBYx1JeZ2Ktnk6dP0ILa9QoG2uAS5wilISJURJgwAU989Zd2CZJxjr6PW0ksiF5yZNzIWPlIslQeQIW/R+iPw3/EITTtjrWkfybGF6AAAAAElFTkSuQmCC"};
+const WEAP={"weapon_knight_sword":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAdCAYAAACT4f2eAAAAAXNSR0IArs4c6QAAAIVJREFUOI1jYEADSkpK/5WUlP6ji2Mo2nb6/P+/399iKGZCVjRl5Vq4xO2rpxmQFTMxEAlGFdJZIQogKq6JtppqiWIA3chCKH/A5WHugmUqdAyTY4HpRLYWG2BEMR4HuHfvHiOGe4gOHncdOYadVx5hmIqhcOeVRwzuOnKEFeIyEQPgKnsAtv9mr8si8jcAAAAASUVORK5CYII=","weapon_red_magic_staff":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAeCAYAAAARgF8NAAAAAXNSR0IArs4c6QAAAIlJREFUKJFjYIACJSWl/0pKSv8Z0AATTDJXjh1djoGBgYGBESY5+dFPDMl79+4xMiEL7NARY7h99TQDAwMDw2I7ZgYlJaX/TBja0K1AdgPMmsV2zAyxh/4y3Lt3j5EFWXWuHDuDmcIfTF/cu3ePEdmRMN1wBfjAqIJRBYNNAUqyn/zoJwPDI1QFAG3gKrCKvJjBAAAAAElFTkSuQmCC","weapon_bow":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAA4AAAAaCAYAAACHD21cAAAAAXNSR0IArs4c6QAAAP9JREFUOI3VlLGKwkAQhv+VgwURrrCx2sAUgqWkS2XhK9xj5Bnu3sDCp5B7CLt0wcLOYiCp0qQQREg1V8iKUePOWQj+1cwuH/8MuzMGARGR+JiZjY97ISh1FqmzN3cPQa9l2bTcVOD8+weps62Sg9quV0JEsphNZDGbyCUcdGRmsywbAEBcV2dnVY/MbLJNgWQanc9UIADkw1ErV4NxXbXyDy34uz+avGwkdRZZ3Re146Xy4UhfqtdgVwD4R4/XegPwMI6ed4zrSv+OX599SZw9jdj+aF7/5VQgEUkyjZBtCj3o9w5wKvd6hXRC2/XqZvpVYBek6vHesgrW27WQ/wAIG2Aq3SC5twAAAABJRU5ErkJggg==","weapon_golden_sword":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAWCAYAAAD5Jg1dAAAAAXNSR0IArs4c6QAAAJ9JREFUKJFjYEADSkpK/5WUlP6ji2Mo+nXa7v+7Pj0MxUzIim6slIFLnMnhYUBWzMRAJBhVSGeFLIQSAEyeUUlJ6f+ZHB4GkylfsCqEyTEhCzAwMDCU7pBl0GxVRRFjYGBgYLl37x6jyRTs1sNsuXfvHiMjNvfAwL179+DyGL6+sVIGxUqcCr8c/sDAYytAWCGPrQDDl8MfsDkZFeDKXABmFjhtRgm9oQAAAABJRU5ErkJggg==","weapon_katana":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAYAAAAdCAYAAACJ3R0QAAAAAXNSR0IArs4c6QAAAHRJREFUKJFjYGBgYFBSUvqvpKT0nwEJMMEYAVvWMCBLMiGrun31NFwSRQKrUaMSg1uCET0RwAALAwMDg5hdFIrgq0PLGBgZGBgY0HXdu3ePEW6HcVsRQ8CWNZiWy+pZMTy+dAxT4vGlYwyyelaEdcABevoFAPDtIQAbwu1XAAAAAElFTkSuQmCC","weapon_lavish_sword":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAeCAYAAAAVdY8wAAAAAXNSR0IArs4c6QAAAM5JREFUOI3tlC0OwzAMhV+KA3qAIqOiodJucGAH6CV6lqFKO8LUcxSuB6gGgoqngaCRDDly8yMVTzNy7E9+smUHCIyIHBG5MB5Bn8fRva6HCC4ktIyVT8y9hoQL7LQ/+Ftg3a3ebwabBo0xKqwiY0quEq+Znd5RVUVEbu51JMXGuUIGuCpX5hgAKABIycvGjDFq00B4J7KZaI7LWG0ks6Cd3tBtmQdZVrelH0/2Cudeo+5WNINNym+auT1P7nI/5z+A3UZE/iuRfhKUifD9BQZLYneidbtcAAAAAElFTkSuQmCC"};
+
+// armes par classe (sprite d'attaque) + config héros
+const WEAPON_SPR={guerrier:'weapon_knight_sword',mage:'weapon_red_magic_staff',rodeur:'weapon_bow',paladin:'weapon_golden_sword'};
+function heroHitFrames(){const b=HERO_SPR[S.cls||'guerrier']||'knight_m';return SPR[b+'_hit']||SPR[b+'_idle'];}
+
 function heroFrames(run){const b=HERO_SPR[S.cls||'guerrier']||'knight_m';return SPR[b+(run?'_run':'_idle')]||SPR[b+'_idle']||SPR['knight_m_idle'];}
 function mobFrames(f,i){const k=isBoss(i)?BOSS_ROSTER[(f-1)%BOSS_ROSTER.length]:MOB_ROSTER[(f*3+i)%MOB_ROSTER.length];return SPR[k]||SPR['goblin'];}
 function pixImg(frames,h,flip){const f=(frames&&frames[0])||'';return `<img class="pix${flip?' flip':''}" src="${f}" style="height:${h}px">`;}
@@ -339,6 +364,35 @@ function clearAnims(){animReg.length=0;}
 function regAnim(el,frames,ms){if(!el||!frames||!frames.length)return;let a=animReg.find(x=>x.el===el);if(a){a.frames=frames;a.i=0;a.last=0;a.ms=ms||180;}else{a={el,frames,i:0,last:0,ms:ms||180};animReg.push(a);}el.src=frames[0];return a;}
 function _spriteLoop(t){for(const a of animReg){if(!a.el||!a.el.isConnected)continue;if(t-a.last>=a.ms){a.last=t;a.i=(a.i+1)%a.frames.length;a.el.src=a.frames[a.i];}}requestAnimationFrame(_spriteLoop);}
 requestAnimationFrame(_spriteLoop);
+
+// ==== Jeu d'icônes SVG (chrome de l'UI) ====
+const ICO={
+  coin:'<circle cx="12" cy="12" r="9.5" fill="currentColor"/><circle cx="12" cy="12" r="9.5" fill="none" stroke="#00000040" stroke-width="1.6"/><circle cx="12" cy="12" r="6.4" fill="none" stroke="#ffffff55" stroke-width="1.3"/><path d="M12 8.2l1.1 2.4 2.6.2-2 1.7.65 2.5L12 16.1l-2.35 1.6.65-2.5-2-1.7 2.6-.2z" fill="#00000045"/>',
+  gem:'<path d="M12 2.5l6.5 4.2-2.4 12.8H7.9L5.5 6.7z" fill="currentColor"/><path d="M12 2.5l6.5 4.2-6.5 13-6.5-13z" fill="#ffffff28"/><path d="M5.5 6.7h13" stroke="#00000040" stroke-width="1.2"/><path d="M12 2.5v17" stroke="#ffffff40" stroke-width="1"/>',
+  sword:'<path d="M12 1.8l1.5 2.8v9.6h-3V4.6z" fill="currentColor"/><path d="M11 14h2v6.2h-2z" fill="currentColor"/><path d="M6.8 14.4h10.4v2H6.8z" fill="currentColor"/><circle cx="12" cy="21" r="1.7" fill="currentColor"/><path d="M12 3.2v9.4" stroke="#ffffff45" stroke-width="1"/>',
+  dagger:'<path d="M11 2l2 0 .5 11h-3zM9.5 13.5h5v2h-5zM11 15.5h2v6l-1 1.2-1-1.2z" fill="currentColor"/>',
+  heart:'<path d="M12 21S3.5 15 3.5 8.9C3.5 5.9 5.8 4 8.2 4c1.9 0 3.1 1.1 3.8 2.2C12.7 5.1 13.9 4 15.8 4c2.4 0 4.7 1.9 4.7 4.9C20.5 15 12 21 12 21z" fill="currentColor"/>',
+  flame:'<path d="M12 2c1 3.5-1.5 4.6-2.8 6.6C7.8 10.7 7 12.3 7 14.2 7 18 9.4 21 12 21s5-3 5-6.8c0-3-2-4.7-2-4.7 .1 2-1 2.8-1.8 2.8C11.3 12.3 11 10 12 8c-1.6.4-2.4-.7-2.4-2C9.6 4.3 11 3 12 2z" fill="currentColor"/>',
+  blood:'<path d="M12 2.5c3.6 5 6 8 6 11.2A6 6 0 0 1 6 13.7C6 10.5 8.4 7.5 12 2.5z" fill="currentColor"/><path d="M9.5 13.6a2.5 3 0 0 0 2.5 3" fill="none" stroke="#ffffff55" stroke-width="1.3" stroke-linecap="round"/>',
+  skull:'<path d="M12 2.5C7 2.5 4 5.9 4 10.2c0 2.4 1.1 4 2.5 5v3.1c0 .9.7 1.6 1.6 1.6h7.8c.9 0 1.6-.7 1.6-1.6v-3.1c1.4-1 2.5-2.6 2.5-5C20 5.9 17 2.5 12 2.5z" fill="currentColor"/><circle cx="8.8" cy="11" r="2" fill="#00000060"/><circle cx="15.2" cy="11" r="2" fill="#00000060"/><path d="M12 14l-1 3h2z" fill="#00000060"/>',
+  frost:'<g stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 3v18M4.2 7.5l15.6 9M19.8 7.5l-15.6 9"/><path d="M12 6.5l2.2-2M12 6.5l-2.2-2M12 17.5l2.2 2M12 17.5l-2.2 2M6.6 9l-3 .3M6.6 9l-.4-3M17.4 15l3-.3M17.4 15l.4 3M6.6 15l-3-.3M6.6 15l-.4 3M17.4 9l3 .3M17.4 9l.4-3"/></g>',
+  bolt:'<path d="M13.5 2L5 13h5l-1.5 9L19 10h-5.2z" fill="currentColor"/>',
+  star:'<path d="M12 2.2l2.8 6.1 6.7.6-5 4.5 1.5 6.5L12 17l-6 3.4 1.5-6.5-5-4.5 6.7-.6z" fill="currentColor"/>',
+  shield:'<path d="M12 2.5l7.5 2.6v6c0 5-3.2 8.6-7.5 10.4C7.7 19.7 4.5 16.1 4.5 11.1v-6z" fill="currentColor"/><path d="M12 2.5l7.5 2.6v6c0 5-3.2 8.6-7.5 10.4z" fill="#00000030"/>',
+  flask:'<path d="M9.5 2.5h5v2h-5zM10 4.5h4v4.2l3.6 7.6c.8 1.7-.4 3.7-2.3 3.7H8.7c-1.9 0-3.1-2-2.3-3.7L10 8.7z" fill="currentColor"/><path d="M8.2 14h7.6" stroke="#ffffff55" stroke-width="1.4"/>',
+  crown:'<path d="M3 8l3.5 3L12 5l5.5 6L21 8l-1.6 10.5H4.6z" fill="currentColor"/><circle cx="3" cy="8" r="1.6" fill="currentColor"/><circle cx="21" cy="8" r="1.6" fill="currentColor"/><circle cx="12" cy="4.5" r="1.8" fill="currentColor"/><path d="M4.6 18.5h14.8" stroke="#00000045" stroke-width="1.4"/>',
+  trophy:'<path d="M7 4h10v3c0 3-2 5-5 5S7 10 7 7zM4.5 5H7v2c0 1-2 1.2-2.5-.2zM19.5 5H17v2c0 1 2 1.2 2.5-.2zM10.5 12.5h3V16h-3zM8 16h8v2H8zM7 18.5h10V21H7z" fill="currentColor"/>',
+  anvil:'<path d="M4 8h9c0 2-1 3-2.5 3.3V13h4l3-2 .8 1.3-2 2.2c-.4 2-2.2 3.5-4.3 3.5H8.5V15H6l-2 .5V13l3-.5V11H4z" fill="currentColor"/><path d="M7.5 19h9v2h-9z" fill="currentColor"/>',
+  target:'<circle cx="12" cy="12" r="9.2" fill="none" stroke="currentColor" stroke-width="2.2"/><circle cx="12" cy="12" r="5" fill="none" stroke="currentColor" stroke-width="2.2"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/>',
+  tree:'<circle cx="6" cy="5.5" r="2.6" fill="currentColor"/><circle cx="18" cy="7" r="2.6" fill="currentColor"/><circle cx="9.5" cy="13" r="2.6" fill="currentColor"/><circle cx="16" cy="18" r="2.6" fill="currentColor"/><g stroke="currentColor" stroke-width="1.7"><path d="M6 5.5L9.5 13M18 7l-8.5 6M9.5 13l6.5 5"/></g>',
+  castle:'<path d="M3 9h2V6h2v3h2V6h2v3h2V6h2v3h2V6h2v3h2v12H3z" fill="currentColor"/><path d="M9 21v-5h6v5" fill="#00000045"/>',
+  scroll:'<path d="M6 3h11a2.5 2.5 0 0 1 2.5 2.5V19a2.5 2.5 0 0 1-2.5 2.5H7A2.5 2.5 0 0 1 4.5 19V6" fill="currentColor"/><path d="M4.5 6A1.5 1.5 0 0 1 6 3M8 8h7M8 11.5h7M8 15h5" stroke="#00000050" stroke-width="1.4" fill="none" stroke-linecap="round"/>',
+  helm:'<path d="M5 11a7 7 0 0 1 14 0v3.5c0 1-.6 1.8-1.5 2.2L15 18v2.5H9V18l-2.5-1.3C5.6 16.3 5 15.5 5 14.5z" fill="currentColor"/><path d="M11.2 8.5h1.6v9h-1.6z" fill="#00000050"/><path d="M5 12.5h6M13 12.5h6" stroke="#00000050" stroke-width="1.3"/>',
+  check:'<path d="M5 12.5l4.5 4.5L19 6.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>',
+  bag:'<path d="M8 7c0-2.2 1.8-4 4-4s4 1.8 4 4M5.5 7h13l1.5 13.5H4z" fill="currentColor"/><path d="M8 7c0-2.2 1.8-4 4-4s4 1.8 4 4" fill="none" stroke="#00000050" stroke-width="1.6"/>',
+  hourglass:'<path d="M6 3h12v3.2c0 2-1.6 3.4-3.4 4.8 1.8 1.4 3.4 2.8 3.4 4.8V21H6v-2.2C6 16.8 7.6 15.4 9.4 14 7.6 12.6 6 11.2 6 9.2z" fill="currentColor"/>',
+};
+function ic(name,size,extra){const s=size||18;return `<svg class="ic-svg${extra?' '+extra:''}" viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" aria-hidden="true" style="display:inline-block;vertical-align:middle">${ICO[name]||''}</svg>`;}
 
 const MOBS=['👺','🦇','🕷️','🐍','🧟','👹','🦂','🐗'];
 const mobEmoji=(f,i)=> i>=MPF-1?'🐉':MOBS[(f+i)%MOBS.length];
@@ -410,6 +464,7 @@ const CLASS_TREES={
       {id:'g_r1',nm:'Colère',em:'💢',max:5,ds:'Dégâts ×1,15 par niv',ap:(e,l)=>e.dmgMul*=P(1.15,l)},
       {id:'g_r2',nm:'Fureur',em:'🗡️',max:5,ds:'Dégâts ×1,14 par niv',ap:(e,l)=>e.dmgMul*=P(1.14,l)},
       {id:'g_r3',nm:'Sang-froid',em:'🎯',max:5,ds:'+4% critique par niv',ap:(e,l)=>e.critAdd+=4*l},
+      {id:'g_r4',nm:'Mise à mort',em:'💥',max:4,ds:'Dégâts critiques +20% par niv (×2 → ×2,8)',ap:(e,l)=>e.critMultAdd+=0.2*l},
       {id:'g_rK',key:1,nm:'Berserker',em:'😡',max:1,ds:'★ KEYSTONE : dégâts ×2 quand PV < 50%.',ap:e=>e.dmgLowHp=1.0},
     ]},
     {nm:'Garde',col:'var(--regen)',nodes:[
@@ -435,8 +490,8 @@ const CLASS_TREES={
     {nm:'Foudre',col:'var(--gold)',nodes:[
       {id:'m_l1',nm:'Décharge',em:'⚡',max:5,ds:'+4% critique par niv',ap:(e,l)=>e.critAdd+=4*l},
       {id:'m_l2',nm:'Arcanes',em:'🔮',max:5,ds:'Dégâts ×1,15 par niv',ap:(e,l)=>e.dmgMul*=P(1.15,l)},
-      {id:'m_l3',nm:'Conductivité',em:'🌩️',max:5,ds:'+4% critique par niv',ap:(e,l)=>e.critAdd+=4*l},
-      {id:'m_lK',key:1,nm:'Surcharge',em:'⚡',max:1,ds:'★ KEYSTONE : critiques ×3 (au lieu de ×2).',ap:e=>e.critMultAdd+=1},
+      {id:'m_l3',nm:'Conductivité',em:'🌩️',max:5,ds:'Dégâts critiques +25% par niv',ap:(e,l)=>e.critMultAdd+=0.25*l},
+      {id:'m_lK',key:1,nm:'Surcharge',em:'⚡',max:1,ds:'★ KEYSTONE : +150% dégâts critiques (×2 → ×3,5).',ap:e=>e.critMultAdd+=1.5},
     ]},
   ],grand:[{id:'m_GR',nm:'Avatar élémentaire',em:'💠',ds:'CAPSTONE ULTIME : dégâts ×2 ET brûlure ×2. Requiert « Immolation » + « Zéro absolu ».',req:['m_fK','m_gK'],ap:e=>{e.dmgMul*=2;e.burnMul*=2}}]},
   rodeur:{branches:[
@@ -450,6 +505,7 @@ const CLASS_TREES={
       {id:'r_c1',nm:'Visée',em:'🎯',max:5,ds:'+5% critique par niv',ap:(e,l)=>e.critAdd+=5*l},
       {id:'r_c2',nm:'Tir puissant',em:'🏹',max:5,ds:'Dégâts ×1,15 par niv',ap:(e,l)=>e.dmgMul*=P(1.15,l)},
       {id:'r_c3',nm:'Précision',em:'👁️',max:5,ds:'+4% critique par niv',ap:(e,l)=>e.critAdd+=4*l},
+      {id:'r_c4',nm:'Coup fatal',em:'💥',max:4,ds:'Dégâts critiques +25% par niv (×2 → ×3)',ap:(e,l)=>e.critMultAdd+=0.25*l},
       {id:'r_cK',key:1,syn:'assassin',nm:'Assassin',em:'🗡️',max:1,ds:'★ SYNERGIE : ton crit augmente ta vitesse d’attaque.'},
     ]},
     {nm:'Chasse',col:'var(--sport)',nodes:[
@@ -562,7 +618,7 @@ const ACH=[
 function achToast(a){
   const rw=a.reliques?('+'+a.reliques+' 🏵️'):('+'+(a.gems||0)+' 💎');
   const t=document.createElement('div'); t.className='achtoast';
-  t.innerHTML=`<span style="font-size:26px">${a.em}</span><div style="flex:1"><div style="color:var(--gold);font-size:11px;font-weight:800">🏆 Succès débloqué · ${rw}</div><div style="font-weight:900">${a.name}</div></div>`;
+  t.innerHTML=`<span style="font-size:26px">${a.em}</span><div style="flex:1"><div style="color:var(--gold);font-size:11px;font-weight:800;display:flex;align-items:center;gap:4px">${ic('trophy',13)} Succès débloqué · ${rw}</div><div style="font-weight:900">${a.name}</div></div>`;
   document.querySelector('.phone').appendChild(t);
   setTimeout(()=>{t.style.opacity='0';t.style.transform='translateY(-14px)';},2000);
   setTimeout(()=>t.remove(),2400);
@@ -619,12 +675,13 @@ function spawnSparks(n,color){
 }
 function tapRing(x){ const layer=document.getElementById('floats'); if(!layer)return; const r=document.createElement('div'); r.className='ring'; r.style.left=(x!=null?x:50)+'%'; r.style.top='40%'; layer.appendChild(r); setTimeout(()=>r.remove(),430); }
 function ghostMob(key){ const ar=document.querySelector('.mobcol')||document.querySelector('.arena'); if(!ar)return; const g=document.createElement('div'); g.className='ghost'; g.innerHTML=spr(key,82)||mobEmoji(1,0); ar.appendChild(g); setTimeout(()=>g.remove(),500); }
-function levelToast(lvl){ const ar=document.querySelector('.arena'); if(!ar)return; const t=document.createElement('div'); t.className='leveltoast'; t.textContent='⭐ NIVEAU '+lvl; ar.appendChild(t); setTimeout(()=>t.remove(),1200); }
+function levelToast(lvl){ const ar=document.querySelector('.scene'); if(!ar)return; const t=document.createElement('div'); t.className='leveltoast'; t.innerHTML=ic('star',16)+' NIVEAU '+lvl; ar.appendChild(t); setTimeout(()=>t.remove(),1200); }
 function coinFly(n){
   const mob=document.getElementById('mob'), gb=document.getElementById('goldbox'); if(!mob||!gb)return;
   const f=mob.getBoundingClientRect(), to=gb.getBoundingClientRect();
   const sx=f.left+f.width/2, sy=f.top+f.height/2, tx=to.left+to.width/2, ty=to.top+to.height/2;
-  for(let i=0;i<n;i++){ const c=document.createElement('div'); c.className='coin'; c.textContent='🪙';
+  const coinSrc=(typeof SPR!=='undefined'&&SPR.coin&&SPR.coin[0])||'';
+  for(let i=0;i<n;i++){ const c=document.createElement('div'); c.className='coin'; c.innerHTML=coinSrc?`<img class="pix" src="${coinSrc}" style="height:16px">`:ic('coin',15,'coingold');
     c.style.left=sx+'px'; c.style.top=sy+'px';
     c.style.setProperty('--cx1',(Math.random()*70-35).toFixed(0)+'px'); c.style.setProperty('--cy1',(-32-Math.random()*34).toFixed(0)+'px');
     c.style.setProperty('--cx2',(tx-sx).toFixed(0)+'px'); c.style.setProperty('--cy2',(ty-sy).toFixed(0)+'px');
@@ -684,9 +741,9 @@ let offlineMsg=null;
 // ============ Navigation ============
 let tab='dungeon';
 const screen=document.getElementById('screen');
-const NAV=[{k:'dungeon',ic:'🏰',l:'Donjon'},{k:'checkin',ic:'✅',l:'Check-in'},{k:'body',ic:'🎯',l:'Objectif'},{k:'talents',ic:'🌟',l:'Talents'},{k:'hero',ic:'🦸',l:'Héros'}];
+const NAV=[{k:'dungeon',ic:'castle',l:'Donjon'},{k:'checkin',ic:'scroll',l:'Check-in'},{k:'body',ic:'target',l:'Objectif'},{k:'talents',ic:'tree',l:'Talents'},{k:'hero',ic:'helm',l:'Héros'}];
 function renderNav(){
-  document.getElementById('nav').innerHTML=NAV.map(n=>`<button class="${tab===n.k?'active':''}" data-tab="${n.k}"><span class="ic">${n.ic}</span>${n.l}</button>`).join('');
+  document.getElementById('nav').innerHTML=NAV.map(n=>`<button class="${tab===n.k?'active':''}" data-tab="${n.k}"><span class="ic">${ic(n.ic,22)}</span>${n.l}</button>`).join('');
   document.querySelectorAll('#nav button').forEach(b=>b.onclick=()=>go(b.dataset.tab));
 }
 function go(t){tab=t;render();}
@@ -694,15 +751,15 @@ function go(t){tab=t;render();}
 function renderCur(){
   const d=D();
   document.getElementById('cur').innerHTML=
-    `<div class="curbox" id="goldbox"><span class="ic">💰</span><div><div class="v" style="color:var(--gold)">${fmt(S.gold)}</div><div class="s">+${fmt(d.goldSec)}/s</div></div></div>
-     <div class="curbox" id="gemsbox"><span class="ic">💎</span><div><div class="v" style="color:var(--gem)">${fmt(S.gems)}</div><div class="s">gemmes</div></div></div>
-     ${(S.reliques>0)?`<div class="curbox" style="flex:0 0 auto"><span class="relicpill">🏵️ ${fmt(S.reliques)}</span></div>`:''}
-     ${buffOn()?`<div class="curbox" style="flex:0 0 auto"><span class="buffpill">✨ ×1,5</span></div>`:''}
-     ${elanOn()?`<div class="curbox" style="flex:0 0 auto"><span class="elanpill">⚡ ×2</span></div>`:''}`;
+    `<div class="curbox" id="goldbox"><span class="ic" style="color:var(--gold)">${ic('coin',20)}</span><div><div class="v" style="color:var(--gold)">${fmt(S.gold)}</div><div class="s">+${fmt(d.goldSec)}/s</div></div></div>
+     <div class="curbox" id="gemsbox"><span class="ic" style="color:var(--gem)">${ic('gem',20)}</span><div><div class="v" style="color:var(--gem)">${fmt(S.gems)}</div><div class="s">gemmes</div></div></div>
+     ${(S.reliques>0)?`<div class="curbox" style="flex:0 0 auto"><span class="relicpill">${ic('star',14)} ${fmt(S.reliques)}</span></div>`:''}
+     ${buffOn()?`<div class="curbox" style="flex:0 0 auto"><span class="buffpill">${ic('flame',13)} ×1,5</span></div>`:''}
+     ${elanOn()?`<div class="curbox" style="flex:0 0 auto"><span class="elanpill">${ic('bolt',13)} ×2</span></div>`:''}`;
 }
 
 function headerHTML(title,right){
-  return `<div class="header"><div><h1>${title}</h1><div class="sub">Niv. ${S.level} · Étage ${S.floor} · ${biomeName(S.floor)}</div></div>${right||`<div class="streak">🔥<b>${S.streak}</b></div>`}</div>`;
+  return `<div class="header"><div><h1>${title}</h1><div class="sub">Niv. ${S.level} · Étage ${S.floor} · ${biomeName(S.floor)}</div></div>${right||`<div class="streak"><span style="color:var(--ember);display:flex">${ic('flame',15)}</span><b>${S.streak}</b></div>`}</div>`;
 }
 
 // ============ DONJON ============
@@ -714,14 +771,14 @@ function renderDungeon(){
         <div class="walls" id="walls"></div>
         <div class="ground" id="ground"></div>
         <div class="vignette"></div>
-        <div class="torch t1">🔥</div><div class="torch t2">🔥</div>
+        <div class="torch t1"><span class="tflame" style="color:var(--ember)">${ic('flame',15)}</span></div><div class="torch t2"><span class="tflame" style="color:var(--ember)">${ic('flame',15)}</span></div>
         <div class="floatlayer" id="floats"></div>
         <div class="fighter hero" id="hero"><img class="pix" id="heroimg"><div class="tag">${(CLASSES[S.cls]||CLASSES.guerrier).name}</div></div>
         <div class="fighter mob" id="mob"><div class="mnameplate" id="mobnm"></div><img class="pix flip" id="mobimg"></div>
         <div class="fxbadges" id="fxbadges"></div>
       </div>
       <div class="comps" id="comps" style="margin-top:8px"></div>
-      <div class="tapipill" style="text-align:center;margin-top:6px">👆 Tape le monstre pour frapper</div>
+      <div class="tapipill" style="text-align:center;margin-top:6px">Tape le monstre pour frapper plus fort</div>
       <div style="height:8px"></div>
       <div class="bar" id="mbarw"><i id="mbar" style="background:${boss?'linear-gradient(90deg,var(--gold),var(--ember))':'var(--hp)'}"></i></div>
       <div class="cstats">
@@ -732,10 +789,10 @@ function renderDungeon(){
       </div>
     </div>
     <div class="card" style="padding:11px 13px"><div class="bar" style="height:9px"><i id="hbar" style="background:var(--regen)"></i></div><div class="s" id="hlbl" style="color:var(--muted);font-size:11px;margin-top:5px;font-variant-numeric:tabular-nums"></div></div>
-    <div class="section"><span>⚒️ Compagnons · or/sec</span></div>
+    <div class="section"><span>${ic('anvil',14)} Compagnons · or/sec</span></div>
     <div class="amtsel" id="amtsel"></div>
     <div id="companions"></div>
-    <div class="section"><span>📜 Journal</span></div>
+    <div class="section"><span>${ic('scroll',14)} Journal</span></div>
     <div class="log" id="log"></div>`;
   document.getElementById('mob').onclick=onTapMob;
   if(typeof TILE!=='undefined'){const w=document.getElementById('walls'),g=document.getElementById('ground');if(w)w.style.backgroundImage='url('+TILE.wall+')';if(g)g.style.backgroundImage='url('+TILE.floor+')';}
@@ -781,7 +838,7 @@ function renderCompanions(){
     return `<div class="buy ${can?'can':'no'}" data-c="${cp.id}">
       <span class="em">${spr('comp_'+cp.id,26)||cp.em}</span>
       <div style="flex:1"><div class="nm">${cp.nm} <small>${fmt(cp.rate)}/s ch.</small></div><div class="ds">produit ${fmt((S.comp[cp.id]||0)*cp.rate)}/s</div></div>
-      <div class="right"><div class="cnt">${have}</div><div class="cost" style="color:${can?'var(--gold)':'var(--faint)'}">💰${fmt(cost)} ${buyAmt!==1?`<span style="color:var(--faint)">×${amt}</span>`:''}</div></div>
+      <div class="right"><div class="cnt">${have}</div><div class="cost" style="color:${can?'var(--gold)':'var(--faint)'}"><span style="display:inline-flex;vertical-align:middle;color:var(--gold);opacity:${can?1:.4}">${ic('coin',12)}</span> ${fmt(cost)} ${buyAmt!==1?`<span style="color:var(--faint)">×${amt}</span>`:''}</div></div>
     </div>`;
   }).join('');
   box.querySelectorAll('[data-c]').forEach(el=>el.onclick=()=>{
@@ -800,7 +857,7 @@ function updateDungeon(full){
   const dotNow=d.burnDps+d.bleedDps+d.poisonPct*mMax;
   set('c-dps',fmt(d.dps+dotNow)); set('c-click',fmt(d.clickDmg)); set('c-gs',fmt(d.goldSec)); set('c-left',(MPF-S.mi));
   const badges=document.getElementById('fxbadges');
-  if(badges){const b=[];if(d.ce.burnBase>0)b.push('🔥');if(d.ce.bleedBase>0)b.push('🩸');if(d.ce.poisonBase>0)b.push('☠️');if(d.ce.vulnBase>0)b.push('❄️');if(d.ce.critMultAdd>0)b.push('⚡');badges.innerHTML=b.map(x=>`<span class="fxb">${x}</span>`).join('');}
+  if(badges){const b=[];if(d.ce.burnBase>0)b.push(['flame','var(--ember)']);if(d.ce.bleedBase>0)b.push(['blood','var(--hp)']);if(d.ce.poisonBase>0)b.push(['skull','var(--nutrition)']);if(d.ce.vulnBase>0)b.push(['frost','var(--xp)']);if(d.ce.critMultAdd>0)b.push(['bolt','var(--gold)']);badges.innerHTML=b.map(x=>`<span class="fxb" style="color:${x[1]}">${ic(x[0],15)}</span>`).join('');}
   if(full){
     swapMob(true);
     const sub=document.querySelector('.header .sub'); if(sub)sub.textContent='Niv. '+S.level+' · Étage '+S.floor+' · '+biomeName(S.floor);
@@ -811,25 +868,38 @@ function updateDungeon(full){
   }
 }
 function pushLog(s){S.log.unshift(s);if(S.log.length>26)S.log.pop();}
-function spawnFloat(text,color,crit,x){
+function spawnFloat(text,color,crit,x,icon){
   const layer=document.getElementById('floats'); if(!layer)return;
-  const s=document.createElement('div'); s.className='flt'+(crit?' crit':''); s.textContent=text; s.style.color=color;
-  s.style.left=(x!=null?x:35+Math.random()*30)+'%'; s.style.top=(24+Math.random()*16)+'%';
+  const s=document.createElement('div'); s.className='flt'+(crit?' crit':'');
+  s.innerHTML=(icon?ic(icon,crit?18:13)+' ':'')+'<span>'+text+'</span>'; s.style.color=color;
+  s.style.left=(x!=null?x:38+Math.random()*24)+'%'; s.style.top=(22+Math.random()*14)+'%';
   s.style.fontSize=(crit?28:16)+'px';
   s.style.setProperty('--dx',(Math.random()*44-22).toFixed(0)+'px');
   s.style.setProperty('--rot',(Math.random()*16-8).toFixed(0)+'deg');
   layer.appendChild(s); setTimeout(()=>s.remove(),860);
 }
+function heroSwing(){
+  const h=document.getElementById('hero'); if(!h)return;
+  h.classList.remove('atk'); void h.offsetWidth; h.classList.add('atk');
+  const wsrc=WEAP[WEAPON_SPR[S.cls||'guerrier']];
+  if(wsrc){ const w=document.createElement('img'); w.className='swing'; w.src=wsrc; h.appendChild(w); setTimeout(()=>w.remove(),280); }
+}
+function slashMob(crit){
+  const m=document.getElementById('mob'); if(!m)return;
+  m.classList.remove('hit'); void m.offsetWidth; m.classList.add('hit');
+  const s=document.createElement('div'); s.className='slash'; if(crit)s.style.borderColor='var(--gold) transparent transparent var(--gold)'; m.appendChild(s); setTimeout(()=>s.remove(),260);
+  const im=document.createElement('div'); im.className='impact'; const sz=crit?46:30; im.style.cssText+=`left:${-4-(crit?8:0)}px;top:20%;width:${sz}px;height:${sz}px`; if(crit)im.style.background='radial-gradient(circle,#ffe08a 0%,transparent 62%)'; m.appendChild(im); setTimeout(()=>im.remove(),300);
+  if(crit){const sc=document.querySelector('.scene'); if(sc){sc.classList.remove('shakeS');void sc.offsetWidth;sc.classList.add('shakeS');}}
+}
 function onTapMob(e){
   SND.unlock();
-  const d=D(); const crit=Math.random()*100<d.crit; const amount=d.clickDmg*(crit?CRIT_MULT:1);
+  const d=D(); const crit=Math.random()*100<d.crit; const amount=d.clickDmg*(crit?CRIT_MULT+d.ce.critMultAdd:1);
   const lay=document.getElementById('floats').getBoundingClientRect();
   const cx=(e.clientX!=null?e.clientX:lay.left+lay.width/2);
   const x=Math.max(8,Math.min(92,(cx-lay.left)/lay.width*100));
-  spawnFloat((crit?'✦ ':'')+fmt(amount),crit?'var(--gold)':'var(--xp)',crit,x);
-  tapRing(x); spawnSparks(crit?11:5,crit?'#ffcc4d':'#7ce0ff');
-  const m=document.getElementById('mob'); m.classList.remove('hit'); void m.offsetWidth; m.classList.add('hit');
-  const h=document.getElementById('hero'); if(h){h.classList.remove('atk');void h.offsetWidth;h.classList.add('atk');}
+  spawnFloat(fmt(amount),crit?'var(--gold)':'var(--xp)',crit,x,crit?'bolt':null);
+  tapRing(x); spawnSparks(crit?11:5,crit?'#ffcc4d':'#7cc4ff');
+  heroSwing(); slashMob(crit);
   if(crit){SND.crit();haptic(18);} else {SND.hit();haptic(6);}
   damageMonster(amount);
 }
@@ -845,14 +915,14 @@ function killMonster(){
   const g=Math.round(goldPerKill(S.floor,S.mi)*d.goldMult);
   const gx=xpPerKill(S.floor,S.mi); S.gold+=g; S.xp+=gx; if(S.cls)S.classXp[S.cls]=(S.classXp[S.cls]||0)+gx; S.kills++;
   const nl=levelFromXp(S.xp); if(nl>oldLvl){S.gems+=(nl-oldLvl);S.level=nl;pushLog('⭐ Niveau '+nl+' atteint ! +'+(nl-oldLvl)+' 💎');}
-  spawnFloat('+'+fmt(g)+' 💰','var(--gold)',false,50);
+  spawnFloat('+'+fmt(g),'var(--gold)',false,50,'coin');
   ghostMobPix(oldFrames); spawnSparks(boss?20:9,boss?'#ffcc4d':'#ff5d7a'); coinFly(boss?9:4);
   if(boss){
     const gem=1+Math.floor(S.floor/2); S.gems+=gem;
     pushLog('👑 Boss étage '+S.floor+' vaincu ! +'+gem+' 💎, descente étage '+(S.floor+1)+'.');
     S.floor++; S.mi=0;
     const ar=document.querySelector('.scene'); if(ar){ar.classList.remove('shake');void ar.offsetWidth;ar.classList.add('shake');}
-    spawnFloat('+'+gem+' 💎','var(--gem)',true,50); SND.boss(); haptic([30,40,70]); bump(document.getElementById('gemsbox'));
+    spawnFloat('+'+gem,'var(--gem)',true,50,'gem'); SND.boss(); haptic([30,40,70]); bump(document.getElementById('gemsbox'));
   } else { S.mi++; SND.kill(); haptic(12); }
   if(nl>oldLvl){ levelToast(S.level); SND.level(); haptic([10,30,10]); }
   S.mhp=monsterMaxHp(S.floor,S.mi); if(S.hp<d.maxHp)S.hp=Math.min(d.maxHp,S.hp+d.maxHp*0.15);
@@ -982,7 +1052,7 @@ function talDetail(){
 function renderHero(){
   const d=D(),cur=xpForLevel(S.level),nxt=xpForLevel(S.level+1);
   const UPG=[{k:'atk',em:'⚔️',nm:'Aiguiser la lame',ds:'+3 attaque',col:'var(--hp)'},{k:'click',em:'🗡️',nm:'Dague affûtée',ds:'+3 dégâts de clic',col:'var(--xp)'},{k:'maxHp',em:'🛡️',nm:"Armure",ds:'+20 PV max',col:'var(--regen)'},{k:'regen',em:'🧪',nm:'Élixir de régén.',ds:'+2 régén./s',col:'var(--sommeil)'},{k:'crit',em:'🎯',nm:"Œil du chasseur",ds:'+2% critique',col:'var(--gold)'}];
-  screen.innerHTML=`<div class="header"><h1>Héros</h1><div class="goldpill">💰 ${fmt(S.gold)}</div></div>
+  screen.innerHTML=`<div class="header"><h1>Héros</h1><div class="goldpill"><span style="color:var(--gold);display:inline-flex;vertical-align:middle">${ic('coin',15)}</span> ${fmt(S.gold)}</div></div>
     <div class="card" style="text-align:center"><div style="display:flex;justify-content:center;height:72px;align-items:flex-end">${pixImg(heroFrames(false),68)||('<span style="font-size:52px">'+d.c.em+'</span>')}</div>
       <div style="font-family:var(--serif);font-size:20px;font-weight:700;margin-top:4px">Niveau ${S.level} · ${d.c.name} <span style="color:var(--gem);font-size:14px">(classe niv. ${classLevelOf(S.classXp[S.cls||'guerrier']||0)})</span></div>
       <div class="sub num">${fmt(S.xp-cur)} / ${fmt(nxt-cur)} XP</div>
@@ -996,13 +1066,13 @@ function renderHero(){
       <div><b style="color:var(--regen)">${Math.round(d.maxHp)}</b><span>PV max</span></div>
       <div><b style="color:var(--gold)">${Math.round(d.crit)}%</b><span>Critique</span></div>
       <div><b style="color:var(--muted)">${fmt(S.totalDmg)}</b><span>Dégâts cumulés</span></div></div></div>
-    <div class="section"><span>⚔️ Classe</span></div>
+    <div class="section"><span>${ic('sword',14)} Classe</span></div>
     <div class="classgrid" id="classgrid"></div>
-    <div class="section"><span>🔨 Forge · dépense ton or</span></div>
+    <div class="section"><span>${ic('anvil',14)} Forge · dépense ton or</span></div>
     <div id="forge"></div>
-    <div class="section"><span>🏆 Succès</span></div>
+    <div class="section"><span>${ic('trophy',14)} Succès</span></div>
     <button class="buy can" id="achbtn" style="width:100%;justify-content:space-between"><span class="nm">Voir les succès</span><span class="cnt" style="font-size:16px">${(S.unlocked||[]).length}/${ACH.length}</span></button>
-    <div class="section"><span>🌟 Renaissance</span></div>
+    <div class="section"><span>${ic('star',14)} Renaissance</span></div>
     <div class="card"><div class="sub" style="line-height:1.5">Recommence la run (or, compagnons, forge, étage) contre des <b style="color:var(--gold)">Reliques</b> permanentes : <b>+4% dégâts & or</b> chacune. Tu gardes gemmes, talents, classe, objectif et streak.</div>
       <div class="stat3" style="margin-top:12px"><div><b style="color:var(--gold)">🏵️ ${S.reliques||0}</b><span>Reliques</span></div><div><b style="color:var(--regen)">+${4*(S.reliques||0)}%</b><span>Bonus</span></div><div><b style="color:var(--xp)">+${reliquesGain(S.floor)}</b><span>Si tu renais</span></div></div>
       <button class="btn-gold" id="prestigebtn" style="margin-top:12px" ${reliquesGain(S.floor)<=0?'disabled':''}>${reliquesGain(S.floor)>0?('Renaître (+'+reliquesGain(S.floor)+' 🏵️)'):"Atteins l'étage 5 pour renaître"}</button></div>
@@ -1014,7 +1084,7 @@ function renderHero(){
     if(!S.cls){S.cls=el.dataset.cl;selTal=null;save();renderHero();return;}
     if(confirm('Changer de classe coûte 5 💎. Continuer ?')){if(S.gems>=5){S.gems-=5;S.cls=el.dataset.cl;selTal=null;save();renderHero();renderCur();}else alert('Pas assez de gemmes (5 💎).');}
   });
-  document.getElementById('forge').innerHTML=UPG.map(u=>{const cost=upCost(u.k),can=S.gold>=cost;return `<div class="buy ${can?'can':'no'}" data-u="${u.k}" style="${can?'border-color:'+u.col:''}"><span class="em">${u.em}</span><div style="flex:1"><div class="nm">${u.nm} <small>Niv. ${S.up[u.k]}</small></div><div class="ds">${u.ds}</div></div><div class="right"><div class="cost" style="color:${can?'var(--gold)':'var(--faint)'}">💰${fmt(cost)}</div></div></div>`;}).join('');
+  document.getElementById('forge').innerHTML=UPG.map(u=>{const cost=upCost(u.k),can=S.gold>=cost;return `<div class="buy ${can?'can':'no'}" data-u="${u.k}" style="${can?'border-color:'+u.col:''}"><span class="em">${u.em}</span><div style="flex:1"><div class="nm">${u.nm} <small>Niv. ${S.up[u.k]}</small></div><div class="ds">${u.ds}</div></div><div class="right"><div class="cost" style="color:${can?'var(--gold)':'var(--faint)'}"><span style="display:inline-flex;vertical-align:middle;color:var(--gold);opacity:${can?1:.4}">${ic('coin',12)}</span> ${fmt(cost)}</div></div></div>`;}).join('');
   document.querySelectorAll('[data-u]').forEach(el=>el.onclick=()=>{const k=el.dataset.u,cost=upCost(k);if(S.gold>=cost){S.gold-=cost;S.up[k]++;save();renderHero();SND.buy();haptic(9);}});
   document.getElementById('achbtn').onclick=openAch;
   document.getElementById('prestigebtn').onclick=()=>{const g=reliquesGain(S.floor);if(g<=0)return;if(confirm('Renaissance ? Tu gagnes '+g+' 🏵️ reliques permanentes (+'+(4*g)+'% dégâts & or) et réinitialises ta run.')){doPrestige();SND.boss();haptic([30,40,70]);renderHero();renderCur();}};
@@ -1081,9 +1151,9 @@ function renderBody(){
        <input class="winput" id="wnow" type="number" inputmode="decimal" placeholder="${B.weight.toFixed(1)}">
        <button class="btn-gold" style="margin-top:10px" id="weighbtn">Enregistrer ma pesée ⚖️</button>
      </div>
-     <div class="section"><span>📜 Chronique du héros</span></div>
+     <div class="section"><span>${ic('scroll',14)} Chronique du héros</span></div>
      <div class="card">${sparkline(B.history.map(h=>h.w))}</div>
-     <div class="section"><span>🌟 Bonus permanent de la Voie</span></div>
+     <div class="section"><span>${ic('star',14)} Bonus permanent de la Voie</span></div>
      <div class="card sub"><b style="color:var(--gold)">${B.chapters}</b> palier(s) franchi(s) — bonus actif : ${voieBonusText(B)}</div>
      <button class="link" id="changevoie" style="display:block;margin:12px auto">Changer de Voie</button>
      <div style="height:12px"></div>`;
@@ -1131,20 +1201,23 @@ function coffreOverlay(r){
 }
 
 // ============ Boucle idle (100ms) ============
-let autoAcc=0, floatAcc=0;
+let autoAcc=0, floatAcc=0, swingAcc=0;
 setInterval(()=>{
   const d=D(),dt=0.1;
   S.gold+=d.goldSec*dt;
   // combat auto
   let hp=Math.min(d.maxHp,S.hp+d.regen*dt)-monsterAtk(S.floor,S.mi)*dt;
-  if(hp<=0){S.hp=d.maxHp;S.mhp=monsterMaxHp(S.floor,S.mi);pushLog('💀 Héros terrassé étage '+S.floor+', il se relève !');save();updateDungeon(true);}
+  if(hp<=0){S.hp=d.maxHp;S.mhp=monsterMaxHp(S.floor,S.mi);pushLog('💀 Héros terrassé étage '+S.floor+', il se relève !');if(tab==='dungeon'){const h=document.getElementById('hero');if(h){h.classList.remove('hurt');void h.offsetWidth;h.classList.add('hurt');}}save();updateDungeon(true);}
   else{S.hp=hp;
     // dégâts directs + effets élémentaires (brûlure/saignement/poison)
     const dot=d.burnDps+d.bleedDps+d.poisonPct*monsterMaxHp(S.floor,S.mi);
     const total=d.dps+dot;
     S.mhp-=total*dt; S.totalDmg+=total*dt;
-    floatAcc+=dt;
-    if(floatAcc>=0.5){ if(tab==='dungeon'){spawnFloat(fmt(d.dps*0.5),'var(--hp)',false); if(dot>0)spawnFloat('🔥'+fmt(dot*0.5),'var(--ember)',false);} floatAcc=0; }
+    floatAcc+=dt; swingAcc+=dt;
+    // le héros frappe en rythme (cadence ×vitesse d'attaque)
+    const cadence=Math.max(0.28,0.62/Math.min(3,d.spd||1));
+    if(swingAcc>=cadence){ if(tab==='dungeon'&&d.dps>0){heroSwing();slashMob(false);} swingAcc=0; }
+    if(floatAcc>=0.5){ if(tab==='dungeon'){spawnFloat(fmt(d.dps*0.5),'var(--hp)',false); if(dot>0)spawnFloat(fmt(dot*0.5),'var(--ember)',false,null,'flame');} floatAcc=0; }
     if(S.mhp<=0)killMonster(); else updateDungeon(false);
   }
   checkAch();
