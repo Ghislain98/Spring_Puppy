@@ -307,8 +307,8 @@ const COMP_TIER_SIZE=10, COMP_TIER_BONUS=0.05;
 const regularMobs=f=>Math.min(30,8+f*2);
 const totalMobs=f=>regularMobs(f)+1;
 const BASE={atk:4,maxHp:60,regen:2,crit:3};
-const UP_GAIN={atk:3,maxHp:20,regen:2,crit:2,click:3,critdmg:0.10,speed:0.03,power:0.06};
-const UP_BASE={atk:50,maxHp:40,regen:60,crit:120,click:80,critdmg:200,speed:300,power:150};
+const UP_GAIN={atk:3,maxHp:20,regen:2,crit:2,click:3,critdmg:0.10,speed:0.03,power:0.06,multi:4};
+const UP_BASE={atk:50,maxHp:40,regen:60,crit:120,click:80,critdmg:200,speed:300,power:150,multi:260};
 
 const CLASSES={
   guerrier:{name:'Guerrier',em:'⚔️',hero:'🤺',hp:1.35,dmg:1.15,gold:1,crit:0,click:1,regen:1,ds:'Robuste. +35% PV, +15% dégâts.'},
@@ -430,12 +430,16 @@ const compCost=(cp,count)=>Math.ceil(cp.base*Math.pow(1.15,count));
 const talCost=(t,lvl)=>Math.ceil(t.base*Math.pow(1.6,lvl));
 const upCost=(st)=>Math.ceil(UP_BASE[st]*Math.pow(1.18,S.up[st]||0));
 
+// Formatage infini : suffixes jusqu'à ~1e63 puis notation scientifique.
+const FMT_U=['K','M','B','T','Qa','Qi','Sx','Sp','Oc','No','Dc','UD','DD','TD','QaD','QiD','SxD','SpD','OcD','NoD','Vg'];
 function fmt(n){
+  if(!isFinite(n))return '∞';
+  if(n<0)return '-'+fmt(-n);
   n=Math.floor(n);
   if(n<1000) return ''+n;
-  const u=['K','M','B','T','Qa','Qi','Sx'];
-  let i=-1; while(n>=1000&&i<u.length-1){n/=1000;i++;}
-  return n.toFixed(n<10?2:n<100?1:0)+u[i];
+  const exp=Math.floor(Math.log10(n)), tier=Math.floor(exp/3);
+  if(tier-1<FMT_U.length){ const m=n/Math.pow(10,tier*3); return m.toFixed(m<10?2:m<100?1:0)+FMT_U[tier-1]; }
+  const m=n/Math.pow(10,exp); return m.toFixed(2)+'e'+exp;
 }
 function todayKey(){const d=new Date();return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();}
 
@@ -443,7 +447,7 @@ function todayKey(){const d=new Date();return d.getFullYear()+'-'+(d.getMonth()+
 function fresh(){return{
   gold:0,gems:0,xp:0,level:1,cls:null,
   habit:{atk:0,maxHp:0,regen:0,crit:0},
-  up:{atk:0,maxHp:0,regen:0,crit:0,click:0,critdmg:0,speed:0,power:0},
+  up:{atk:0,maxHp:0,regen:0,crit:0,click:0,critdmg:0,speed:0,power:0,multi:0},
   tal:{},comp:{},
   classXp:{guerrier:0,mage:0,rodeur:0,paladin:0},
   classTal:{guerrier:{},mage:{},rodeur:{},paladin:{}},
@@ -457,7 +461,7 @@ function fresh(){return{
 let S; try{S=JSON.parse(localStorage.getItem('habitquest-demo2'))||fresh();}catch(e){S=fresh();}
 S=Object.assign(fresh(),S);
 S.habit=Object.assign({atk:0,maxHp:0,regen:0,crit:0},S.habit);
-S.up=Object.assign({atk:0,maxHp:0,regen:0,crit:0,click:0,critdmg:0,speed:0,power:0},S.up);
+S.up=Object.assign({atk:0,maxHp:0,regen:0,crit:0,click:0,critdmg:0,speed:0,power:0,multi:0},S.up);
 S.classXp=Object.assign({guerrier:0,mage:0,rodeur:0,paladin:0},S.classXp);
 S.classTal=Object.assign({guerrier:{},mage:{},rodeur:{},paladin:{}},S.classTal);
 function save(){S.lastActive=Date.now();localStorage.setItem('habitquest-demo2',JSON.stringify(S));}
@@ -521,7 +525,7 @@ const CLASS_TREES={
     {id:'r_K2',gx:2,gy:4,req:['r_H'],key:1,syn:'assassin',nm:'Assassin',em:'🗡️',max:1,ds:'★ SYNERGIE : ton crit augmente ta vitesse d’attaque.'},
     {id:'r_K3',gx:4,gy:4,req:['r_I'],key:1,syn:'bounty',nm:'Chasseur de primes',em:'🎖️',max:1,ds:'★ SYNERGIE : ta cupidité augmente tes dégâts.'},
     {id:'r_C1',gx:1,gy:5,req:['r_K1','r_K2'],cap:1,nm:'Prédateur apex',em:'💠',max:1,ds:'CAPSTONE : poison ×2 ET dégâts ×2.',ap:e=>{e.poisonMul*=2;e.dmgMul*=2}},
-    {id:'r_C2',gx:3,gy:5,req:['r_K2','r_K3'],cap:1,nm:'Œil du faucon',em:'💠',max:1,ds:'CAPSTONE : +100% dégâts critiques ET vitesse d’attaque ×1,4.',ap:e=>{e.critMultAdd+=1;e.atkSpeedMul*=1.4}},
+    {id:'r_C2',gx:3,gy:5,req:['r_K2','r_K3'],cap:1,nm:'Œil du faucon',em:'💠',max:1,ds:'CAPSTONE : +100% dégâts crit, +30% multi-attaque, et ta chance de crit AU-DELÀ de 100% te donne autant de multi-attaque (½).',ap:e=>{e.critMultAdd+=1;e.multiAdd+=30;e.overcritMulti=1}},
     {id:'r_C3',gx:2,gy:6,req:['r_K1','r_K3'],cap:1,nm:'Contrebandier mortel',em:'💠',max:1,ds:'CAPSTONE : poison ×2 ET or ×2.',ap:e=>{e.poisonMul*=2;e.goldMul*=2}},
   ]},
   paladin:{nodes:[
@@ -559,7 +563,7 @@ function classSpent(cls){const a=S.classTal[cls]||{},t=CLASS_TREES[cls];let s=0;
 function classPoints(cls){const total=Math.min(POINT_CAP,classLevelOf(S.classXp[cls]||0));const spent=classSpent(cls);return{total,spent,avail:total-spent};}
 function nodeUnlocked(cls,id){const a=S.classTal[cls]||{};const n=nodeById(cls,id);if(!n)return false;const req=n.req||[];if(!req.length)return true;return req.every(r=>(a[r]||0)>0);}
 function classEff(cls){
-  const e={dmgMul:1,hpMul:1,goldMul:1,goldSecMul:1,atkSpeedMul:1,clickMul:1,burnMul:1,bleedMul:1,poisonMul:1,vulnMul:1,burnBase:0,bleedBase:0,poisonBase:0,vulnBase:0,critAdd:0,critMultAdd:0,regenAdd:0,dmgLowHp:0};
+  const e={dmgMul:1,hpMul:1,goldMul:1,goldSecMul:1,atkSpeedMul:1,clickMul:1,burnMul:1,bleedMul:1,poisonMul:1,vulnMul:1,burnBase:0,bleedBase:0,poisonBase:0,vulnBase:0,critAdd:0,critMultAdd:0,regenAdd:0,dmgLowHp:0,multiAdd:0,overcritMulti:0};
   const t=CLASS_TREES[cls]; if(!t)return e; const a=S.classTal&&S.classTal[cls]||{}; const syns=[];
   for(const n of t.nodes){const l=a[n.id]||0;if(l>0){if(n.ap)n.ap(e,l);if(n.syn)syns.push(n.syn);}}
   for(const s of syns) SYN[s]&&SYN[s](e);
@@ -737,18 +741,23 @@ function D(){
   const compDmg=1+COMP_TIER_BONUS*compTier;
   const dmgMult=c.dmg*ce.dmgMul*b*vDmg*pres*lowHp*(1+(S.up.power||0)*UP_GAIN.power)*compDmg*achMult;
   const spd=ce.atkSpeedMul*(1+(S.up.speed||0)*UP_GAIN.speed); // vitesse d'attaque
+  // Multi-attaque : chance (%) de frapper plusieurs fois. >100% = coups garantis + chance.
+  // Le talent « Œil du faucon » convertit ta chance de crit au-delà de 100% en multi-attaque.
+  let multi=Math.max(0,(S.up.multi||0)*UP_GAIN.multi+(ce.multiAdd||0));
+  if(ce.overcritMulti)multi+=Math.max(0,crit-100)*0.5;
+  const multiHits=1+multi/100; // nombre de coups moyen (auto-DPS)
   const hitBase=atk*critF*dmgMult*vuln;
-  const dps=hitBase*spd;
+  const dps=hitBase*spd*multiHits;
   const clickBase=2+S.level+(S.up.click||0)*3;
   const clickDmg=clickBase*dmgMult*vuln*c.click*vClick*ce.clickMul*spd;
   const compMult=ce.goldSecMul*goldMult;
   const goldSec=COMPANIONS.reduce((a,cp)=>a+(S.comp[cp.id]||0)*cp.rate,0)*compMult;
   const offCap=8*3600;
-  // Effets sur la durée (base × multiplicateurs de keystones/synergies, × vitesse d'attaque)
-  const burnDps=ce.burnBase*hitBase*ce.burnMul*spd;
-  const bleedDps=ce.bleedBase*hitBase*ce.bleedMul*spd;
+  // Effets sur la durée (base × multiplicateurs de keystones/synergies, × vitesse d'attaque × multi)
+  const burnDps=ce.burnBase*hitBase*ce.burnMul*spd*multiHits;
+  const bleedDps=ce.bleedBase*hitBase*ce.bleedMul*spd*multiHits;
   const poisonPct=ce.poisonBase*ce.poisonMul;
-  return{c,ce,dmgMult,goldMult,crit,critMult,critF,atk,maxHp,regen,dps,clickDmg,goldSec,offCap,vuln,spd,burnDps,bleedDps,poisonPct,compCount,compTier,compDmg};
+  return{c,ce,dmgMult,goldMult,crit,critMult,critF,atk,maxHp,regen,dps,clickDmg,goldSec,offCap,vuln,spd,multi,multiHits,burnDps,bleedDps,poisonPct,compCount,compTier,compDmg};
 }
 
 // gains hors-ligne
@@ -931,24 +940,31 @@ function slashMob(crit){
   const im=document.createElement('div'); im.className='impact'; const sz=crit?46:30; im.style.cssText+=`left:${-4-(crit?8:0)}px;top:20%;width:${sz}px;height:${sz}px`; if(crit)im.style.background='radial-gradient(circle,#ffe08a 0%,transparent 62%)'; m.appendChild(im); setTimeout(()=>im.remove(),300);
   if(crit){const sc=document.querySelector('.scene'); if(sc){sc.classList.remove('shakeS');void sc.offsetWidth;sc.classList.add('shakeS');}}
 }
-const CRIT_LABELS=['','CRIT','DOUBLE CRIT','TRIPLE CRIT','QUADRA CRIT','PENTA CRIT'];
+// Couleur des dégâts selon la puissance du crit (pas de texte, juste la couleur) :
+// normal, crit, double, triple, quadra, penta+
+const CRIT_COLORS=['var(--xp)','var(--gold)','var(--ember)','#ff5d6c','#c77dff','#ff2d6c'];
+const CRIT_SPARKS=['#7cc4ff','#ffcc4d','#ff8a3d','#ff5d6c','#c77dff','#ff2d6c'];
+function rollLayers(chancePct){
+  const over=Math.max(0,chancePct)/100, g=Math.floor(over), f=over-g;
+  return g+(Math.random()<f?1:0);
+}
 function rollCritLayers(d){
-  const chance=Math.min(1,d.crit/100);
-  if(Math.random()>=chance) return 0;
-  const over=Math.max(0,d.crit-100)/100, g=Math.floor(over), f=over-g;
-  return 1+g+(Math.random()<f?1:0); // 1 = crit simple, 2 = double crit, etc.
+  if(Math.random()>=Math.min(1,d.crit/100)) return 0;
+  return 1+rollLayers(Math.max(0,d.crit-100)); // 1 = crit, 2 = double, etc.
 }
 function onTapMob(e){
   SND.unlock();
   const d=D(); const layers=rollCritLayers(d); const crit=layers>0;
-  const mult=crit?Math.pow(d.critMult,layers):1; const amount=d.clickDmg*mult;
+  const hits=1+rollLayers(d.multi); // multi-attaque : coups supplémentaires
+  const mult=(crit?Math.pow(d.critMult,layers):1)*hits;
+  const amount=d.clickDmg*mult;
   const lay=document.getElementById('floats').getBoundingClientRect();
   const cx=(e.clientX!=null?e.clientX:lay.left+lay.width/2);
   const x=Math.max(8,Math.min(92,(cx-lay.left)/lay.width*100));
-  const lbl=layers>=2?(CRIT_LABELS[Math.min(layers,5)]||(layers+'× CRIT')):'';
-  spawnFloat((lbl?lbl+' ':'')+fmt(amount),crit?(layers>=2?'var(--ember)':'var(--gold)'):'var(--xp)',crit,x,crit?'bolt':null);
-  tapRing(x); spawnSparks(crit?(8+layers*4):5,layers>=2?'#ff8a3d':(crit?'#ffcc4d':'#7cc4ff'));
-  heroSwing(); slashMob(crit);
+  const ci=Math.min(layers,5);
+  spawnFloat(fmt(amount),CRIT_COLORS[ci],crit,x,crit?'bolt':null);
+  tapRing(x); spawnSparks(crit?(8+layers*4):5,CRIT_SPARKS[ci]);
+  heroSwing(); slashMob(crit); for(let k=1;k<hits;k++)setTimeout(()=>slashMob(crit),80*k);
   if(layers>=2){const sc=document.querySelector('.scene');if(sc){sc.classList.remove('shake');void sc.offsetWidth;sc.classList.add('shake');}SND.boss&&SND.boss();haptic([12,20,12]);}
   else if(crit){SND.crit();haptic(18);} else {SND.hit();haptic(6);}
   damageMonster(amount);
@@ -1088,7 +1104,7 @@ function talDetail(){
 // ============ HÉROS ============
 function renderHero(){
   const d=D(),cur=xpForLevel(S.level),nxt=xpForLevel(S.level+1);
-  const UPG=[{k:'atk',em:'⚔️',nm:'Aiguiser la lame',ds:'+3 attaque',col:'var(--hp)'},{k:'power',em:'💪',nm:'Puissance',ds:'+6% dégâts',col:'var(--hp)'},{k:'critdmg',em:'💥',nm:'Cruauté',ds:'+10% dégâts critiques',col:'var(--ember)'},{k:'crit',em:'🎯',nm:"Œil du chasseur",ds:'+2% critique',col:'var(--gold)'},{k:'speed',em:'⚡',nm:'Célérité',ds:"+3% vitesse d'attaque",col:'var(--xp)'},{k:'click',em:'🗡️',nm:'Dague affûtée',ds:'+3 dégâts de clic',col:'var(--xp)'},{k:'maxHp',em:'🛡️',nm:"Armure",ds:'+20 PV max',col:'var(--regen)'},{k:'regen',em:'🧪',nm:'Élixir de régén.',ds:'+2 régén./s',col:'var(--sommeil)'}];
+  const UPG=[{k:'atk',em:'⚔️',nm:'Aiguiser la lame',ds:'+3 attaque',col:'var(--hp)'},{k:'power',em:'💪',nm:'Puissance',ds:'+6% dégâts',col:'var(--hp)'},{k:'critdmg',em:'💥',nm:'Cruauté',ds:'+10% dégâts critiques',col:'var(--ember)'},{k:'crit',em:'🎯',nm:"Œil du chasseur",ds:'+2% critique',col:'var(--gold)'},{k:'speed',em:'⚡',nm:'Célérité',ds:"+3% vitesse d'attaque",col:'var(--xp)'},{k:'multi',em:'🌀',nm:'Frappe multiple',ds:'+4% multi-attaque',col:'var(--gem)'},{k:'click',em:'🗡️',nm:'Dague affûtée',ds:'+3 dégâts de clic',col:'var(--xp)'},{k:'maxHp',em:'🛡️',nm:"Armure",ds:'+20 PV max',col:'var(--regen)'},{k:'regen',em:'🧪',nm:'Élixir de régén.',ds:'+2 régén./s',col:'var(--sommeil)'}];
   screen.innerHTML=`<div class="header"><h1>Héros</h1><div class="goldpill"><span style="color:var(--gold);display:inline-flex;vertical-align:middle">${ic('coin',15)}</span> ${fmt(S.gold)}</div></div>
     <div class="card" style="text-align:center"><div style="display:flex;justify-content:center;height:72px;align-items:flex-end">${pixImg(heroFrames(false),68)||('<span style="font-size:52px">'+d.c.em+'</span>')}</div>
       <div style="font-family:var(--serif);font-size:20px;font-weight:700;margin-top:4px">Niveau ${S.level} · ${d.c.name} <span style="color:var(--gem);font-size:14px">(classe niv. ${classLevelOf(S.classXp[S.cls||'guerrier']||0)})</span></div>
@@ -1104,9 +1120,13 @@ function renderHero(){
       <div><b style="color:var(--ember)">×${d.critMult.toFixed(2)}</b><span>Dégâts crit</span></div>
       <div><b style="color:var(--xp)">×${d.spd.toFixed(2)}</b><span>Vit. attaque</span></div></div>
       <div class="stat3" style="margin-top:12px">
-      <div><b style="color:var(--regen)">${Math.round(d.maxHp)}</b><span>PV max</span></div>
+      <div><b style="color:${d.multi>100?'var(--ember)':'var(--gem)'}">${Math.round(d.multi)}%</b><span>Multi-attaque</span></div>
       <div><b style="color:var(--ember)">${fmt(d.burnDps+d.bleedDps+d.poisonPct*monsterMaxHp(S.floor,S.mi))}</b><span>Effets/s</span></div>
-      <div><b style="color:var(--gem)">+${Math.round(d.compDmg*100-100)}%</b><span>Bonus troupe</span></div></div></div>
+      <div><b style="color:var(--gem)">+${Math.round(d.compDmg*100-100)}%</b><span>Bonus troupe</span></div></div>
+      <div class="stat3" style="margin-top:12px">
+      <div><b style="color:var(--regen)">${Math.round(d.maxHp)}</b><span>PV max</span></div>
+      <div><b style="color:var(--regen)">${fmt(d.regen)}</b><span>Régén/s</span></div>
+      <div><b style="color:var(--muted)">${fmt(S.totalDmg)}</b><span>Dégâts cumulés</span></div></div></div>
     <div class="section"><span>${ic('sword',14)} Classe</span></div>
     <div class="classgrid" id="classgrid"></div>
     <div class="section"><span>${ic('anvil',14)} Forge · dépense ton or</span></div>
