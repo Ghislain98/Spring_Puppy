@@ -12,7 +12,9 @@ app, hors-ligne (c'est un seul fichier autonome).
    **iOS (Safari)** : bouton Partager → *Sur l'écran d'accueil*.
 3. Une icône « HabitQuest » apparaît ; elle lance le jeu en plein écran.
 
-C'est le même jeu que l'app native (mêmes mécaniques et équilibrage).
+C'est **exactement** le même jeu que l'APK Android : l'app embarque ce fichier
+HTML et l'affiche en plein écran. Une seule base de code, donc chaque
+amélioration du jeu arrive aussi dans l'APK au prochain build.
 
 ## 🥇 APK Android SANS rien installer sur ton PC (GitHub Actions)
 
