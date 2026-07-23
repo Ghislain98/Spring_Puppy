@@ -506,25 +506,35 @@ function compFrames(id){return SPR[COMP_SPR[id]]||SPR['goblin'];}
 function heroHitFrames(){const b=HERO_SPR[S.cls||'guerrier']||'knight_m';return SPR[b+'_hit']||SPR[b+'_idle'];}
 
 // ==== Combat animé (sprites Tiny RPG Character Pack) ====
-// Héros = le Soldat animé, tinté par classe pour l'identité visuelle.
+// UN SPRITE PAR CLASSE. Le personnage voulu est utilisé dès que ses feuilles sont
+// chargées ; sinon repli automatique sur le Soldat (aucune casse en attendant).
+const HERO_CHAR={guerrier:'knight', mage:'wizard', rodeur:'archer', paladin:'templar'};
+const hasSheet=c=>!!(c&&SHEETS[c+'_idle']);
+const heroChar=cls=>{cls=cls||S.cls||'guerrier'; return hasSheet(HERO_CHAR[cls])?HERO_CHAR[cls]:'soldier';};
+// Teinte de repli : seulement quand on retombe sur le Soldat (pour distinguer les
+// classes). Dès qu'un vrai sprite de classe existe, pas de teinte (déjà distinct).
 const CLASS_TINT={guerrier:'', paladin:'sepia(.55) saturate(1.5) hue-rotate(-15deg) brightness(1.1)', mage:'hue-rotate(175deg) saturate(1.35) brightness(1.05)', rodeur:'hue-rotate(85deg) saturate(1.25)'};
 const heroShadow='drop-shadow(0 3px 3px rgba(0,0,0,.55))';
-const heroFilter=cls=>((CLASS_TINT[cls||S.cls||'guerrier']||'')+' '+heroShadow).trim();
-function heroFrames(run){return sliceSheet('soldier_'+(run?'walk':'idle'));}
-function heroAnim(name){return sliceSheet(SHEETS['soldier_'+name]?'soldier_'+name:'soldier_idle');}
-// 3 monstres animés cyclés ; le démon est un lanceur à distance.
-const MOB_CHARS=['orc','blood','demon'];
-const mobChar=(f,i)=>isBoss(f,i)?'demon':MOB_CHARS[((f*2+i)%MOB_CHARS.length+MOB_CHARS.length)%MOB_CHARS.length];
+const heroFilter=cls=>{cls=cls||S.cls||'guerrier'; const tint=(heroChar(cls)==='soldier')?(CLASS_TINT[cls]||''):''; return (tint+' '+heroShadow).trim();};
+function heroFrames(run){const c=heroChar();return sliceSheet(c+'_'+(run?'walk':'idle'));}
+function heroAnim(name){const c=heroChar();return sliceSheet(SHEETS[c+'_'+name]?c+'_'+name:c+'_idle');}
+// Roster d'ennemis : intention élargie ; seuls les persos réellement présents dans
+// SHEETS entrent dans la rotation (repli sur orc/blood/demon).
+const MOB_POOL=['orc','skeleton','blood','lancer','demon','necromancer'];
+const RANGED_POOL=new Set(['demon','necromancer','archer_enemy','wizard_enemy']);
+const BOSS_POOL=['necromancer','demon'];
+const availMobs=()=>{const a=MOB_POOL.filter(c=>hasSheet(c));return a.length?a:['orc','blood','demon'];};
+function mobChar(f,i){ if(isBoss(f,i)){const bp=BOSS_POOL.filter(hasSheet);return bp.length?bp[(f-1)%bp.length]:'demon';} const a=availMobs();return a[((f*2+i)%a.length+a.length)%a.length]; }
 // Teinte de biome : varie la palette des monstres tous les 5 étages.
 const BIOME_TINT=['', 'hue-rotate(-30deg) saturate(1.3)', 'hue-rotate(95deg) saturate(.85)', 'hue-rotate(180deg) saturate(1.25)', 'hue-rotate(45deg) saturate(1.5)', 'hue-rotate(-70deg) saturate(1.2)', 'grayscale(.45) brightness(.85)', 'hue-rotate(300deg) saturate(1.6)'];
 const biomeTint=f=>BIOME_TINT[Math.floor((f-1)/5)%BIOME_TINT.length];
 const mobFilter=f=>((biomeTint(f)||'')+' drop-shadow(0 3px 2px rgba(0,0,0,.55))').trim();
 function mobFrames(f,i){return sliceSheet(mobChar(f,i)+'_idle');}
 function mobAnim(f,i,name){const c=mobChar(f,i),k=c+'_'+name;return sliceSheet(SHEETS[k]?k:c+'_idle');}
-// Le démon riposte à distance (projectile) ; orc & monstre de sang chargent.
-const mobRanged=(f,i)=>mobChar(f,i)==='demon';
+// Ennemis à distance : projectile au lieu de charger.
+const mobRanged=(f,i)=>RANGED_POOL.has(mobChar(f,i));
 // Image statique tintée du héros (pour les cartes de classe / écrans).
-function classImg(cls,h){const fr=sliceSheet('soldier_idle');return `<img class="pix" src="${(fr&&fr[0])||''}" style="height:${h}px;filter:${heroFilter(cls)}">`;}
+function classImg(cls,h){const fr=sliceSheet(heroChar(cls)+'_idle');return `<img class="pix" src="${(fr&&fr[0])||''}" style="height:${h}px;filter:${heroFilter(cls)}">`;}
 // Joue une animation « une fois » sur le sprite du héros / du monstre, puis repos.
 function heroPlay(name,ms){const el=document.getElementById('heroimg');if(el)playOnce(el,heroAnim(name),ms||70,heroFrames(false),200);}
 function mobPlay(name,ms){const el=document.getElementById('mobimg');if(el)playOnce(el,mobAnim(S.floor,S.mi,name),ms||70,mobFrames(S.floor,S.mi),220);}
