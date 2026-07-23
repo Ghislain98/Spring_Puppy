@@ -75,7 +75,13 @@
   .atb { flex:1; height:7px; background:#0c0920; border:1px solid var(--border); border-radius:999px; overflow:hidden; }
   .atb > i { display:block; height:100%; width:0; border-radius:999px; background:linear-gradient(90deg,#5b8cff,#8ecbff); transition:width .1s linear; }
   .atb > i.full { background:linear-gradient(90deg,var(--gold),#fff2c2); box-shadow:0 0 8px var(--gold); animation:atbpulse .5s ease-in-out infinite; }
+  .atb > i.frozen { background:linear-gradient(90deg,#5bd6ff,#c9f4ff)!important; box-shadow:0 0 8px #5bd6ff; animation:none; }
   @keyframes atbpulse { 0%,100%{filter:brightness(1)} 50%{filter:brightness(1.5)} }
+  .scene .mob.frozen .pix { filter:brightness(1.15) saturate(.5) hue-rotate(160deg) drop-shadow(0 0 7px #7fe3ff) drop-shadow(0 3px 2px rgba(0,0,0,.55))!important; }
+  .frostburst { position:absolute; left:50%; top:34%; width:52px; height:52px; transform:translate(-50%,-50%); border-radius:50%; pointer-events:none; z-index:7; background:radial-gradient(circle,#eafcff 0%,#7fe3ff 40%,transparent 72%); animation:frostb .48s ease-out forwards; }
+  @keyframes frostb { 0%{opacity:0;transform:translate(-50%,-50%) scale(.3)} 35%{opacity:.95} 100%{opacity:0;transform:translate(-50%,-50%) scale(1.5)} }
+  .combobadge { position:absolute; left:50%; bottom:8px; transform:translateX(-50%); z-index:8; background:linear-gradient(90deg,rgba(255,93,122,.95),rgba(255,138,61,.95)); color:#1a0f14; font-weight:900; font-size:12px; padding:3px 11px; border-radius:999px; white-space:nowrap; box-shadow:0 2px 8px rgba(0,0,0,.45); animation:pop .3s ease; }
+  .combobadge small { font-weight:800; opacity:.85; }
   .spdrow { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:6px; }
   .spdsel { display:flex; gap:4px; }
   .spdsel button { background:var(--bgEl); border:1px solid var(--border); color:var(--muted); border-radius:8px; padding:4px 9px; font-weight:800; font-size:11px; cursor:pointer; font-variant-numeric:tabular-nums; }
@@ -642,7 +648,7 @@ function fresh(){return{
   tal:{},comp:{},
   classXp:{guerrier:0,mage:0,rodeur:0,paladin:0},
   classTal:{guerrier:{},mage:{},rodeur:{},paladin:{}},
-  parangon:{guerrier:{},mage:{},rodeur:{},paladin:{}},rampStacks:0,
+  parangon:{guerrier:{},mage:{},rodeur:{},paladin:{}},rampStacks:0,shield:0,frozen:0,combo:0,
   floor:1,mi:0,mhp:monsterMaxHp(1,0),hp:BASE.maxHp,
   streak:0,streakBest:0,lastCheckin:null,buffUntil:0,buffMult:1.5,freezes:2,
   week:{key:null,prog:{}},perfectDays:0,checkinsTotal:0,moodLog:[],gameSpeed:1,
@@ -674,6 +680,7 @@ let streakMsg=null;
 S.classXp=Object.assign({guerrier:0,mage:0,rodeur:0,paladin:0},S.classXp);
 S.classTal=Object.assign({guerrier:{},mage:{},rodeur:{},paladin:{}},S.classTal);
 S.parangon=Object.assign({guerrier:{},mage:{},rodeur:{},paladin:{}},S.parangon); if(typeof S.rampStacks!=='number')S.rampStacks=0;
+['shield','frozen','combo'].forEach(k=>{if(typeof S[k]!=='number')S[k]=0;});
 // Les anciens joueurs (déjà une classe) sont considérés comme intégrés ; les
 // nouveaux passent par l'onboarding de première ouverture.
 if(typeof S.onboarded!=='boolean')S.onboarded=!!S.cls;
@@ -709,13 +716,13 @@ const CLASS_TREES={
     {id:'gF2',gx:2,gy:2,req:['gF1'],nm:'Frénésie',em:'🔥',max:6,ds:'Par rang : +4% dégâts ET +2% vitesse par palier de fureur.',ap:(e,l)=>{e.rampRate+=0.04*l;e.atkRampRate+=0.02*l}},
     {id:'gF3',gx:2,gy:3,req:['gF2'],key:1,nm:'Rage indomptable',em:'💢',max:1,ds:'★ KEYSTONE : la fureur monte 2× plus fort (dégâts ET vitesse par palier doublés).',ap:e=>{e.rampRate*=2;e.atkRampRate*=2}},
     {id:'gF4',gx:2,gy:4,req:['gF3'],nm:'Sang-froid',em:'🌡️',max:6,ds:'Par rang : +3% dégâts par palier de fureur.',ap:(e,l)=>e.rampRate+=0.03*l},
-    {id:'gF5',gx:2,gy:5,req:['gF4'],cap:1,nm:'Berserker',em:'😡',max:1,ds:'CAPSTONE : sous 50% PV, +150% dégâts et tu voles +18% de tes dégâts en PV.',ap:e=>{e.dmgLowHp+=1.5;e.lifestealPct+=0.18}},
+    {id:'gF5',gx:2,gy:5,req:['gF4'],cap:1,nm:'Berserker',em:'😡',max:1,ds:'CAPSTONE : sous 50% PV, +150% dégâts. Chaque kill SANS te faire toucher empile un ÉLAN (+4% dégâts/palier, max 20).',ap:e=>{e.dmgLowHp+=1.5;e.comboDmg+=0.04}},
     // ── Branche EXÉCUTION (bourreau) ──
     {id:'gE1',gx:4,gy:1,req:['g0'],nm:'Exécution',em:'🪓',max:1,ds:'MÉCANIQUE : frappe fatale — +150% dégâts contre un ennemi sous 25% PV.',ap:e=>{e.execThresh=Math.max(e.execThresh,0.25);e.execMul*=2.5}},
     {id:'gE2',gx:4,gy:2,req:['gE1'],nm:'Bourreau',em:'⚔️',max:6,ds:'+40% dégâts d’exécution par rang.',ap:(e,l)=>e.execMul+=0.4*l},
     {id:'gE3',gx:4,gy:3,req:['gE2'],key:1,nm:'Décapitation',em:'💀',max:1,ds:'★ KEYSTONE : le seuil d’exécution passe à 40% PV.',ap:e=>{e.execThresh=Math.max(e.execThresh,0.40)}},
     {id:'gE4',gx:4,gy:4,req:['gE3'],nm:'Moisson',em:'🌾',max:6,ds:'+35% dégâts d’exécution par rang.',ap:(e,l)=>e.execMul+=0.35*l},
-    {id:'gE5',gx:4,gy:5,req:['gE4'],cap:1,nm:'Faucheur',em:'💠',max:1,ds:'CAPSTONE : seuil d’exécution à 55% PV et +300% dégâts d’exécution.',ap:e=>{e.execThresh=Math.max(e.execThresh,0.55);e.execMul+=3}},
+    {id:'gE5',gx:4,gy:5,req:['gE4'],cap:1,nm:'Faucheur',em:'💠',max:1,ds:'CAPSTONE : seuil d’exécution à 55% PV, +300% dégâts d’exécution, et 60% du SURPLUS de dégâts déferle sur l’ennemi suivant (Surtue).',ap:e=>{e.execThresh=Math.max(e.execThresh,0.55);e.execMul+=3;e.overkill+=0.6}},
     // ── Branche COLOSSE (vulnérabilité & tank) ──
     {id:'gC1',gx:5,gy:1,req:['g0'],nm:'Faiblesse',em:'🎯',max:1,ds:'MÉCANIQUE : ouvre la VULNÉRABILITÉ — l’ennemi subit +25% de TOUS tes dégâts.',ap:e=>e.vulnBase+=0.25},
     {id:'gC2',gx:6,gy:2,req:['gC1'],nm:'Broyer',em:'🔨',max:6,ds:'Vulnérabilité ×1,35 par rang.',ap:(e,l)=>e.vulnMul*=P(1.35,l)},
@@ -736,7 +743,7 @@ const CLASS_TREES={
     {id:'mF2',gx:2,gy:2,req:['mF1'],nm:'Gel profond',em:'🧊',max:6,ds:'Vulnérabilité ×1,35 par rang.',ap:(e,l)=>e.vulnMul*=P(1.35,l)},
     {id:'mF3',gx:2,gy:3,req:['mF2'],key:1,syn:'conflag',nm:'Zéro absolu',em:'🔷',max:1,ds:'★ SYNERGIE : ta vulnérabilité amplifie ta brûlure.'},
     {id:'mF4',gx:2,gy:4,req:['mF3'],nm:'Éclats de glace',em:'🩸',max:6,ds:'Vulnérabilité ×1,3 par rang.',ap:(e,l)=>e.vulnMul*=P(1.3,l)},
-    {id:'mF5',gx:2,gy:5,req:['mF4'],cap:1,syn:'crush',nm:'Ère glaciaire',em:'💠',max:1,ds:'CAPSTONE : ta vulnérabilité amplifie AUSSI tes dégâts directs.'},
+    {id:'mF5',gx:2,gy:5,req:['mF4'],cap:1,syn:'crush',nm:'Ère glaciaire',em:'❄️',max:1,ds:'CAPSTONE : tes coups critiques GÈLENT l’ennemi (jauge ATB figée) et un ennemi gelé subit +70% de dégâts. Ta vulnérabilité amplifie aussi tes dégâts directs.',ap:e=>{e.freezeChance+=0.55;e.freezeAmp+=0.7}},
     // ── Branche FOUDRE (crit) ──
     {id:'mC1',gx:4,gy:1,req:['m0'],nm:'Décharge',em:'⚡',max:1,ds:'MÉCANIQUE : +15% crit et +50% dégâts critiques.',ap:e=>{e.critAdd+=15;e.critMultAdd+=0.5}},
     {id:'mC2',gx:4,gy:2,req:['mC1'],nm:'Haute tension',em:'🌩️',max:6,ds:'+50% dégâts critiques par rang.',ap:(e,l)=>e.critMultAdd+=0.5*l},
@@ -763,7 +770,7 @@ const CLASS_TREES={
     {id:'rC2',gx:2,gy:2,req:['rC1'],nm:'Point faible',em:'🔎',max:6,ds:'+50% dégâts critiques par rang.',ap:(e,l)=>e.critMultAdd+=0.5*l},
     {id:'rC3',gx:2,gy:3,req:['rC2'],key:1,syn:'assassin',nm:'Assassin',em:'🗡️',max:1,ds:'★ SYNERGIE : ta chance de crit accélère tes attaques.'},
     {id:'rC4',gx:2,gy:4,req:['rC3'],nm:'Précision',em:'👁️',max:6,ds:'+6% crit par rang (peut surcritiquer).',ap:(e,l)=>e.critAdd+=6*l},
-    {id:'rC5',gx:2,gy:5,req:['rC4'],cap:1,nm:'Œil du faucon',em:'💠',max:1,ds:'CAPSTONE : ta chance de crit AU-DELÀ de 100% se convertit en multi-attaque, +30% multi.',ap:e=>{e.overcritMulti=1;e.multiAdd+=30}},
+    {id:'rC5',gx:2,gy:5,req:['rC4'],cap:1,nm:'Œil du faucon',em:'💠',max:1,ds:'CAPSTONE : crit au-delà de 100% → multi-attaque (+30% multi), et tes coups critiques GÈLENT parfois l’ennemi.',ap:e=>{e.overcritMulti=1;e.multiAdd+=30;e.freezeChance+=0.3;e.freezeAmp+=0.4}},
     // ── Branche OR (cupidité) ──
     {id:'rG1',gx:4,gy:1,req:['r0'],nm:'Cupidité',em:'🪙',max:1,ds:'MÉCANIQUE : or ×1,5 et or/sec ×1,3.',ap:e=>{e.goldMul*=1.5;e.goldSecMul*=1.3}},
     {id:'rG2',gx:4,gy:2,req:['rG1'],nm:'Rapine',em:'💰',max:6,ds:'Or ×1,25 par rang.',ap:(e,l)=>e.goldMul*=P(1.25,l)},
@@ -775,7 +782,7 @@ const CLASS_TREES={
     {id:'rM2',gx:6,gy:2,req:['rM1'],nm:'Salve',em:'🎇',max:6,ds:'+12% multi-attaque par rang.',ap:(e,l)=>e.multiAdd+=12*l},
     {id:'rM3',gx:5,gy:3,req:['rM2'],key:1,nm:'Coup de grâce',em:'🎯',max:1,ds:'★ KEYSTONE : exécution — +200% dégâts sous 30% PV ennemi.',ap:e=>{e.execThresh=Math.max(e.execThresh,0.30);e.execMul*=3}},
     {id:'rM4',gx:6,gy:4,req:['rM3'],nm:'Traque',em:'🐾',max:6,ds:'+45% dégâts d’exécution par rang.',ap:(e,l)=>e.execMul+=0.45*l},
-    {id:'rM5',gx:5,gy:5,req:['rM4'],cap:1,nm:'Prédateur',em:'💠',max:1,ds:'CAPSTONE : tu voles 15% de tes dégâts en PV et +25% multi-attaque.',ap:e=>{e.lifestealPct+=0.15;e.multiAdd+=25}},
+    {id:'rM5',gx:5,gy:5,req:['rM4'],cap:1,nm:'Prédateur',em:'💠',max:1,ds:'CAPSTONE : +25% multi-attaque, vol de vie 15%, et chaque kill sans être touché empile un ÉLAN (+3% dégâts/palier).',ap:e=>{e.lifestealPct+=0.15;e.multiAdd+=25;e.comboDmg+=0.03}},
   ]},
   paladin:{nodes:[
     {id:'p0',gx:3,gy:0,req:[],nm:'Serment sacré',em:'⚔️',max:1,ds:'Ouvre l’arbre. +18% dégâts et +12 régén/s.',ap:e=>{e.dmgMul*=1.18;e.regenAdd+=12}},
@@ -788,9 +795,9 @@ const CLASS_TREES={
     // ── Branche BOUCLIER (tank & vol de vie) ──
     {id:'pS1',gx:2,gy:1,req:['p0'],nm:'Bouclier de foi',em:'🛡️',max:1,ds:'MÉCANIQUE : PV max ×1,5 et tu voles 10% de tes dégâts en PV.',ap:e=>{e.hpMul*=1.5;e.lifestealPct+=0.10}},
     {id:'pS2',gx:2,gy:2,req:['pS1'],nm:'Dévotion',em:'❤️',max:6,ds:'Par rang : PV max ×1,15 et +3 régén/s.',ap:(e,l)=>{e.hpMul*=P(1.15,l);e.regenAdd+=3*l}},
-    {id:'pS3',gx:2,gy:3,req:['pS2'],key:1,nm:'Rempart',em:'🏰',max:1,ds:'★ KEYSTONE : PV max ×2 et +25 régén/s.',ap:e=>{e.hpMul*=2;e.regenAdd+=25}},
+    {id:'pS3',gx:2,gy:3,req:['pS2'],key:1,nm:'Rempart',em:'🏰',max:1,ds:'★ KEYSTONE : PV max ×2, +25 régén/s et un BOUCLIER régénérant (15% PV max) qui absorbe les coups.',ap:e=>{e.hpMul*=2;e.regenAdd+=25;e.shieldMax+=0.15}},
     {id:'pS4',gx:2,gy:4,req:['pS3'],nm:'Sanctuaire',em:'⛪',max:6,ds:'+6% vol de vie par rang.',ap:(e,l)=>e.lifestealPct+=0.06*l},
-    {id:'pS5',gx:2,gy:5,req:['pS4'],cap:1,nm:'Gardien immortel',em:'💠',max:1,ds:'CAPSTONE : sous 50% PV, +120% dégâts et tu voles +20% de tes dégâts en PV.',ap:e=>{e.dmgLowHp+=1.2;e.lifestealPct+=0.20}},
+    {id:'pS5',gx:2,gy:5,req:['pS4'],cap:1,nm:'Gardien immortel',em:'💠',max:1,ds:'CAPSTONE : gros BOUCLIER régénérant (40% PV max) qui absorbe les coups sans casser ton élan, et sous 50% PV +120% dégâts.',ap:e=>{e.dmgLowHp+=1.2;e.shieldMax+=0.40}},
     // ── Branche MARTEAU (vulnérabilité) ──
     {id:'pV1',gx:4,gy:1,req:['p0'],nm:'Marteau de justice',em:'🔨',max:1,ds:'MÉCANIQUE : ouvre la VULNÉRABILITÉ — l’ennemi subit +22% de tes dégâts.',ap:e=>e.vulnBase+=0.22},
     {id:'pV2',gx:4,gy:2,req:['pV1'],nm:'Zèle',em:'📜',max:6,ds:'Vulnérabilité ×1,3 par rang.',ap:(e,l)=>e.vulnMul*=P(1.3,l)},
@@ -829,11 +836,15 @@ const PARANGON=[
   {id:'hp',nm:'Titan',em:'🛡️',ds:'PV max ×1,4 par rang',col:'var(--regen)',base:1.4},
   {id:'gold',nm:'Cupidité',em:'🪙',ds:'Or ×1,5 par rang',col:'var(--gold)',base:1.5},
   {id:'goldsec',nm:'Rente',em:'💰',ds:'Or/sec ×1,4 par rang',col:'var(--gold)',base:1.4},
+  {id:'freeze',nm:'Morsure du gel',em:'❄️',ds:'+8% chance de geler + gel plus mordant par rang',col:'var(--xp)',base:8,add:true},
+  {id:'shield',nm:'Égide',em:'🛡️',ds:'+8% de bouclier (PV max) par rang',col:'var(--regen)',base:8,add:true},
+  {id:'combo',nm:'Élan mortel',em:'🔥',ds:'+2% dégâts par palier d’élan, par rang',col:'var(--hp)',base:2,add:true},
 ];
 function parRank(cls,id){return (S.parangon&&S.parangon[cls]&&S.parangon[cls][id])||0;}
 function parEff(cls){const p=(S.parangon&&S.parangon[cls])||{};return {
   dmg:Math.pow(1.5,p.dmg||0), dot:Math.pow(1.5,p.dot||0), crit:5*(p.crit||0),
-  spd:Math.pow(1.08,p.spd||0), hp:Math.pow(1.4,p.hp||0), gold:Math.pow(1.5,p.gold||0), goldsec:Math.pow(1.4,p.goldsec||0)
+  spd:Math.pow(1.08,p.spd||0), hp:Math.pow(1.4,p.hp||0), gold:Math.pow(1.5,p.gold||0), goldsec:Math.pow(1.4,p.goldsec||0),
+  freeze:0.08*(p.freeze||0), shield:0.08*(p.shield||0), combo:0.02*(p.combo||0)
 };}
 function parSpent(cls){const pa=(S.parangon&&S.parangon[cls])||{};let s=0;for(const k in pa)s+=pa[k]||0;return s;}
 function treeSpent(cls){const a=S.classTal[cls]||{},t=CLASS_TREES[cls];let s=0;for(const n of t.nodes)s+=a[n.id]||0;return s;}
@@ -843,7 +854,8 @@ function treeFull(cls){const t=CLASS_TREES[cls],a=S.classTal[cls]||{};return t.n
 function nodeUnlocked(cls,id){const a=S.classTal[cls]||{};const n=nodeById(cls,id);if(!n)return false;const req=n.req||[];if(!req.length)return true;return req.every(r=>(a[r]||0)>0);}
 function classEff(cls){
   const e={dmgMul:1,hpMul:1,goldMul:1,goldSecMul:1,atkSpeedMul:1,clickMul:1,burnMul:1,bleedMul:1,poisonMul:1,vulnMul:1,burnBase:0,bleedBase:0,poisonBase:0,vulnBase:0,critAdd:0,critMultAdd:0,regenAdd:0,dmgLowHp:0,multiAdd:0,overcritMulti:0,
-    dotCrit:0,execThresh:0,execMul:1,rampRate:0,atkRampRate:0,lifestealPct:0,critToDmg:0,vulnToPoison:0,goldOnHit:0};
+    dotCrit:0,execThresh:0,execMul:1,rampRate:0,atkRampRate:0,lifestealPct:0,critToDmg:0,vulnToPoison:0,goldOnHit:0,
+    freezeChance:0,freezeAmp:0,shieldMax:0,comboDmg:0,overkill:0};
   const t=CLASS_TREES[cls]; if(!t)return e; const a=S.classTal&&S.classTal[cls]||{}; const syns=[];
   for(const n of t.nodes){const l=a[n.id]||0;if(l>0){if(n.ap)n.ap(e,l);if(n.syn)syns.push(n.syn);}}
   for(const s of syns) SYN[s]&&SYN[s](e);
@@ -1149,11 +1161,17 @@ function D(){
   const execB=(ce.execThresh>0&&mFrac<ce.execThresh)?ce.execMul:1;
   // Fureur montante : les dégâts (et la vitesse) grimpent tant que tu frappes le même monstre.
   const rampD=1+(S.rampStacks||0)*(ce.rampRate||0), rampA=1+(S.rampStacks||0)*(ce.atkRampRate||0);
+  // NOUVELLES MÉCANIQUES :
+  // Élan de combat : chaque kill sans se faire toucher empile des dégâts (reset au coup reçu).
+  const comboMax=20, comboDmgPer=(ce.comboDmg||0)+pe.combo, comboMult=1+Math.min(comboMax,S.combo||0)*comboDmgPer;
+  // Givre : un ennemi gelé (jauge ATB figée) encaisse davantage.
+  const frozenAmp=(S.frozen>0)?(1+(ce.freezeAmp||0)):1;
+  const freezeChance=Math.min(0.9,(ce.freezeChance||0)+pe.freeze); // chance de geler par coup critique
   // Paliers de compagnons : chaque tranche de 10 compagnons recrutés = +5% dégâts.
   const compCount=COMPANIONS.reduce((a,cp)=>a+(S.comp[cp.id]||0),0);
   const compTier=Math.floor(compCount/COMP_TIER_SIZE);
   const compDmg=1+COMP_TIER_BONUS*compTier;
-  const dmgMult=c.dmg*ce.dmgMul*b*vDmg*pres*lowHp*(1+(S.up.power||0)*UP_GAIN.power)*compDmg*achMult*ascPowerMult()*pe.dmg*execB*rampD;
+  const dmgMult=c.dmg*ce.dmgMul*b*vDmg*pres*lowHp*(1+(S.up.power||0)*UP_GAIN.power)*compDmg*achMult*ascPowerMult()*pe.dmg*execB*rampD*comboMult*frozenAmp;
   const spd=ce.atkSpeedMul*(1+(S.up.speed||0)*UP_GAIN.speed)*pe.spd*rampA; // vitesse d'attaque
   // Multi-attaque : chance (%) de frapper plusieurs fois. >100% = coups garantis + chance.
   // Le talent « Œil du faucon » convertit ta chance de crit au-delà de 100% en multi-attaque.
@@ -1179,7 +1197,9 @@ function D(){
   // Dégâts « bruts » d'un coup unique (sans crit/multi/vitesse) : sert au combat
   // ATB pour rejouer le crit en direct par tour tout en conservant le DPS moyen.
   const hitRaw=atk*dmgMult*vuln;
-  return{c,ce,dmgMult,goldMult,crit,critMult,critF,atk,maxHp,regen,dps,hitRaw,clickDmg,goldSec,offCap,vuln,spd,multi,multiHits,burnDps,bleedDps,poisonPct,compCount,compTier,compDmg,ramp:S.rampStacks||0};
+  const shieldMax=maxHp*((ce.shieldMax||0)+pe.shield); // bouclier régénérant (part des PV max)
+  return{c,ce,dmgMult,goldMult,crit,critMult,critF,atk,maxHp,regen,dps,hitRaw,clickDmg,goldSec,offCap,vuln,spd,multi,multiHits,burnDps,bleedDps,poisonPct,compCount,compTier,compDmg,ramp:S.rampStacks||0,
+    freezeChance,freezeAmp:ce.freezeAmp||0,shieldMax,comboDmg:comboDmgPer,comboMax,overkill:ce.overkill||0};
 }
 
 // gains hors-ligne
@@ -1233,6 +1253,7 @@ function renderDungeon(){
         <div class="fighter hero" id="hero"><img class="pix" id="heroimg"><div class="tag">${(CLASSES[S.cls]||CLASSES.guerrier).name}</div></div>
         <div class="fighter mob" id="mob"><div class="mnameplate" id="mobnm"></div><img class="pix flip" id="mobimg"></div>
         <div class="fxbadges" id="fxbadges"></div>
+        <div class="combobadge" id="combobadge" style="display:none"></div>
       </div>
       <div class="comps" id="comps" style="margin-top:8px"></div>
       <div class="spdrow"><span class="tapipill">Tape le monstre pour frapper plus fort</span><div class="spdsel" id="spdsel"></div></div>
@@ -1328,8 +1349,15 @@ function updateDungeon(full){
   setw('hbar',S.hp/d.maxHp*100);
   setw('mobatb',mobATB*100); setw('heroatb',heroATB*100);
   const ma=document.getElementById('mobatb'),ha=document.getElementById('heroatb');
-  if(ma)ma.classList.toggle('full',mobATB>=.985); if(ha)ha.classList.toggle('full',heroATB>=.985);
-  set('hlbl','PV héros '+Math.max(0,Math.ceil(S.hp))+'/'+Math.ceil(d.maxHp));
+  const frozen=(S.frozen||0)>0;
+  if(ma){ma.classList.toggle('full',mobATB>=.985); ma.classList.toggle('frozen',frozen);}
+  if(ha)ha.classList.toggle('full',heroATB>=.985);
+  const mel=document.getElementById('mob'); if(mel)mel.classList.toggle('frozen',frozen);
+  const shieldTxt=(S.shield||0)>=1?' · 🛡 '+fmt(Math.ceil(S.shield)):'';
+  set('hlbl','PV héros '+Math.max(0,Math.ceil(S.hp))+'/'+Math.ceil(d.maxHp)+shieldTxt);
+  // Badge d'élan de combat (dégâts cumulés en enchaînant les kills sans se faire toucher).
+  const cb=document.getElementById('combobadge');
+  if(cb){const on=(S.combo||0)>0&&d.comboDmg>0; cb.style.display=on?'block':'none'; if(on)cb.innerHTML='🔥 Élan ×'+S.combo+' <small>+'+Math.round(S.combo*d.comboDmg*100)+'% dgt</small>';}
   const dotNow=d.burnDps+d.bleedDps+d.poisonPct*mMax;
   set('c-dps',fmt(d.dps+dotNow)); set('c-click',fmt(d.clickDmg)); set('c-gs',fmt(d.goldSec)); set('c-left',(totalMobs(S.floor)-S.mi));
   const badges=document.getElementById('fxbadges');
@@ -1418,6 +1446,8 @@ function damageMonster(amount){
 function ghostMobPix(frames){const sc=document.querySelector('.scene');if(!sc)return;const g=document.createElement('div');g.className='ghost';g.innerHTML=`<img class="pix flip" src="${(frames&&frames[0])||''}" style="height:54px">`;sc.appendChild(g);setTimeout(()=>g.remove(),560);}
 function killMonster(){
   const d=D(),boss=isBoss(S.floor,S.mi),elite=isElite(S.floor,S.mi),oldFrames=mobFrames(S.floor,S.mi),oldLvl=S.level;
+  const excess=Math.max(0,-S.mhp); // surplus de dégâts (pour la Surtue / overkill)
+  S.combo=Math.min(d.comboMax||20,(S.combo||0)+1); // l'élan grimpe à chaque kill
   const g=Math.round(goldPerKill(S.floor,S.mi)*d.goldMult);
   const gx=xpPerKill(S.floor,S.mi); S.gold+=g; S.xp+=gx; if(S.cls)S.classXp[S.cls]=(S.classXp[S.cls]||0)+gx; S.kills++;
   const nl=levelFromXp(S.xp); if(nl>oldLvl){S.gems+=(nl-oldLvl);S.level=nl;pushLog('⭐ Niveau '+nl+' atteint ! +'+(nl-oldLvl)+' 💎');}
@@ -1432,8 +1462,10 @@ function killMonster(){
     spawnFloat('+'+gem,'var(--gem)',true,50,'gem'); SND.boss(); haptic([30,40,70]); bump(document.getElementById('gemsbox'));
   } else { S.mi++; SND.kill(); haptic(12); }
   if(nl>oldLvl){ levelToast(S.level); SND.level(); haptic([10,30,10]); }
-  S.mhp=monsterMaxHp(S.floor,S.mi); if(S.hp<d.maxHp)S.hp=Math.min(d.maxHp,S.hp+d.maxHp*0.15);
-  S.rampStacks=0; heroATB=0; mobATB=0; // nouveau monstre → fureur et jauges ATB retombent
+  S.mhp=monsterMaxHp(S.floor,S.mi);
+  if((d.overkill||0)>0 && excess>0) S.mhp=Math.max(1,S.mhp-excess*d.overkill); // Surtue : le surplus déferle sur le suivant
+  if(S.hp<d.maxHp)S.hp=Math.min(d.maxHp,S.hp+d.maxHp*0.15);
+  S.rampStacks=0; heroATB=0; mobATB=0; S.frozen=0; // nouveau monstre → fureur, jauges ATB et gel retombent
   advanceScene(); save(); updateDungeon(true);
   const mo=document.getElementById('mob'); if(mo){mo.classList.remove('slidein');void mo.offsetWidth;mo.classList.add('slidein');}
 }
@@ -1858,7 +1890,7 @@ function coffreOverlay(r){
 let floatAcc=0, heroATB=0, mobATB=0;
 function heroDies(){
   // Le héros tombe : il recommence l'étage depuis le premier monstre.
-  S.hp=D().maxHp; S.mi=0; S.mhp=monsterMaxHp(S.floor,0); S.rampStacks=0; mobATB=0; heroATB=0;
+  S.hp=D().maxHp; S.mi=0; S.mhp=monsterMaxHp(S.floor,0); S.rampStacks=0; mobATB=0; heroATB=0; S.combo=0; S.shield=0; S.frozen=0;
   pushLog('💀 Héros terrassé à l’étage '+S.floor+' — il repart au début de l’étage.');
   if(tab==='dungeon'){const h=document.getElementById('hero');if(h){h.classList.remove('hurt');void h.offsetWidth;h.classList.add('hurt');} SND.boss&&SND.boss(); haptic([40,60,40]); if(typeof advanceScene==='function')advanceScene();}
   save();updateDungeon(true);
@@ -1870,6 +1902,9 @@ function heroTurn(d,animate){
   const per=d.hitRaw*HERO_ATB*(crit?Math.pow(d.critMult,layers):1);
   const burst=per*hits;
   S.mhp-=burst; S.totalDmg+=burst;
+  // Givre : un coup critique peut GELER l'ennemi (sa jauge ATB se fige) — il subit
+  // alors plus de dégâts (freezeAmp), ce qui récompense les builds crit + givre.
+  if(crit && d.freezeChance>0 && Math.random()<d.freezeChance){ S.frozen=Math.max(S.frozen||0,1.4); if(animate&&tab==='dungeon')freezeFx(); }
   if(animate && tab==='dungeon'){
     const ci=Math.min(layers,5);
     const impact=()=>{ slashMob(crit); for(let k=1;k<hits;k++)setTimeout(()=>slashMob(crit),70*k);
@@ -1899,13 +1934,20 @@ function heroCast(){
 // Un TOUR du monstre : il riposte et frappe le héros (coup unique). Corps-à-corps
 // = charge (lunge) ; ennemi à distance = projectile (l'impact se joue à l'arrivée).
 function monsterTurn(d,animate){
-  const hit=monsterAtk(S.floor,S.mi)*MOB_ATB; S.hp-=hit;
+  let raw=monsterAtk(S.floor,S.mi)*MOB_ATB, blocked=0;
+  // Bouclier : absorbe les coups avant les PV et PRÉSERVE l'élan de combat.
+  if((S.shield||0)>0){ blocked=Math.min(S.shield,raw); S.shield-=blocked; raw-=blocked; }
+  if(raw>0){ S.hp-=raw; S.combo=0; } // seul un coup qui entame les PV brise l'élan
   if(animate && tab==='dungeon'){
-    const dmg=()=>{ heroFlinch(); spawnFloat('-'+fmt(hit),'var(--hp)',false,26,null); };
+    const dmg=()=>{ heroFlinch();
+      if(raw<=0 && blocked>0) spawnFloat('🛡 '+fmt(blocked),'var(--regen)',false,26,null);
+      else spawnFloat('-'+fmt(raw),'var(--hp)',false,26,null); };
     if(mobRanged(S.floor,S.mi)){ mobCast(); fireMobProjectile(dmg); }
     else { mobAttack(); dmg(); }
   }
 }
+// Petit éclat de givre sur l'ennemi gelé.
+function freezeFx(){ const m=document.getElementById('mob'); if(!m)return; const f=document.createElement('div'); f.className='frostburst'; m.appendChild(f); setTimeout(()=>f.remove(),480); SND.crit&&SND.crit(); }
 // Réaction du héros quand il encaisse (utilisé aussi à l'arrivée d'un projectile).
 function heroFlinch(){
   const h=document.getElementById('hero'); if(h){h.classList.remove('flinch');void h.offsetWidth;h.classList.add('flinch');}
@@ -1924,6 +1966,8 @@ setInterval(()=>{
   const d=D(), dt=0.1*gameSpeed();
   S.gold+=d.goldSec*dt;
   S.hp=Math.min(d.maxHp,S.hp+d.regen*dt); // régénération continue
+  // Bouclier : régénère vers son max (~12%/s), plafonné au max courant.
+  if(d.shieldMax>0)S.shield=Math.min(d.shieldMax,(S.shield||0)+d.shieldMax*0.12*dt); else S.shield=0;
   S.rampStacks=Math.min(15,(S.rampStacks||0)+dt*3);
   // Effets sur la durée (brûlure/saignement/poison) : dégâts continus « entre les tours ».
   const mMax=monsterMaxHp(S.floor,S.mi);
@@ -1933,9 +1977,10 @@ setInterval(()=>{
   // Jauge ATB du héros : se remplit à la vitesse d'attaque. À plein → il agit.
   heroATB+=(d.spd/HERO_ATB)*dt; const ht=Math.floor(heroATB); heroATB-=ht;
   for(let t=0;t<ht && S.mhp>0;t++) heroTurn(d,t<2); // on n'anime que les 2 premiers d'un même tick (mode rapide)
-  // Jauge ATB du monstre : cadence fixe. À plein → il riposte.
-  mobATB+=(1/MOB_ATB)*dt; const mt=Math.floor(mobATB); mobATB-=mt;
-  for(let t=0;t<mt && S.hp>0 && S.mhp>0;t++) monsterTurn(d,t<1);
+  // Givre : tant que l'ennemi est gelé, sa jauge ATB reste figée.
+  if((S.frozen||0)>0){ S.frozen=Math.max(0,S.frozen-dt); }
+  else { mobATB+=(1/MOB_ATB)*dt; const mt=Math.floor(mobATB); mobATB-=mt;
+    for(let t=0;t<mt && S.hp>0 && S.mhp>0;t++) monsterTurn(d,t<1); }
   if(floatAcc>=0.6){ if(tab==='dungeon'&&dot>0)spawnFloat(fmt(dot*0.6),'var(--ember)',false,66,'flame'); floatAcc=0; }
   if(S.hp<=0){ heroDies(); }
   else if(S.mhp<=0){ killMonster(); mobATB=0; heroATB=0; } // nouveau monstre : jauges à zéro
