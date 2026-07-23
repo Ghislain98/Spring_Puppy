@@ -69,6 +69,17 @@
   .section span { flex:0 0 auto; }
   .bar { width:100%; height:12px; background:#0c0920; border:1px solid var(--border); border-radius:999px; overflow:hidden; }
   .bar > i { display:block; height:100%; border-radius:999px; transition:width .18s linear; }
+  /* Jauges ATB (façon Final Fantasy) */
+  .atbrow { display:flex; align-items:center; gap:8px; margin-top:7px; }
+  .atbl { font-size:9.5px; font-weight:800; letter-spacing:.3px; min-width:70px; text-transform:uppercase; opacity:.9; }
+  .atb { flex:1; height:7px; background:#0c0920; border:1px solid var(--border); border-radius:999px; overflow:hidden; }
+  .atb > i { display:block; height:100%; width:0; border-radius:999px; background:linear-gradient(90deg,#5b8cff,#8ecbff); transition:width .1s linear; }
+  .atb > i.full { background:linear-gradient(90deg,var(--gold),#fff2c2); box-shadow:0 0 8px var(--gold); animation:atbpulse .5s ease-in-out infinite; }
+  @keyframes atbpulse { 0%,100%{filter:brightness(1)} 50%{filter:brightness(1.5)} }
+  .spdrow { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:6px; }
+  .spdsel { display:flex; gap:4px; }
+  .spdsel button { background:var(--bgEl); border:1px solid var(--border); color:var(--muted); border-radius:8px; padding:4px 9px; font-weight:800; font-size:11px; cursor:pointer; font-variant-numeric:tabular-nums; }
+  .spdsel button.on { background:var(--gold); border-color:var(--gold); color:#1a1330; }
   .num { font-variant-numeric:tabular-nums; }
   .btn-gold { background:linear-gradient(180deg,#ffe08a,var(--gold)); color:#2a1c00; border:0; border-radius:999px; font-weight:900; font-size:15px; padding:15px 22px; cursor:pointer; width:100%; box-shadow:0 2px 0 var(--goldDim); }
   .btn-gold:disabled { opacity:.4; box-shadow:none; }
@@ -161,6 +172,11 @@
   @keyframes idlebobf { 0%,100%{transform:scaleX(-1) translateY(0)} 50%{transform:scaleX(-1) translateY(-3px)} }
   .scene .hero.atk .pix { animation:herolunge2 .28s; }
   @keyframes herolunge2 { 0%{transform:translateX(0)} 45%{transform:translateX(14px)} 100%{transform:translateX(0)} }
+  /* Attaque ATB « à plein tour » : anticipation (recul) → charge → frappe → retour. */
+  .scene .hero.lunge .pix { animation:herolunge3 .42s cubic-bezier(.3,.7,.3,1); }
+  @keyframes herolunge3 { 0%{transform:translateX(0)} 22%{transform:translateX(-7px) rotate(-4deg)} 52%{transform:translateX(30px) rotate(6deg)} 70%{transform:translateX(26px)} 100%{transform:translateX(0)} }
+  .scene .hero .swing.big { height:34px; animation:swingbig .34s ease-out forwards; }
+  @keyframes swingbig { 0%{transform:rotate(-72deg) translateY(4px);opacity:.1} 30%{opacity:1} 100%{transform:rotate(86deg) translateX(10px) scale(1.1);opacity:0} }
   .scene .mob.hit .pix { animation:mobhit2 .2s; }
   @keyframes mobhit2 { 0%{transform:scaleX(-1)} 30%{transform:scaleX(-1) translateX(9px); filter:brightness(2.8) drop-shadow(0 0 7px #fff)} 100%{transform:scaleX(-1)} }
   .scene .hero .swing { position:absolute; left:58%; bottom:6px; height:26px; image-rendering:pixelated; transform-origin:50% 88%; animation:swing .26s ease-out forwards; z-index:4; filter:drop-shadow(0 1px 2px rgba(0,0,0,.5)); pointer-events:none; }
@@ -169,8 +185,25 @@
   @keyframes slashfx { 0%{opacity:0;transform:rotate(8deg) scale(.3)} 40%{opacity:.95} 100%{opacity:0;transform:rotate(62deg) scale(1.15)} }
   .scene .hero.hurt .pix { animation:hurtflash .3s; }
   @keyframes hurtflash { 0%,100%{filter:none} 50%{filter:brightness(.4) sepia(1) hue-rotate(-30deg) saturate(4)} }
-  .scene .mob.mattack .pix { animation:mobattack .38s ease-out; }
-  @keyframes mobattack { 0%{transform:scaleX(-1)} 40%{transform:scaleX(-1) translateX(22px) rotate(-6deg)} 100%{transform:scaleX(-1)} }
+  .scene .mob.mattack .pix { animation:mobattack .42s ease-out; }
+  @keyframes mobattack { 0%{transform:scaleX(-1)} 20%{transform:scaleX(-1) translateX(6px)} 55%{transform:scaleX(-1) translateX(-30px) rotate(6deg)} 100%{transform:scaleX(-1)} }
+  /* Héros à distance : recul de tir (pas de charge). */
+  .scene .hero.cast .pix { animation:herocast .3s ease-out; }
+  @keyframes herocast { 0%{transform:translateX(0)} 30%{transform:translateX(-9px) rotate(-5deg)} 100%{transform:translateX(0)} }
+  .scene .hero .swing.draw { height:26px; animation:draw .26s ease-out forwards; }
+  @keyframes draw { 0%{transform:rotate(-22deg);opacity:.3} 45%{opacity:1;transform:rotate(-6deg)} 100%{opacity:0;transform:rotate(-12deg) translateX(4px)} }
+  /* Monstre à distance : recul de préparation du sort. */
+  .scene .mob.mcast .pix { animation:mobcast .32s ease-out; }
+  @keyframes mobcast { 0%{transform:scaleX(-1)} 35%{transform:scaleX(-1) translateX(11px) rotate(4deg)} 100%{transform:scaleX(-1)} }
+  /* Projectiles (flèche / boule de feu) qui traversent la scène. */
+  .scene .proj { position:absolute; bottom:56px; z-index:6; pointer-events:none; will-change:left; }
+  .scene .proj.arrow { width:24px; height:5px; left:24%; background:linear-gradient(90deg,#8a6a2e,#ffe08a); clip-path:polygon(0 40%,68% 40%,68% 0,100% 50%,68% 100%,68% 60%,0 60%); filter:drop-shadow(0 0 3px #ffcf7a); animation:projfly .23s linear forwards; }
+  .scene .proj.fireball { width:18px; height:18px; left:24%; border-radius:50%; background:radial-gradient(circle at 40% 40%,#fff,#ffb14d 45%,#ff5d2e 72%,transparent 80%); filter:drop-shadow(0 0 8px #ff8a3d); animation:projfly .23s linear forwards; }
+  .scene .proj.fireball.critp { background:radial-gradient(circle at 40% 40%,#fff,#ffd27a 45%,#ff2d6c 72%,transparent 80%); filter:drop-shadow(0 0 11px #ff5d8f); }
+  .scene .proj.arrow.critp { filter:drop-shadow(0 0 6px #ffd27a) brightness(1.3); }
+  .scene .proj.rev { left:auto; right:20%; animation:projflyrev .23s linear forwards; transform:scaleX(-1); }
+  @keyframes projfly { 0%{left:24%;opacity:.2} 15%{opacity:1} 100%{left:76%;opacity:1} }
+  @keyframes projflyrev { 0%{right:20%;opacity:.2} 15%{opacity:1} 100%{right:72%;opacity:1} }
   .scene .hero.flinch .pix { animation:heroflinch .3s ease-out; }
   @keyframes heroflinch { 0%,100%{transform:translateX(0)} 45%{transform:translateX(-7px)} }
   .scene .clash { position:absolute; left:34%; top:34%; width:26px; height:26px; pointer-events:none; z-index:6; background:radial-gradient(circle,#ff8a3d 0%,transparent 62%); animation:impactfx .3s ease-out forwards; }
@@ -360,7 +393,13 @@ const ICON={"boss":"data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.o
 /* __ICONS_END__ */
 // ============ Constantes de jeu ============
 const CRIT_MULT=2;
-const MOB_PERIOD=1.15; // le monstre riposte tous les 1,15 s (par coups, pas en continu)
+// Combat ATB (façon FF pixel) : chaque combattant remplit une jauge, puis agit.
+// Le héros la remplit à la vitesse d'attaque ; le monstre à cadence fixe.
+// Rythme volontairement posé et lisible ; le mode ×2/×4 accélère tout.
+const HERO_ATB=2.0; // secondes pour remplir la jauge du héros à vitesse ×1
+const MOB_ATB=2.6;  // secondes pour remplir la jauge du monstre
+const SPEEDS=[1,2,4];
+function gameSpeed(){return SPEEDS.includes(S.gameSpeed)?S.gameSpeed:1;}
 // Paliers de compagnons : +5% dégâts par tranche de 10 compagnons recrutés.
 const COMP_TIER_SIZE=10, COMP_TIER_BONUS=0.05;
 // Un étage = 10 à 30 monstres (ça monte avec l'étage) + 1 boss à la fin.
@@ -461,7 +500,11 @@ function compFrames(id){return SPR[COMP_SPR[id]]||SPR['goblin'];}
 function heroHitFrames(){const b=HERO_SPR[S.cls||'guerrier']||'knight_m';return SPR[b+'_hit']||SPR[b+'_idle'];}
 
 function heroFrames(run){const b=HERO_SPR[S.cls||'guerrier']||'knight_m';return SPR[b+(run?'_run':'_idle')]||SPR[b+'_idle']||SPR['knight_m_idle'];}
-function mobFrames(f,i){const k=isBoss(f,i)?BOSS_ROSTER[(f-1)%BOSS_ROSTER.length]:MOB_ROSTER[(f*3+i)%MOB_ROSTER.length];return SPR[k]||SPR['goblin'];}
+function mobKeyOf(f,i){return isBoss(f,i)?BOSS_ROSTER[(f-1)%BOSS_ROSTER.length]:MOB_ROSTER[(f*3+i)%MOB_ROSTER.length];}
+function mobFrames(f,i){const k=mobKeyOf(f,i);return SPR[k]||SPR['goblin'];}
+// Ennemis à distance : ils lancent un sort/projectile au lieu de charger.
+const RANGED_MOBS=new Set(['imp','chort','wogol','orc_shaman','big_demon']);
+const mobRanged=(f,i)=>RANGED_MOBS.has(mobKeyOf(f,i));
 function pixImg(frames,h,flip){const f=(frames&&frames[0])||'';return `<img class="pix${flip?' flip':''}" src="${f}" style="height:${h}px">`;}
 // moteur d'animation de sprites (cycle des frames, piloté par rAF)
 let animReg=[];
@@ -558,7 +601,7 @@ function fresh(){return{
   parangon:{guerrier:{},mage:{},rodeur:{},paladin:{}},rampStacks:0,
   floor:1,mi:0,mhp:monsterMaxHp(1,0),hp:BASE.maxHp,
   streak:0,streakBest:0,lastCheckin:null,buffUntil:0,buffMult:1.5,freezes:2,
-  week:{key:null,prog:{}},perfectDays:0,checkinsTotal:0,moodLog:[],
+  week:{key:null,prog:{}},perfectDays:0,checkinsTotal:0,moodLog:[],gameSpeed:1,
   customHabits:[],history:[],reminder:{enabled:false,h:20,m:0},
   totalDmg:0,kills:0,log:['✨ Ton héros pénètre dans le donjon…'],
   body:null,
@@ -590,6 +633,7 @@ S.parangon=Object.assign({guerrier:{},mage:{},rodeur:{},paladin:{}},S.parangon);
 // Les anciens joueurs (déjà une classe) sont considérés comme intégrés ; les
 // nouveaux passent par l'onboarding de première ouverture.
 if(typeof S.onboarded!=='boolean')S.onboarded=!!S.cls;
+if(!SPEEDS.includes(S.gameSpeed))S.gameSpeed=1;
 function save(){S.lastActive=Date.now();localStorage.setItem('habitquest-demo2',JSON.stringify(S));}
 
 // ============ Arbres de talents par classe ============
@@ -1088,7 +1132,10 @@ function D(){
   // Le poison est un % des PV max de l'ennemi (il ne passe pas par hitBase, donc
   // il ne profite pas du crit). Le talent « dotCrit » le fait profiter des crits.
   const poisonPct=ce.poisonBase*ce.poisonMul*pe.dot*(ce.dotCrit?critF:1);
-  return{c,ce,dmgMult,goldMult,crit,critMult,critF,atk,maxHp,regen,dps,clickDmg,goldSec,offCap,vuln,spd,multi,multiHits,burnDps,bleedDps,poisonPct,compCount,compTier,compDmg,ramp:S.rampStacks||0};
+  // Dégâts « bruts » d'un coup unique (sans crit/multi/vitesse) : sert au combat
+  // ATB pour rejouer le crit en direct par tour tout en conservant le DPS moyen.
+  const hitRaw=atk*dmgMult*vuln;
+  return{c,ce,dmgMult,goldMult,crit,critMult,critF,atk,maxHp,regen,dps,hitRaw,clickDmg,goldSec,offCap,vuln,spd,multi,multiHits,burnDps,bleedDps,poisonPct,compCount,compTier,compDmg,ramp:S.rampStacks||0};
 }
 
 // gains hors-ligne
@@ -1144,9 +1191,10 @@ function renderDungeon(){
         <div class="fxbadges" id="fxbadges"></div>
       </div>
       <div class="comps" id="comps" style="margin-top:8px"></div>
-      <div class="tapipill" style="text-align:center;margin-top:6px">Tape le monstre pour frapper plus fort</div>
-      <div style="height:8px"></div>
+      <div class="spdrow"><span class="tapipill">Tape le monstre pour frapper plus fort</span><div class="spdsel" id="spdsel"></div></div>
+      <div style="height:6px"></div>
       <div class="bar" id="mbarw"><i id="mbar" style="background:${boss?'linear-gradient(90deg,var(--gold),var(--ember))':'var(--hp)'}"></i></div>
+      <div class="atbrow"><span class="atbl" style="color:var(--ember)">⚡ ATB ennemi</span><div class="atb"><i id="mobatb"></i></div></div>
       <div class="cstats">
         <div class="cstat"><b id="c-dps" style="color:var(--hp)"></b><span>DPS</span></div>
         <div class="cstat"><b id="c-click" style="color:var(--xp)"></b><span>Dégâts/clic</span></div>
@@ -1154,7 +1202,8 @@ function renderDungeon(){
         <div class="cstat"><b id="c-left" style="color:var(--text)"></b><span>Reste</span></div>
       </div>
     </div>
-    <div class="card" style="padding:11px 13px"><div class="bar" style="height:9px"><i id="hbar" style="background:var(--regen)"></i></div><div class="s" id="hlbl" style="color:var(--muted);font-size:11px;margin-top:5px;font-variant-numeric:tabular-nums"></div></div>
+    <div class="card" style="padding:11px 13px"><div class="bar" style="height:9px"><i id="hbar" style="background:var(--regen)"></i></div><div class="s" id="hlbl" style="color:var(--muted);font-size:11px;margin-top:5px;font-variant-numeric:tabular-nums"></div>
+      <div class="atbrow"><span class="atbl" style="color:var(--gold)">⚡ ATB héros</span><div class="atb"><i id="heroatb"></i></div></div></div>
     <div class="section"><span>${ic('anvil',14)} Compagnons · or/sec</span></div>
     <div id="compbanner"></div>
     <div class="amtsel" id="amtsel"></div>
@@ -1166,8 +1215,13 @@ function renderDungeon(){
   clearAnims();
   regAnim(document.getElementById('heroimg'),heroFrames(false),200);
   swapMob(true);
-  renderAmt(); renderCompanions(); renderComps();
+  renderAmt(); renderCompanions(); renderComps(); renderSpeedSel();
   updateDungeon(true);
+}
+function renderSpeedSel(){
+  const el=document.getElementById('spdsel'); if(!el)return;
+  el.innerHTML=SPEEDS.map(s=>`<button class="${gameSpeed()===s?'on':''}" data-spd="${s}">×${s}</button>`).join('');
+  el.querySelectorAll('button').forEach(b=>b.onclick=()=>{S.gameSpeed=+b.dataset.spd;save();renderSpeedSel();SND.buy&&SND.buy();haptic(6);});
 }
 let advT=null;
 function advanceScene(){const sc=document.getElementById('scene');if(!sc)return;sc.classList.add('adv');heroRun(true);clearTimeout(advT);advT=setTimeout(()=>{sc.classList.remove('adv');heroRun(false);},700);}
@@ -1227,6 +1281,9 @@ function updateDungeon(full){
   const setw=(id,v)=>{const e=document.getElementById(id);if(e)e.style.width=Math.max(0,Math.min(100,v))+'%';};
   setw('mbar',S.mhp/mMax*100);
   setw('hbar',S.hp/d.maxHp*100);
+  setw('mobatb',mobATB*100); setw('heroatb',heroATB*100);
+  const ma=document.getElementById('mobatb'),ha=document.getElementById('heroatb');
+  if(ma)ma.classList.toggle('full',mobATB>=.985); if(ha)ha.classList.toggle('full',heroATB>=.985);
   set('hlbl','PV héros '+Math.max(0,Math.ceil(S.hp))+'/'+Math.ceil(d.maxHp));
   const dotNow=d.burnDps+d.bleedDps+d.poisonPct*mMax;
   set('c-dps',fmt(d.dps+dotNow)); set('c-click',fmt(d.clickDmg)); set('c-gs',fmt(d.goldSec)); set('c-left',(totalMobs(S.floor)-S.mi));
@@ -1256,13 +1313,18 @@ function heroSwing(){
   const h=document.getElementById('hero'); if(!h)return;
   h.classList.remove('atk'); void h.offsetWidth; h.classList.add('atk');
   const wsrc=WEAP[WEAPON_SPR[S.cls||'guerrier']];
-  if(wsrc){ const w=document.createElement('img'); w.className='swing'; w.src=wsrc; h.appendChild(w); setTimeout(()=>w.remove(),280); }
+  if(wsrc){ const w=document.createElement('img'); w.className='swing'; w.src=wsrc; h.appendChild(w); setTimeout(()=>w.remove(),300); }
 }
-function mobAttack(){
+// Attaque « à plein tour » ATB : chorégraphie plus ample (anticipation → charge →
+// frappe → recul) pour un vrai ressenti de coup, avec l'arme et un flash d'impact.
+function heroLunge(){
+  const h=document.getElementById('hero'); if(!h)return;
+  h.classList.remove('lunge'); void h.offsetWidth; h.classList.add('lunge');
+  const wsrc=WEAP[WEAPON_SPR[S.cls||'guerrier']];
+  if(wsrc){ const w=document.createElement('img'); w.className='swing big'; w.src=wsrc; h.appendChild(w); setTimeout(()=>w.remove(),340); }
+}
+function mobAttack(){ // charge du monstre au corps-à-corps (la réaction du héros = heroFlinch)
   const mo=document.getElementById('mob'); if(mo){mo.classList.remove('mattack');void mo.offsetWidth;mo.classList.add('mattack');}
-  const h=document.getElementById('hero'); if(h){h.classList.remove('flinch');void h.offsetWidth;h.classList.add('flinch');}
-  const sc=document.querySelector('.scene'); if(sc){const c=document.createElement('div');c.className='clash';sc.appendChild(c);setTimeout(()=>c.remove(),320);}
-  haptic(4);
 }
 function slashMob(crit){
   const m=document.getElementById('mob'); if(!m)return;
@@ -1298,6 +1360,7 @@ function onTapMob(e){
   heroSwing(); slashMob(crit); for(let k=1;k<hits;k++)setTimeout(()=>slashMob(crit),80*k);
   if(layers>=2){const sc=document.querySelector('.scene');if(sc){sc.classList.remove('shake');void sc.offsetWidth;sc.classList.add('shake');}SND.boss&&SND.boss();haptic([12,20,12]);}
   else if(crit){SND.crit();haptic(18);} else {SND.hit();haptic(6);}
+  heroATB=Math.min(1,heroATB+0.2); // taper charge aussi ta jauge ATB → prochain coup plus vite
   damageMonster(amount);
 }
 let killFx=0;
@@ -1324,7 +1387,7 @@ function killMonster(){
   } else { S.mi++; SND.kill(); haptic(12); }
   if(nl>oldLvl){ levelToast(S.level); SND.level(); haptic([10,30,10]); }
   S.mhp=monsterMaxHp(S.floor,S.mi); if(S.hp<d.maxHp)S.hp=Math.min(d.maxHp,S.hp+d.maxHp*0.15);
-  S.rampStacks=0; // nouveau monstre → la fureur retombe
+  S.rampStacks=0; heroATB=0; mobATB=0; // nouveau monstre → fureur et jauges ATB retombent
   advanceScene(); save(); updateDungeon(true);
   const mo=document.getElementById('mob'); if(mo){mo.classList.remove('slidein');void mo.offsetWidth;mo.classList.add('slidein');}
 }
@@ -1745,35 +1808,90 @@ function coffreOverlay(r){
   document.getElementById('cofok').onclick=()=>{ov.remove();go('dungeon');};
 }
 
-// ============ Boucle idle (100ms) ============
-let autoAcc=0, floatAcc=0, swingAcc=0, mAtkAcc=0;
+// ============ Boucle idle (100ms) — combat ATB ============
+let floatAcc=0, heroATB=0, mobATB=0;
 function heroDies(){
   // Le héros tombe : il recommence l'étage depuis le premier monstre.
-  S.hp=D().maxHp; S.mi=0; S.mhp=monsterMaxHp(S.floor,0); S.rampStacks=0; mAtkAcc=0;
+  S.hp=D().maxHp; S.mi=0; S.mhp=monsterMaxHp(S.floor,0); S.rampStacks=0; mobATB=0; heroATB=0;
   pushLog('💀 Héros terrassé à l’étage '+S.floor+' — il repart au début de l’étage.');
   if(tab==='dungeon'){const h=document.getElementById('hero');if(h){h.classList.remove('hurt');void h.offsetWidth;h.classList.add('hurt');} SND.boss&&SND.boss(); haptic([40,60,40]); if(typeof advanceScene==='function')advanceScene();}
   save();updateDungeon(true);
 }
+// Un TOUR du héros : coup unique (ou multi-attaque), crit rejoué en direct.
+// Chaque coup vaut hitRaw×HERO_ATB → le DPS moyen reste identique au calcul de D().
+function heroTurn(d,animate){
+  const layers=rollCritLayers(d), crit=layers>0, hits=1+rollLayers(d.multi);
+  const per=d.hitRaw*HERO_ATB*(crit?Math.pow(d.critMult,layers):1);
+  const burst=per*hits;
+  S.mhp-=burst; S.totalDmg+=burst;
+  if(animate && tab==='dungeon'){
+    const ci=Math.min(layers,5);
+    const impact=()=>{ slashMob(crit); for(let k=1;k<hits;k++)setTimeout(()=>slashMob(crit),70*k);
+      spawnFloat(fmt(burst),CRIT_COLORS[ci],crit,60,crit?'bolt':null);
+      if(crit){spawnSparks(6+layers*3,CRIT_SPARKS[ci]); if(layers>=2){const sc=document.querySelector('.scene');if(sc){sc.classList.remove('shake');void sc.offsetWidth;sc.classList.add('shake');}}} };
+    if(isRanged()){ heroCast(); fireProjectile(crit,impact); } // archer/mage : tir à distance
+    else { heroLunge(); impact(); }                            // guerrier/paladin : charge au corps-à-corps
+    if(crit&&SND.crit)SND.crit(); else if(SND.hit)SND.hit(); haptic(crit?11:4);
+  }
+}
+const isRanged=()=>S.cls==='mage'||S.cls==='rodeur';
+// Le tir/sort part du héros et vole jusqu'au monstre ; l'impact se joue à l'arrivée.
+function fireProjectile(crit,onArrive){
+  const sc=document.querySelector('.scene'); if(!sc){onArrive&&onArrive();return;}
+  const p=document.createElement('div'); const mage=S.cls==='mage';
+  p.className='proj '+(mage?'fireball':'arrow')+(crit?' critp':''); // mage : boule de feu · rôdeur : flèche
+  sc.appendChild(p);
+  setTimeout(()=>{ onArrive&&onArrive(); p.remove(); },230);
+}
+// Le héros à distance : léger recul + arme levée (pas de charge au corps-à-corps).
+function heroCast(){
+  const h=document.getElementById('hero'); if(!h)return;
+  h.classList.remove('cast'); void h.offsetWidth; h.classList.add('cast');
+  const wsrc=WEAP[WEAPON_SPR[S.cls||'rodeur']];
+  if(wsrc){ const w=document.createElement('img'); w.className='swing draw'; w.src=wsrc; h.appendChild(w); setTimeout(()=>w.remove(),260); }
+}
+// Un TOUR du monstre : il riposte et frappe le héros (coup unique). Corps-à-corps
+// = charge (lunge) ; ennemi à distance = projectile (l'impact se joue à l'arrivée).
+function monsterTurn(d,animate){
+  const hit=monsterAtk(S.floor,S.mi)*MOB_ATB; S.hp-=hit;
+  if(animate && tab==='dungeon'){
+    const dmg=()=>{ heroFlinch(); spawnFloat('-'+fmt(hit),'var(--hp)',false,26,null); };
+    if(mobRanged(S.floor,S.mi)){ mobCast(); fireMobProjectile(dmg); }
+    else { mobAttack(); dmg(); }
+  }
+}
+// Réaction du héros quand il encaisse (utilisé aussi à l'arrivée d'un projectile).
+function heroFlinch(){
+  const h=document.getElementById('hero'); if(h){h.classList.remove('flinch');void h.offsetWidth;h.classList.add('flinch');}
+  const sc=document.querySelector('.scene'); if(sc){const c=document.createElement('div');c.className='clash';sc.appendChild(c);setTimeout(()=>c.remove(),320);}
+  haptic(4);
+}
+// Monstre à distance : petit recul de préparation, puis projectile vers le héros.
+function mobCast(){ const mo=document.getElementById('mob'); if(mo){mo.classList.remove('mcast');void mo.offsetWidth;mo.classList.add('mcast');} }
+function fireMobProjectile(onArrive){
+  const sc=document.querySelector('.scene'); if(!sc){onArrive&&onArrive();return;}
+  const p=document.createElement('div'); p.className='proj fireball rev'; sc.appendChild(p);
+  setTimeout(()=>{ onArrive&&onArrive(); p.remove(); },230);
+}
 setInterval(()=>{
-  const d=D(),dt=0.1;
+  const d=D(), dt=0.1*gameSpeed();
   S.gold+=d.goldSec*dt;
-  // Régénération continue (le socle en % de PV max rend l'endurance viable).
-  S.hp=Math.min(d.maxHp,S.hp+d.regen*dt);
-  // Fureur montante : les paliers grimpent tant qu'on frappe le même monstre.
+  S.hp=Math.min(d.maxHp,S.hp+d.regen*dt); // régénération continue
   S.rampStacks=Math.min(15,(S.rampStacks||0)+dt*3);
-  // Le héros inflige ses dégâts (directs + brûlure/saignement/poison).
-  const dot=d.burnDps+d.bleedDps+d.poisonPct*monsterMaxHp(S.floor,S.mi);
-  S.mhp-=(d.dps+dot)*dt; S.totalDmg+=(d.dps+dot)*dt;
-  floatAcc+=dt; swingAcc+=dt; mAtkAcc+=dt;
-  const cadence=Math.max(0.28,0.62/Math.min(3,d.spd||1));
-  if(swingAcc>=cadence){ if(tab==='dungeon'&&d.dps>0){heroSwing();slashMob(false);} swingAcc=0; }
-  // Le monstre riposte par COUPS espacés (pas en continu) : tuer vite = esquiver
-  // ses coups. Un monstre encaissé en < une cadence ne te touche pas — les
-  // classes fragiles à gros DPS peuvent « burst » avant de se faire toucher.
-  if(mAtkAcc>=MOB_PERIOD){ mAtkAcc-=MOB_PERIOD; S.hp-=monsterAtk(S.floor,S.mi)*MOB_PERIOD; if(tab==='dungeon')mobAttack(); }
-  if(floatAcc>=0.5){ if(tab==='dungeon'){spawnFloat(fmt(d.dps*0.5),'var(--hp)',false); if(dot>0)spawnFloat(fmt(dot*0.5),'var(--ember)',false,null,'flame');} floatAcc=0; }
+  // Effets sur la durée (brûlure/saignement/poison) : dégâts continus « entre les tours ».
+  const mMax=monsterMaxHp(S.floor,S.mi);
+  const dot=d.burnDps+d.bleedDps+d.poisonPct*mMax;
+  S.mhp-=dot*dt; S.totalDmg+=dot*dt;
+  floatAcc+=dt;
+  // Jauge ATB du héros : se remplit à la vitesse d'attaque. À plein → il agit.
+  heroATB+=(d.spd/HERO_ATB)*dt; const ht=Math.floor(heroATB); heroATB-=ht;
+  for(let t=0;t<ht && S.mhp>0;t++) heroTurn(d,t<2); // on n'anime que les 2 premiers d'un même tick (mode rapide)
+  // Jauge ATB du monstre : cadence fixe. À plein → il riposte.
+  mobATB+=(1/MOB_ATB)*dt; const mt=Math.floor(mobATB); mobATB-=mt;
+  for(let t=0;t<mt && S.hp>0 && S.mhp>0;t++) monsterTurn(d,t<1);
+  if(floatAcc>=0.6){ if(tab==='dungeon'&&dot>0)spawnFloat(fmt(dot*0.6),'var(--ember)',false,66,'flame'); floatAcc=0; }
   if(S.hp<=0){ heroDies(); }
-  else if(S.mhp<=0){ killMonster(); mAtkAcc=0; } // nouveau monstre : petit temps avant son 1er coup
+  else if(S.mhp<=0){ killMonster(); mobATB=0; heroATB=0; } // nouveau monstre : jauges à zéro
   else if(tab==='dungeon') updateDungeon(false);
   checkAch();
   if(tab!=='dungeon')renderCur();
