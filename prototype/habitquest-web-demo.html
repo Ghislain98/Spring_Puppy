@@ -153,10 +153,9 @@
   .mobname { font-family:var(--serif); font-size:17px; font-weight:700; margin-top:2px; }
   /* ===== Scène donjon : side-scroller pixel-art ===== */
   .scene { position:relative; height:166px; border-radius:14px; overflow:hidden; background:linear-gradient(180deg,#140f1c 0%,#221726 55%,#2b2033 100%); box-shadow:inset 0 0 46px rgba(0,0,0,.65); }
-  .scene .walls { position:absolute; top:0; left:-50px; right:-50px; height:92px; background-repeat:repeat-x; background-size:auto 92px; image-rendering:pixelated; opacity:.9; animation:walldrift 13s linear infinite; }
+  .scene .walls { position:absolute; top:0; left:-50px; right:-50px; height:92px; background-repeat:repeat-x; background-size:auto 92px; image-rendering:pixelated; opacity:.9; }
   .scene .ground { position:absolute; bottom:0; left:-50px; right:-50px; height:58px; background-repeat:repeat; background-size:44px 44px; image-rendering:pixelated; box-shadow:inset 0 10px 16px rgba(0,0,0,.5); }
   @keyframes grounddrift { from{background-position-x:0} to{background-position-x:-44px} }
-  @keyframes walldrift { from{background-position-x:0} to{background-position-x:-92px} }
   .scene .vignette { position:absolute; inset:0; pointer-events:none; background:radial-gradient(ellipse at 50% 62%,transparent 40%,rgba(0,0,0,.62)); }
   .scene .torch { position:absolute; top:20px; z-index:1; }
   .scene .torch::before { content:""; position:absolute; left:50%; top:15px; transform:translateX(-50%); width:4px; height:11px; background:linear-gradient(180deg,#6b4a2a,#3d2a17); border-radius:1px; }
@@ -233,10 +232,6 @@
   @keyframes shakeS { 0%,100%{transform:translate(0,0)} 25%{transform:translate(-2px,1px)} 75%{transform:translate(2px,-1px)} }
   .scene .impact { position:absolute; border-radius:50%; pointer-events:none; z-index:5; background:radial-gradient(circle,#fff 0%,transparent 62%); animation:impactfx .28s ease-out forwards; }
   @keyframes impactfx { 0%{opacity:.9;transform:scale(.3)} 100%{opacity:0;transform:scale(1.6)} }
-  .scene.adv .walls { animation:scrollw .7s linear; }
-  .scene.adv .ground { animation:scrollg .7s linear; }
-  @keyframes scrollw { from{background-position-x:0} to{background-position-x:-150px} }
-  @keyframes scrollg { from{background-position-x:0} to{background-position-x:-280px} }
   .scene .mob.slidein { animation:mobslidein .6s cubic-bezier(.2,.7,.3,1); }
   @keyframes mobslidein { from{transform:translateX(170px);opacity:0} to{transform:translateX(0);opacity:1} }
   .scene .ghost { position:absolute; right:11%; bottom:28px; z-index:2; pointer-events:none; animation:ghostpoof .55s ease-out forwards; }
@@ -1596,7 +1591,7 @@ function onTapMob(e){
   const ci=Math.min(layers,5);
   spawnFloat(fmt(amount),CRIT_COLORS[ci],crit,x,crit?'bolt':null);
   tapRing(x); spawnSparks(crit?(8+layers*4):5,CRIT_SPARKS[ci]);
-  heroSwing(); slashMob(crit); for(let k=1;k<hits;k++)setTimeout(()=>slashMob(crit),80*k);
+  slashMob(crit); for(let k=1;k<hits;k++)setTimeout(()=>slashMob(crit),80*k);
   if(layers>=2){const sc=document.querySelector('.scene');if(sc){sc.classList.remove('shake');void sc.offsetWidth;sc.classList.add('shake');}SND.boss&&SND.boss();haptic([12,20,12]);}
   else if(crit){SND.crit();haptic(18);} else {SND.hit();haptic(6);}
   heroATB=Math.min(1,heroATB+0.2); // taper charge aussi ta jauge ATB → prochain coup plus vite
@@ -1633,7 +1628,7 @@ function killMonster(){
   if((d.ce.gemEvery||0)>0 && S.kills%d.ce.gemEvery===0){ S.gems+=1; spawnFloat('+1','var(--gem)',true,50,'gem'); }
   const nl=levelFromXp(S.xp); if(nl>oldLvl){S.gems+=(nl-oldLvl);S.level=nl;pushLog('⭐ Niveau '+nl+' atteint ! +'+(nl-oldLvl)+' 💎');}
   spawnFloat('+'+fmt(g),'var(--gold)',false,50,'coin');
-  if(tab==='dungeon'){ ghostMobDeath(deathFrames.slice(-1),boss); spawnSparks(boss?20:9,boss?'#ffcc4d':'#ff5d7a'); coinFly(boss?9:4); }
+  if(tab==='dungeon'){ spawnSparks(boss?20:9,boss?'#ffcc4d':'#ff5d7a'); coinFly(boss?9:4); }
   if(boss){
     let gem=1+Math.floor(S.floor/2); if(elite)gem*=3; S.gems+=gem;
     if(elite){ const bonusG=Math.round(g*4); S.gold+=bonusG; pushLog('★ BOSS D’ÉLITE étage '+S.floor+' terrassé ! +'+gem+' 💎 & butin ×5 !'); spawnFloat('BUTIN ×5','var(--gold)',true,50,'coin'); }
@@ -2089,8 +2084,19 @@ function clearActs(){AQ.length=0;curAct=null;setFighterX('hero',0);setFighterX('
   const sc=document.getElementById('scene'); if(sc)sc.classList.remove('adv');}
 function dropMobActs(){AQ=AQ.filter(a=>a.actor!=='mob'); if(curAct&&curAct.actor==='mob'){curAct=null;setFighterX('mob',0);}}
 const easeOut=t=>1-Math.pow(1-t,2), easeIn=t=>t*t;
-function dashDist(){const sc=document.getElementById('scene');const w=(sc&&sc.clientWidth)||346;return Math.max(110,Math.round(w*0.74-46));}
+// Le dash s'arrête AU BORD de l'ennemi (pas à travers lui).
+function dashDist(){const sc=document.getElementById('scene');const w=(sc&&sc.clientWidth)||346;return Math.max(100,Math.round(w*0.74-86));}
 function sceneW(){const sc=document.getElementById('scene');return (sc&&sc.clientWidth)||346;}
+// Défilement du décor piloté par la timeline (murs en parallaxe lente, sol
+// rapide, torches qui suivent le mur) — zéro animation CSS.
+let bgX=0;
+function setBgScroll(px){
+  const w=document.getElementById('walls'),g=document.getElementById('ground');
+  if(w)w.style.backgroundPositionX=(-Math.round(px*0.55))+'px';
+  if(g)g.style.backgroundPositionX=(-Math.round(px))+'px';
+  const sc=document.getElementById('scene'); if(!sc)return; const W=sc.clientWidth||346;
+  sc.querySelectorAll('.torch').forEach((t,i)=>{const base=W*(i===0?0.27:0.67);const x=(((base-px*0.55)%W)+W)%W;t.style.left=Math.round(x)+'px';});
+}
 function battleLoop(ts){
   if(!curAct&&AQ.length){curAct=AQ.shift();curAct.t0=ts;curAct.fired={};}
   if(curAct){
@@ -2102,21 +2108,22 @@ function battleLoop(ts){
   requestAnimationFrame(battleLoop);
 }
 requestAnimationFrame(battleLoop);
-// --- Attaque de MÊLÉE du héros : élan → course au contact → frappe → retour ---
+// --- Attaque de MÊLÉE du héros : élan → course au bord de l'ennemi → frappe →
+// retour LISIBLE (~260 ms, en courant) ---
 function actHeroMelee(strike){
-  enqueueAct({actor:'hero',dur:520,
+  enqueueAct({actor:'hero',dur:640,
     events:[
-      {at:0.08,fire:()=>heroRun(true)},
-      {at:0.38,fire:()=>{heroRun(false);heroPlay('atk1',60);}},
-      {at:0.46,fire:strike},
-      {at:0.72,fire:()=>heroRun(true)},
+      {at:0.06,fire:()=>heroRun(true)},
+      {at:0.32,fire:()=>{heroRun(false);heroPlay('atk1',60);}},
+      {at:0.40,fire:strike},
+      {at:0.60,fire:()=>heroRun(true)},
       {at:0.97,fire:()=>heroRun(false)},
     ],
     update:p=>{const dx=dashDist();let x;
-      if(p<0.08)x=-10*(p/0.08);
-      else if(p<0.38)x=-10+(dx+10)*easeOut((p-0.08)/0.30);
-      else if(p<0.72)x=dx;
-      else x=dx*(1-easeOut((p-0.72)/0.28));
+      if(p<0.06)x=-10*(p/0.06);
+      else if(p<0.32)x=-10+(dx+10)*easeOut((p-0.06)/0.26);
+      else if(p<0.60)x=dx;
+      else x=dx*(1-easeOut((p-0.60)/0.40));
       setFighterX('hero',x);},
     done:()=>{setFighterX('hero',0);heroRun(false);}});
 }
@@ -2145,16 +2152,16 @@ function actHeroCast(strike){
 }
 // --- Riposte du monstre : mêlée (course au contact) ou sort sur le héros ---
 function actMobMelee(strike){
-  enqueueAct({actor:'mob',dur:520,
+  enqueueAct({actor:'mob',dur:640,
     events:[
-      {at:0.34,fire:()=>mobPlay('atk1',60)},
-      {at:0.46,fire:strike},
+      {at:0.28,fire:()=>mobPlay('atk1',60)},
+      {at:0.40,fire:strike},
     ],
     update:p=>{const dx=dashDist();let x;
-      if(p<0.08)x=10*(p/0.08);
-      else if(p<0.38)x=10-(dx+10)*easeOut((p-0.08)/0.30);
-      else if(p<0.72)x=-dx;
-      else x=-dx*(1-easeOut((p-0.72)/0.28));
+      if(p<0.06)x=10*(p/0.06);
+      else if(p<0.32)x=10-(dx+10)*easeOut((p-0.06)/0.26);
+      else if(p<0.60)x=-dx;
+      else x=-dx*(1-easeOut((p-0.60)/0.40));
       setFighterX('mob',x);},
     done:()=>setFighterX('mob',0)});
 }
@@ -2187,14 +2194,21 @@ function actMobDeath(){
     }});
 }
 function actNextMob(){
-  enqueueAct({actor:'mob',dur:980,
+  const dist=Math.round(sceneW()*0.85); // distance de course (le décor défile d'autant)
+  enqueueAct({actor:'mob',dur:1050,
     events:[
-      {at:0.00,fire:()=>{const sc=document.getElementById('scene');if(sc)sc.classList.add('adv');heroRun(true);}},
-      {at:0.58,fire:()=>{const sc=document.getElementById('scene');if(sc)sc.classList.remove('adv');heroRun(false);
+      {at:0.00,fire:()=>heroRun(true)},
+      {at:0.60,fire:()=>{heroRun(false);
         const mo=document.getElementById('mob');if(mo)mo.style.visibility='visible';swapMob(true);}},
     ],
-    update:p=>{if(p>=0.58)setFighterX('mob',170*(1-easeOut((p-0.58)/0.42)));},
-    done:()=>setFighterX('mob',0)});
+    update:p=>{
+      // le décor défile pendant que le héros court (accélère puis ralentit)…
+      const t=Math.min(1,p/0.60);
+      setBgScroll(bgX+dist*(t<0.5?2*t*t:1-Math.pow(-2*t+2,2)/2));
+      // …puis le monstre suivant entre en scène par la droite.
+      if(p>=0.60)setFighterX('mob',170*(1-easeOut((p-0.60)/0.40)));
+    },
+    done:()=>{bgX+=dist;setFighterX('mob',0);}});
 }
 
 // ============ Boucle idle (100ms) — combat ATB ============
@@ -2211,7 +2225,7 @@ function heroDies(){
   // Le héros tombe : il recommence l'étage depuis le premier monstre.
   S.hp=D().maxHp; S.mi=0; S.mhp=monsterMaxHp(S.floor,0); S.rampStacks=0; mobATB=0; heroATB=0; heroHold=0; mobHold=0; mobDying=0; clearActs(); S.combo=0; S.shield=0; S.frozen=0; S.souls=0;
   pushLog('💀 Héros terrassé à l’étage '+S.floor+' — il repart au début de l’étage.');
-  if(tab==='dungeon'){heroPlay('death',110); const h=document.getElementById('hero');if(h){h.classList.remove('hurt');void h.offsetWidth;h.classList.add('hurt');} SND.boss&&SND.boss(); haptic([40,60,40]); if(typeof advanceScene==='function')advanceScene();}
+  if(tab==='dungeon'){heroPlay('death',110); const h=document.getElementById('hero');if(h){h.classList.remove('hurt');void h.offsetWidth;h.classList.add('hurt');} SND.boss&&SND.boss(); haptic([40,60,40]);}
   save();updateDungeon(true);
 }
 // Un TOUR du héros : coup unique (ou multi-attaque), crit rejoué en direct.
