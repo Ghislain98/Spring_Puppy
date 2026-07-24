@@ -181,14 +181,16 @@
      La distance (--dashX) est calculée en JS d'après la largeur réelle de la scène. */
   .scene .hero.lunge .pix { animation:ffdash .46s cubic-bezier(.25,.8,.3,1); }
   @keyframes ffdash { 0%{transform:translateX(0)} 16%{transform:translateX(-8px)} 44%{transform:translateX(var(--dashX,150px))} 64%{transform:translateX(var(--dashX,150px))} 100%{transform:translateX(0)} }
-  /* Impact : flash blanc FF6 + l'ennemi est BOUSCULÉ (recul sec + écrasement). */
-  .scene .mob.hit .pix:not(.spellfx) { animation:ffhit .3s steps(1); }
-  @keyframes ffhit { 0%{transform:scaleX(-1) translateX(-9px) scaleY(.86);filter:brightness(3.4) saturate(.15) drop-shadow(0 0 8px #fff)} 34%{transform:scaleX(-1) translateX(-5px);filter:none} 55%{transform:scaleX(-1) translateX(-6px) scaleY(.93);filter:brightness(3.2) saturate(.2) drop-shadow(0 0 6px #fff)} 78%,100%{transform:scaleX(-1);filter:none} }
+  /* Impact : flash blanc FF6 (sec, en escalier) + recul FLUIDE avec écrasement. */
+  .scene .mob.hit .pix:not(.spellfx) { animation:ffhitflash .3s steps(1), ffhitknock .3s cubic-bezier(.2,.8,.3,1); }
+  @keyframes ffhitflash { 0%{filter:brightness(3.4) saturate(.15) drop-shadow(0 0 8px #fff)} 34%{filter:none} 55%{filter:brightness(3.2) saturate(.2) drop-shadow(0 0 6px #fff)} 78%,100%{filter:none} }
+  @keyframes ffhitknock { 0%{transform:scaleX(-1) translateX(-3px) scaleY(.92)} 24%{transform:scaleX(-1) translateX(-10px) scaleY(.88)} 62%{transform:scaleX(-1) translateX(-3px) scaleY(1)} 100%{transform:scaleX(-1)} }
   .scene .mob .slash { position:absolute; left:18%; top:26%; width:44px; height:44px; border:4px solid #fff; border-color:#fff transparent transparent #fff; border-radius:50%; pointer-events:none; opacity:0; animation:slashfx .24s ease-out forwards; z-index:6; filter:drop-shadow(0 0 5px #fff); }
   @keyframes slashfx { 0%{opacity:0;transform:rotate(8deg) scale(.3)} 40%{opacity:.95} 100%{opacity:0;transform:rotate(62deg) scale(1.15)} }
-  /* Le héros encaisse : flash blanc + recul sec + écrasement. */
-  .scene .hero.hurt .pix:not(.spellfx) { animation:ffherohurt .32s steps(1); }
-  @keyframes ffherohurt { 0%{transform:translateX(-7px) scaleY(.88);filter:brightness(3) saturate(.2)} 40%{transform:translateX(-4px);filter:none} 60%{transform:translateX(-5px) scaleY(.94);filter:brightness(3) saturate(.2)} 80%,100%{transform:none;filter:none} }
+  /* Le héros encaisse : flash blanc sec + recul fluide avec écrasement. */
+  .scene .hero.hurt .pix:not(.spellfx) { animation:ffhurtflash .32s steps(1), ffhurtknock .32s cubic-bezier(.2,.8,.3,1); }
+  @keyframes ffhurtflash { 0%{filter:brightness(3) saturate(.2)} 40%{filter:none} 60%{filter:brightness(3) saturate(.2)} 80%,100%{filter:none} }
+  @keyframes ffhurtknock { 0%{transform:translateX(-3px) scaleY(.92)} 24%{transform:translateX(-9px) scaleY(.9)} 62%{transform:translateX(-3px) scaleY(1)} 100%{transform:none} }
   .scene .hero.flinch .pix:not(.spellfx) { animation:ffflinch .3s ease-out; }
   @keyframes ffflinch { 0%,100%{transform:translateX(0)} 45%{transform:translateX(-8px)} }
   /* Attaque du monstre : il fonce JUSQU'AU héros, frappe, revient. */
@@ -227,7 +229,7 @@
   .ffnm.bossnm { color:var(--gold); }
   .ffnm.elitenm { color:#ffe08a; animation:elitepulse 1s ease-in-out infinite; }
   @keyframes elitepulse { 0%,100%{opacity:.85} 50%{opacity:1} }
-  .scene .clash { position:absolute; left:30%; top:34%; width:26px; height:26px; pointer-events:none; z-index:6; background:radial-gradient(circle,#ff8a3d 0%,transparent 62%); animation:impactfx .3s ease-out forwards; }
+  .scene .clash { position:absolute; left:50%; top:34%; width:30px; height:30px; transform:translate(-50%,-50%); pointer-events:none; z-index:6; background:radial-gradient(circle,#fff 0%,#ff8a3d 40%,transparent 62%); animation:impactfx .3s ease-out forwards; }
   .scene.shakeS { animation:shakeS .16s; }
   @keyframes shakeS { 0%,100%{transform:translate(0,0)} 25%{transform:translate(-2px,1px)} 75%{transform:translate(2px,-1px)} }
   .scene .impact { position:absolute; border-radius:50%; pointer-events:none; z-index:5; background:radial-gradient(circle,#fff 0%,transparent 62%); animation:impactfx .28s ease-out forwards; }
@@ -1243,10 +1245,11 @@ function uiToast(msg){
 }
 function bump(el){ if(!el)return; el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); }
 function spawnSparks(n,color){
-  const layer=document.getElementById('floats'); if(!layer)return;
+  // Les étincelles giclent DEPUIS l'ennemi touché (ancrées à lui), pas du vide.
+  const layer=document.getElementById('mob')||document.getElementById('floats'); if(!layer)return;
   for(let i=0;i<n;i++){ const s=document.createElement('div'); s.className='spark'; const a=Math.random()*6.283,r=28+Math.random()*46;
     s.style.setProperty('--sx',(Math.cos(a)*r).toFixed(1)+'px'); s.style.setProperty('--sy',(Math.sin(a)*r).toFixed(1)+'px');
-    s.style.left='50%'; s.style.top='40%'; s.style.color=color; s.style.background=color; layer.appendChild(s); setTimeout(()=>s.remove(),520); }
+    s.style.left='50%'; s.style.top='36%'; s.style.color=color; s.style.background=color; layer.appendChild(s); setTimeout(()=>s.remove(),520); }
 }
 function tapRing(x){ const layer=document.getElementById('floats'); if(!layer)return; const r=document.createElement('div'); r.className='ring'; r.style.left=(x!=null?x:50)+'%'; r.style.top='40%'; layer.appendChild(r); setTimeout(()=>r.remove(),430); }
 function ghostMob(key){ const ar=document.querySelector('.mobcol')||document.querySelector('.arena'); if(!ar)return; const g=document.createElement('div'); g.className='ghost'; g.innerHTML=spr(key,82)||mobEmoji(1,0); ar.appendChild(g); setTimeout(()=>g.remove(),500); }
@@ -2308,7 +2311,7 @@ function heroTurn(d,animate){
   if(!(animate && tab==='dungeon')){ applyDamage(); return; }
   const ci=Math.min(layers,5);
   // La FRAPPE : dégâts + tous les visuels, déclenchés PAR la timeline au contact.
-  const spell=S.cls==='mage'||S.cls==='necromancien'; // leur explosion fait office d'impact
+  const spell=isRanged(); // projectile/sort : leur propre impact remplace l'arc d'épée
   const strike=()=>{ applyDamage();
     slashMob(crit,spell); for(let k=1;k<hits;k++)setTimeout(()=>slashMob(crit,spell),70*k);
     spawnFloat(fmt(burst),CRIT_COLORS[ci],crit,62,crit?'bolt':null);
@@ -2330,7 +2333,8 @@ function burstFrames(onHero,key,idx,ms,scale,bottom){
   img.style.height=Math.round(m.h*(scale||2.1))+'px';
   if(bottom)img.style.bottom=bottom;
   img.src=use[0]; host.appendChild(img);
-  let i=0; const iv=setInterval(()=>{ i++; if(i>=use.length){clearInterval(iv);img.remove();} else img.src=use[i]; },ms||65);
+  const step=Math.max(24,Math.round((ms||65)/Math.max(1,gameSpeed()))); // suit la vitesse x2/x4
+  let i=0; const iv=setInterval(()=>{ i++; if(i>=use.length){clearInterval(iv);img.remove();} else img.src=use[i]; },step);
 }
 // ---- Serviteur squelette (pet du Nécromancien) ----
 let petShown=false;
@@ -2379,7 +2383,7 @@ function heroFlinch(){
   const h=document.getElementById('hero'); if(h){h.classList.remove('flinch');h.classList.remove('hurt');void h.offsetWidth;h.classList.add('hurt');}
   heroPlay('hurt',70,true); // vraie frame de « touché » (n'interrompt pas une attaque en cours)
   if(typeof hitStop==='function')hitStop(60);
-  const sc=document.querySelector('.scene'); if(sc){const c=document.createElement('div');c.className='clash';sc.appendChild(c);setTimeout(()=>c.remove(),320);}
+  const host=document.getElementById('hero'); if(host){const c=document.createElement('div');c.className='clash';host.appendChild(c);setTimeout(()=>c.remove(),320);}
   haptic(4);
 }
 setInterval(()=>{
@@ -2413,7 +2417,9 @@ setInterval(()=>{
     else mobHold+=dt;
     if(mobATB>=1 && mobHold>=holdM && S.hp>0 && S.mhp>0){ monsterTurn(d,tab==='dungeon'); mobATB=0; mobHold=0; }
   }
-  if(floatAcc>=0.6){ if(tab==='dungeon'&&dot>0&&!mobDying)spawnFloat(fmt(dot*0.6),'var(--ember)',false,66,'flame'); floatAcc=0; }
+  if(floatAcc>=0.6){ const mo=document.getElementById('mob');
+    // pas de chiffres de dégâts sur du vide : seulement si un monstre est À L'ÉCRAN
+    if(tab==='dungeon'&&dot>0&&!mobDying&&mo&&mo.style.visibility!=='hidden')spawnFloat(fmt(dot*0.6),'var(--ember)',false,66,'flame'); floatAcc=0; }
   if(S.hp<=0){ heroDies(); }
   else if(S.mhp<=0 && !mobDying){ startMobDeath(); }
   else if(tab==='dungeon') updateDungeon(false);
