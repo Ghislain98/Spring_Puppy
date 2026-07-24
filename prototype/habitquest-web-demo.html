@@ -1427,7 +1427,8 @@ function renderDungeon(){
     <div class="log" id="log"></div>`;
   document.getElementById('mob').onclick=onTapMob;
   if(typeof TILE!=='undefined'){const w=document.getElementById('walls'),g=document.getElementById('ground');if(w)w.style.backgroundImage='url('+TILE.wall+')';if(g)g.style.backgroundImage='url('+TILE.floor+')';}
-  clearAnims();
+  clearAnims(); clearActs(); mobDying=0;
+  const mv=document.getElementById('mob'); if(mv)mv.style.visibility='visible';
   const hi=document.getElementById('heroimg'); regAnim(hi,heroFrames(false),200); if(hi){hi.style.filter=heroFilter(); spriteFit(hi,heroChar(),heroZ(heroChar()),false);}
   // Distance de dash : du héros (left:15%) jusqu'à l'ennemi (right:11%), moins le corps-à-corps.
   const scEl=document.getElementById('scene');
@@ -1448,7 +1449,6 @@ function advanceScene(){const sc=document.getElementById('scene');if(!sc)return;
 function heroRun(on){const img=document.getElementById('heroimg');if(img){regAnim(img,heroFrames(on),on?110:200);img.style.filter=heroFilter();}}
 function swapMob(noSlide){
   const mo=document.getElementById('mob');if(!mo)return;const boss=isBoss(S.floor,S.mi),elite=isElite(S.floor,S.mi);
-  mo.style.visibility='visible'; // (la transition de course le cache temporairement)
   mo.classList.toggle('boss',boss); mo.classList.toggle('elite',elite);
   const img=document.getElementById('mobimg');regAnim(img,mobFrames(S.floor,S.mi),220);
   if(img){img.style.filter=elite?(mobFilter(S.floor)+' drop-shadow(0 0 8px #ffcc4d)'):mobFilter(S.floor);
@@ -1653,15 +1653,9 @@ function killMonster(){
     if(dotNew>0){ const dmg=dotNew*d.ce.dotExplode; S.mhp=Math.max(1,S.mhp-dmg); S.totalDmg+=dmg; if(tab==='dungeon')spawnFloat(fmt(dmg),'var(--ember)',true,62,'flame'); } }
   if(S.hp<d.maxHp)S.hp=Math.min(d.maxHp,S.hp+d.maxHp*0.15);
   S.rampStacks=0; heroATB=0; mobATB=0; heroHold=0; mobHold=0; S.frozen=0; // nouveau monstre → fureur, jauges ATB et gel retombent
-  advanceScene(); save(); updateDungeon(true);
-  // Transition FF6 : le héros COURT (frames de marche + décor qui défile) pendant
-  // que le monstre suivant attend hors-champ, puis entre en scène.
-  const mo=document.getElementById('mob');
-  if(mo){ mo.style.visibility='hidden';
-    clearTimeout(mobInT);
-    mobInT=setTimeout(()=>{ if(!mo.isConnected)return; mo.style.visibility='visible';
-      mo.classList.remove('slidein'); void mo.offsetWidth; mo.classList.add('slidein'); },520);
-  }
+  save(); updateDungeon(true);
+  // (la transition visuelle — course du héros puis entrée du monstre — est jouée
+  // par la file d'actions : actNextMob, enchaînée après actMobDeath)
 }
 
 // ============ CHECK-IN ============
@@ -2083,17 +2077,139 @@ function coffreOverlay(r){
   document.getElementById('cofok').onclick=()=>{ov.remove();go('dungeon');};
 }
 
+// ============ MOTEUR DE SCÈNE (une seule horloge rAF) ============
+// Toute la chorégraphie de combat (déplacements, frames, impacts, dégâts) sort
+// d'une FILE D'ACTIONS jouée séquentiellement sur une timeline unique : plus
+// aucune animation CSS de mouvement, plus de setTimeout — zéro désynchro.
+let AQ=[], curAct=null;
+function enqueueAct(a){AQ.push(a);}
+const actBusy=()=>!!curAct||AQ.length>0;
+function setFighterX(id,x){const el=document.getElementById(id);if(el)el.style.transform='translateX('+Math.round(x)+'px)';}
+function clearActs(){AQ.length=0;curAct=null;setFighterX('hero',0);setFighterX('mob',0);
+  const sc=document.getElementById('scene'); if(sc)sc.classList.remove('adv');}
+function dropMobActs(){AQ=AQ.filter(a=>a.actor!=='mob'); if(curAct&&curAct.actor==='mob'){curAct=null;setFighterX('mob',0);}}
+const easeOut=t=>1-Math.pow(1-t,2), easeIn=t=>t*t;
+function dashDist(){const sc=document.getElementById('scene');const w=(sc&&sc.clientWidth)||346;return Math.max(110,Math.round(w*0.74-46));}
+function sceneW(){const sc=document.getElementById('scene');return (sc&&sc.clientWidth)||346;}
+function battleLoop(ts){
+  if(!curAct&&AQ.length){curAct=AQ.shift();curAct.t0=ts;curAct.fired={};}
+  if(curAct){
+    const p=Math.min(1,(ts-curAct.t0)*gameSpeed()/curAct.dur);
+    (curAct.events||[]).forEach((ev,i)=>{if(!curAct.fired[i]&&p>=ev.at){curAct.fired[i]=1;try{ev.fire();}catch(e){}}});
+    try{curAct.update&&curAct.update(p);}catch(e){}
+    if(p>=1){const d=curAct.done;curAct=null;try{d&&d();}catch(e){}}
+  }
+  requestAnimationFrame(battleLoop);
+}
+requestAnimationFrame(battleLoop);
+// --- Attaque de MÊLÉE du héros : élan → course au contact → frappe → retour ---
+function actHeroMelee(strike){
+  enqueueAct({actor:'hero',dur:520,
+    events:[
+      {at:0.08,fire:()=>heroRun(true)},
+      {at:0.38,fire:()=>{heroRun(false);heroPlay('atk1',60);}},
+      {at:0.46,fire:strike},
+      {at:0.72,fire:()=>heroRun(true)},
+      {at:0.97,fire:()=>heroRun(false)},
+    ],
+    update:p=>{const dx=dashDist();let x;
+      if(p<0.08)x=-10*(p/0.08);
+      else if(p<0.38)x=-10+(dx+10)*easeOut((p-0.08)/0.30);
+      else if(p<0.72)x=dx;
+      else x=dx*(1-easeOut((p-0.72)/0.28));
+      setFighterX('hero',x);},
+    done:()=>{setFighterX('hero',0);heroRun(false);}});
+}
+// --- Attaque à DISTANCE du héros : incantation → projectile/sort → impact ---
+function actHeroCast(strike){
+  const cls=S.cls, w=sceneW();
+  const necro=cls==='necromancien', kind=cls==='mage'?'fxfire':'fxarrow';
+  let proj=null, projFr=null, projI=0, projAcc=0;
+  enqueueAct({actor:'hero',dur:necro?680:760,
+    events:[
+      {at:0.04,fire:()=>heroPlay(CAST_ANIM[cls]||'atk1',60)},
+      necro?{at:0.42,fire:()=>burstSpell('fxnecro',false,strike)}
+           :{at:0.40,fire:()=>{const sc=document.getElementById('scene');if(!sc)return;
+              projFr=sliceSheet(kind+'_fly')||[];const m=SHEET_META[kind]||{h:10};
+              proj=document.createElement('img');proj.className='pix projimg';proj.src=projFr[0]||'';
+              proj.style.height=Math.round(m.h*1.8)+'px';sc.appendChild(proj);}},
+      necro?{at:0.99,fire:()=>{}}:{at:0.78,fire:()=>{if(proj){proj.remove();proj=null;}strike();}},
+    ],
+    update:p=>{
+      setFighterX('hero',p<0.25?-8*Math.sin(p/0.25*Math.PI):0);
+      if(proj){const f=(p-0.40)/0.38, x0=w*0.20, x1=w*0.84;
+        proj.style.left=Math.round(x0+(x1-x0)*Math.min(1,Math.max(0,f)))+'px';
+        projAcc++; if(projFr.length>1&&projAcc%4===0){projI=(projI+1)%projFr.length;proj.src=projFr[projI];}}
+    },
+    done:()=>{if(proj)proj.remove();setFighterX('hero',0);}});
+}
+// --- Riposte du monstre : mêlée (course au contact) ou sort sur le héros ---
+function actMobMelee(strike){
+  enqueueAct({actor:'mob',dur:520,
+    events:[
+      {at:0.34,fire:()=>mobPlay('atk1',60)},
+      {at:0.46,fire:strike},
+    ],
+    update:p=>{const dx=dashDist();let x;
+      if(p<0.08)x=10*(p/0.08);
+      else if(p<0.38)x=10-(dx+10)*easeOut((p-0.08)/0.30);
+      else if(p<0.72)x=-dx;
+      else x=-dx*(1-easeOut((p-0.72)/0.28));
+      setFighterX('mob',x);},
+    done:()=>setFighterX('mob',0)});
+}
+function actMobCast(strike){
+  const archer=mobChar(S.floor,S.mi)==='skeleton_archer', w=sceneW();
+  let proj=null, projFr=null, projI=0, projAcc=0;
+  enqueueAct({actor:'mob',dur:archer?760:680,
+    events:[
+      {at:0.04,fire:()=>mobPlay('atk1',60)},
+      archer?{at:0.40,fire:()=>{const sc=document.getElementById('scene');if(!sc)return;
+              projFr=sliceSheet('fxarrow_fly')||[];const m=SHEET_META.fxarrow||{h:7};
+              proj=document.createElement('img');proj.className='pix projimg rev pixflip';proj.src=projFr[0]||'';
+              proj.style.height=Math.round(m.h*1.8)+'px';sc.appendChild(proj);}}
+            :{at:0.42,fire:()=>burstSpell('fxwarlock',true,strike)},
+      archer?{at:0.78,fire:()=>{if(proj){proj.remove();proj=null;}strike();}}:{at:0.99,fire:()=>{}},
+    ],
+    update:p=>{
+      if(proj){const f=(p-0.40)/0.38, x0=w*0.82, x1=w*0.18;
+        proj.style.left=Math.round(x0+(x1-x0)*Math.min(1,Math.max(0,f)))+'px';}
+    },
+    done:()=>{if(proj)proj.remove();setFighterX('mob',0)}});
+}
+// --- Mort du monstre : agonie sur place, puis butin + course vers le suivant ---
+function actMobDeath(){
+  enqueueAct({actor:'mob',dur:620,
+    events:[{at:0.02,fire:()=>{const el=document.getElementById('mobimg');if(el)playOnce(el,mobAnim(S.floor,S.mi,'death'),90,null);SND.kill&&SND.kill();}}],
+    done:()=>{
+      const mo=document.getElementById('mob'); if(mo)mo.style.visibility='hidden';
+      mobDying=0; killMonster(); actNextMob();
+    }});
+}
+function actNextMob(){
+  enqueueAct({actor:'mob',dur:980,
+    events:[
+      {at:0.00,fire:()=>{const sc=document.getElementById('scene');if(sc)sc.classList.add('adv');heroRun(true);}},
+      {at:0.58,fire:()=>{const sc=document.getElementById('scene');if(sc)sc.classList.remove('adv');heroRun(false);
+        const mo=document.getElementById('mob');if(mo)mo.style.visibility='visible';swapMob(true);}},
+    ],
+    update:p=>{if(p>=0.58)setFighterX('mob',170*(1-easeOut((p-0.58)/0.42)));},
+    done:()=>setFighterX('mob',0)});
+}
+
 // ============ Boucle idle (100ms) — combat ATB ============
 let floatAcc=0, heroATB=0, mobATB=0, heroHold=0, mobHold=0, mobDying=0;
-// Le monstre vient de tomber : il joue son animation de MORT SUR PLACE pendant
-// ~0,5 s (tout se fige autour), puis le butin tombe et la course reprend.
+// Le monstre tombe : hors donjon on résout tout de suite, sinon la file joue
+// l'agonie puis la transition.
 function startMobDeath(){
-  if(mobDying>0)return; mobDying=0.5;
-  if(tab==='dungeon'){ const el=document.getElementById('mobimg'); if(el)playOnce(el,mobAnim(S.floor,S.mi,'death'),90,null); SND.kill&&SND.kill(); }
+  if(mobDying)return; mobDying=1;
+  dropMobActs(); // une riposte en attente d'un mort n'a plus de sens
+  if(tab!=='dungeon'){ mobDying=0; killMonster(); mobATB=0; heroATB=0; heroHold=0; mobHold=0; return; }
+  actMobDeath(); mobATB=0; heroATB=0; heroHold=0; mobHold=0;
 }
 function heroDies(){
   // Le héros tombe : il recommence l'étage depuis le premier monstre.
-  S.hp=D().maxHp; S.mi=0; S.mhp=monsterMaxHp(S.floor,0); S.rampStacks=0; mobATB=0; heroATB=0; heroHold=0; mobHold=0; mobDying=0; S.combo=0; S.shield=0; S.frozen=0; S.souls=0;
+  S.hp=D().maxHp; S.mi=0; S.mhp=monsterMaxHp(S.floor,0); S.rampStacks=0; mobATB=0; heroATB=0; heroHold=0; mobHold=0; mobDying=0; clearActs(); S.combo=0; S.shield=0; S.frozen=0; S.souls=0;
   pushLog('💀 Héros terrassé à l’étage '+S.floor+' — il repart au début de l’étage.');
   if(tab==='dungeon'){heroPlay('death',110); const h=document.getElementById('hero');if(h){h.classList.remove('hurt');void h.offsetWidth;h.classList.add('hurt');} SND.boss&&SND.boss(); haptic([40,60,40]); if(typeof advanceScene==='function')advanceScene();}
   save();updateDungeon(true);
@@ -2123,15 +2239,16 @@ function heroTurn(d,animate){
   };
   if(!(animate && tab==='dungeon')){ applyDamage(); return; }
   const ci=Math.min(layers,5);
-  const impact=()=>{ applyDamage();
+  // La FRAPPE : dégâts + tous les visuels, déclenchés PAR la timeline au contact.
+  const strike=()=>{ applyDamage();
     slashMob(crit); for(let k=1;k<hits;k++)setTimeout(()=>slashMob(crit),70*k);
     spawnFloat(fmt(burst),CRIT_COLORS[ci],crit,62,crit?'bolt':null);
     if(minionBurst>0) setTimeout(()=>{ petAttack(); spawnFloat(fmt(minionBurst),'var(--nutrition)',false,60,'skull'); },170);
     if(echoed) setTimeout(()=>{ slashMob(crit); spawnFloat(fmt(burst),'var(--gem)',false,66,'bolt'); },230);
     if(crit){spawnSparks(6+layers*3,CRIT_SPARKS[ci]); if(layers>=2){const sc=document.querySelector('.scene');if(sc){sc.classList.remove('shake');void sc.offsetWidth;sc.classList.add('shake');}}}
     if(crit&&SND.crit)SND.crit(); else if(SND.hit)SND.hit(); haptic(crit?11:4); };
-  if(isRanged()){ heroCast(); fireProjectile(crit,impact); } // le projectile vole, l'impact applique tout
-  else { heroLunge(); setTimeout(impact,200); }              // mêlée : les dégâts tombent au contact du dash
+  if(isRanged()) actHeroCast(strike);
+  else actHeroMelee(strike);
 }
 const isRanged=()=>S.cls==='mage'||S.cls==='rodeur'||S.cls==='necromancien';
 // ---- Projectiles & sorts = VRAIS sprites du pack ----
@@ -2186,21 +2303,23 @@ function syncPet(d){
 // Un TOUR du monstre : il riposte et frappe le héros (coup unique). Corps-à-corps
 // = charge (lunge) ; ennemi à distance = projectile (l'impact se joue à l'arrivée).
 function monsterTurn(d,animate){
-  let raw=monsterAtk(S.floor,S.mi)*MOB_ATB, blocked=0;
-  // Bouclier : absorbe les coups avant les PV et PRÉSERVE l'élan de combat.
-  if((S.shield||0)>0){ blocked=Math.min(S.shield,raw); S.shield-=blocked; raw-=blocked; }
-  const full=(raw<=0&&blocked>0);
-  if(raw>0){ S.hp-=raw; S.combo=0; } // seul un coup qui entame les PV brise l'élan
-  // Riposte sacrée / Siphon éternel : un coup ENTIÈREMENT absorbé déclenche une contre-attaque.
-  let counter=0;
-  if(full && (d.ce.counterPct||0)>0){ counter=d.hitRaw*d.ce.counterPct; S.mhp-=counter; S.totalDmg+=counter; }
-  if(animate && tab==='dungeon'){
-    const dmg=()=>{ if(full){ heroBlock(); spawnFloat('🛡 '+fmt(blocked),'var(--regen)',false,26,null);
-        if(counter>0)setTimeout(()=>{ heroLunge(); slashMob(false); spawnFloat(fmt(counter),'var(--gold)',false,60,'sword'); },150); }
-      else { heroFlinch(); spawnFloat('-'+fmt(raw),'var(--hp)',false,26,null); } };
-    if(mobRanged(S.floor,S.mi)){ mobCast(); fireMobProjectile(dmg); }
-    else { mobAttack(); setTimeout(dmg,220); }
-  }
+  // Toute la résolution (bouclier, PV, riposte) est faite DANS la frappe : la vie
+  // du héros ne baisse qu'au moment où le coup touche, à l'impact de la timeline.
+  const strike=()=>{
+    let raw=monsterAtk(S.floor,S.mi)*MOB_ATB, blocked=0;
+    if((S.shield||0)>0){ blocked=Math.min(S.shield,raw); S.shield-=blocked; raw-=blocked; }
+    const full=(raw<=0&&blocked>0);
+    if(raw>0){ S.hp-=raw; S.combo=0; } // seul un coup qui entame les PV brise l'élan
+    let counter=0;
+    if(full && (d.ce.counterPct||0)>0){ counter=d.hitRaw*d.ce.counterPct; S.mhp-=counter; S.totalDmg+=counter; }
+    if(tab!=='dungeon')return;
+    if(full){ heroBlock(); spawnFloat('🛡 '+fmt(blocked),'var(--regen)',false,26,null);
+      if(counter>0)setTimeout(()=>{ slashMob(false); spawnFloat(fmt(counter),'var(--gold)',false,60,'sword'); },150); }
+    else { heroFlinch(); spawnFloat('-'+fmt(raw),'var(--hp)',false,26,null); }
+  };
+  if(!(animate && tab==='dungeon')){ strike(); return; }
+  if(mobRanged(S.floor,S.mi)) actMobCast(strike);
+  else actMobMelee(strike);
 }
 // Coup entièrement absorbé par le bouclier : les chevaliers lèvent leur bouclier
 // (vraie frame Block) ; les autres classes encaissent sans broncher.
@@ -2239,31 +2358,27 @@ setInterval(()=>{
   S.mhp-=dot*dt; S.totalDmg+=dot*dt;
   floatAcc+=dt;
   // Jauge ATB du héros — cycle FF6 : REMPLISSAGE → jauge PLEINE tenue ~0,5 s
-  // (elle pulse en doré, comme « prêt ! ») → l'attaque part. La durée totale du
-  // cycle reste HERO_ATB/vitesse, donc le DPS moyen est inchangé.
-  {
+  // (elle pulse en doré, « prêt ! ») → l'attaque part. Sur l'onglet donjon, une
+  // seule action se joue à la fois (file séquentielle) : les jauges attendent
+  // que la scène soit libre — lisible comme un vrai tour par tour.
+  const stage=(tab!=='dungeon')||!actBusy();
+  if(stage && !mobDying){
     const cycle=HERO_ATB/Math.max(0.01,d.spd), hold=Math.min(0.5,cycle*0.45), fill=Math.max(0.05,cycle-hold);
     if(heroATB<1){ const over=(heroATB+dt/fill)-1; if(over>=0){ heroATB=1; heroHold=over*fill; } else heroATB+=dt/fill; }
     else heroHold+=dt;
-    if(heroATB>=1 && heroHold>=hold && S.mhp>0){ heroTurn(d,true); heroATB=0; heroHold=0; }
+    if(heroATB>=1 && heroHold>=hold && S.mhp>0){ heroTurn(d,tab==='dungeon'); heroATB=0; heroHold=0; }
   }
-  // Givre : tant que l'ennemi est gelé, sa jauge ATB reste figée.
-  // Provocation : la jauge ennemie se remplit plus lentement (mobSlow).
+  // Givre : jauge ennemie figée · Provocation : remplissage ralenti.
   if((S.frozen||0)>0){ S.frozen=Math.max(0,S.frozen-dt); }
-  else {
+  else if(stage && !mobDying){
     const cycleM=MOB_ATB/(1-Math.min(0.5,d.ce.mobSlow||0)), holdM=0.5, fillM=Math.max(0.4,cycleM-holdM);
     if(mobATB<1){ const over=(mobATB+dt/fillM)-1; if(over>=0){ mobATB=1; mobHold=over*fillM; } else mobATB+=dt/fillM; }
     else mobHold+=dt;
-    if(mobATB>=1 && mobHold>=holdM && S.hp>0 && S.mhp>0){ monsterTurn(d,true); mobATB=0; mobHold=0; }
+    if(mobATB>=1 && mobHold>=holdM && S.hp>0 && S.mhp>0){ monsterTurn(d,tab==='dungeon'); mobATB=0; mobHold=0; }
   }
-  if(floatAcc>=0.6){ if(tab==='dungeon'&&dot>0)spawnFloat(fmt(dot*0.6),'var(--ember)',false,66,'flame'); floatAcc=0; }
+  if(floatAcc>=0.6){ if(tab==='dungeon'&&dot>0&&!mobDying)spawnFloat(fmt(dot*0.6),'var(--ember)',false,66,'flame'); floatAcc=0; }
   if(S.hp<=0){ heroDies(); }
-  else if(mobDying>0){ // agonie : le monstre joue sa mort, tout attend ~0,5 s
-    mobDying-=dt;
-    if(mobDying<=0){ mobDying=0;
-      if(S.mhp<=0){ killMonster(); mobATB=0; heroATB=0; heroHold=0; mobHold=0; } }
-  }
-  else if(S.mhp<=0){ startMobDeath(); }
+  else if(S.mhp<=0 && !mobDying){ startMobDeath(); }
   else if(tab==='dungeon') updateDungeon(false);
   checkAch();
   if(tab!=='dungeon')renderCur();
