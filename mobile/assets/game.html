@@ -80,7 +80,7 @@
   .scene .mob.frozen .pix { filter:brightness(1.15) saturate(.5) hue-rotate(160deg) drop-shadow(0 0 7px #7fe3ff) drop-shadow(0 3px 2px rgba(0,0,0,.55))!important; }
   .frostburst { position:absolute; left:50%; top:34%; width:52px; height:52px; transform:translate(-50%,-50%); border-radius:50%; pointer-events:none; z-index:7; background:radial-gradient(circle,#eafcff 0%,#7fe3ff 40%,transparent 72%); animation:frostb .48s ease-out forwards; }
   @keyframes frostb { 0%{opacity:0;transform:translate(-50%,-50%) scale(.3)} 35%{opacity:.95} 100%{opacity:0;transform:translate(-50%,-50%) scale(1.5)} }
-  .combobadge { position:absolute; left:50%; bottom:8px; transform:translateX(-50%); z-index:8; background:linear-gradient(90deg,rgba(255,93,122,.95),rgba(255,138,61,.95)); color:#1a0f14; font-weight:900; font-size:12px; padding:3px 11px; border-radius:999px; white-space:nowrap; box-shadow:0 2px 8px rgba(0,0,0,.45); animation:pop .3s ease; }
+  .combobadge { position:absolute; left:50%; top:6px; transform:translateX(-50%); z-index:8; background:linear-gradient(90deg,rgba(255,93,122,.95),rgba(255,138,61,.95)); color:#1a0f14; font-weight:900; font-size:12px; padding:3px 11px; border-radius:999px; white-space:nowrap; box-shadow:0 2px 8px rgba(0,0,0,.45); animation:pop .3s ease; }
   .combobadge small { font-weight:800; opacity:.85; }
   .spdrow { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:6px; }
   .spdsel { display:flex; gap:4px; }
@@ -204,7 +204,7 @@
   .scene .projimg { position:absolute; bottom:58px; left:26%; z-index:6; pointer-events:none; image-rendering:pixelated; transition:left .3s linear; filter:drop-shadow(0 0 6px rgba(255,180,90,.55)); }
   .scene .projimg.rev { left:64%; filter:drop-shadow(0 0 6px rgba(160,120,255,.5)); }
   .scene .projimg.rev.pixflip { transform:scaleX(-1); }
-  .scene .spellfx { position:absolute; bottom:30px; z-index:7; pointer-events:none; image-rendering:pixelated; animation:spellpop .1s ease-out; }
+  .scene .spellfx { position:absolute; bottom:-2px; left:50%; transform:translateX(-50%); z-index:7; pointer-events:none; image-rendering:pixelated; animation:spellpop .1s ease-out; }
   @keyframes spellpop { 0%{opacity:0;transform:scale(.7)} 100%{opacity:1;transform:scale(1)} }
   /* Serviteur squelette : à la gauche du héros, légèrement en retrait. */
   .scene .pet { left:1%; bottom:22px; z-index:2; }
@@ -215,7 +215,7 @@
   .ffwin { display:flex; gap:6px; margin-top:8px; }
   .ffpanel { flex:1; background:linear-gradient(180deg,#3d52b8 0%,#232f7d 26%,#131c55 100%); border:2px solid #e8e8f2; border-radius:7px; padding:7px 10px 8px; box-shadow:inset 0 0 0 1px #0a0f33, 0 2px 6px rgba(0,0,0,.45); color:#fff; min-width:0; }
   .ffpanel .ffnm { font-weight:800; font-size:12.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-shadow:1px 1px 0 #000; }
-  .ffpanel .ffnm .sub2 { color:#c9d4ff; font-weight:700; font-size:10px; }
+  .ffpanel .ffsub { color:#aab8f0; font-weight:700; font-size:9.5px; margin-top:1px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .ffpanel .ffrow { display:flex; align-items:center; gap:6px; margin-top:5px; }
   .ffpanel .ffl { font-size:9px; font-weight:800; color:#aab8f0; letter-spacing:.4px; min-width:24px; }
   .ffbar { flex:1; height:8px; background:#0a0f33; border:1px solid #6a79c9; border-radius:3px; overflow:hidden; }
@@ -289,6 +289,7 @@
 
   /* héros / classes */
   .classgrid { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+  .classgrid .classcard:nth-child(5):last-child { grid-column:1/-1; }
   .classcard { background:var(--card); border:1.5px solid var(--border); border-radius:15px; padding:13px; cursor:pointer; text-align:center; }
   .classcard.sel { border-color:var(--gold); background:var(--cardAlt); }
   .classcard .em { font-size:34px; display:flex; justify-content:center; align-items:flex-end; min-height:46px; } .classcard .em .pix { height:44px; } .classcard .nm { font-family:var(--serif); font-weight:700; font-size:16px; margin-top:4px; } .classcard .ds { color:var(--muted); font-size:11.5px; margin-top:3px; line-height:1.35; }
@@ -588,16 +589,20 @@ function classImg(cls,h){const key=heroChar(cls),m=SHEET_META[key]||{},fr=sliceS
   const hh=Math.round((m.h||h)*(h/(m.bh||m.h||h))); // h = hauteur du CORPS voulue
   return `<img class="pix" src="${(fr&&fr[0])||''}" style="height:${hh}px;filter:${heroFilter(cls)}">`;}
 // Joue une animation « une fois » sur le sprite du héros / du monstre, puis repos.
-function heroPlay(name,ms){const el=document.getElementById('heroimg');if(el)playOnce(el,heroAnim(name),ms||70,heroFrames(false),200);}
-function mobPlay(name,ms){const el=document.getElementById('mobimg');if(el)playOnce(el,mobAnim(S.floor,S.mi,name),ms||70,mobFrames(S.floor,S.mi),220);}
+function heroPlay(name,ms,soft){const el=document.getElementById('heroimg');if(el)playOnce(el,heroAnim(name),ms||70,heroFrames(false),200,soft);}
+function mobPlay(name,ms,soft){const el=document.getElementById('mobimg');if(el)playOnce(el,mobAnim(S.floor,S.mi,name),ms||70,mobFrames(S.floor,S.mi),220,soft);}
 function pixImg(frames,h,flip){const f=(frames&&frames[0])||'';return `<img class="pix${flip?' flip':''}" src="${f}" style="height:${h}px">`;}
 // moteur d'animation de sprites (cycle des frames, piloté par rAF)
 let animReg=[];
 function clearAnims(){animReg.length=0;}
 function regAnim(el,frames,ms){if(!el||!frames||!frames.length)return;let a=animReg.find(x=>x.el===el);if(a){a.frames=frames;a.i=0;a.last=0;a.ms=ms||180;a.once=false;a.then=null;}else{a={el,frames,i:0,last:0,ms:ms||180,once:false,then:null};animReg.push(a);}el.src=frames[0];return a;}
 // Joue une animation UNE fois (attaque/touché/mort) puis revient à l'animation
-// « then » (repos). Sert aux vraies frames d'attaque des sprites Tiny RPG.
-function playOnce(el,frames,ms,thenFrames,thenMs){if(!el||!frames||!frames.length)return;let a=animReg.find(x=>x.el===el);const cfg={el,frames,i:0,last:0,ms:ms||90,once:true,then:thenFrames&&thenFrames.length?{frames:thenFrames,ms:thenMs||180}:null};if(a)Object.assign(a,cfg);else animReg.push(cfg);el.src=frames[0];return a;}
+// « then » (repos). `soft` : n'interrompt PAS une animation « une fois » déjà en
+// cours (le « touché » ne doit pas écraser une attaque/incantation en plein élan).
+function playOnce(el,frames,ms,thenFrames,thenMs,soft){if(!el||!frames||!frames.length)return;let a=animReg.find(x=>x.el===el);
+  if(soft&&a&&a.once)return a;
+  const cfg={el,frames,i:0,last:0,ms:ms||90,once:true,then:thenFrames&&thenFrames.length?{frames:thenFrames,ms:thenMs||180}:null};
+  if(a)Object.assign(a,cfg);else animReg.push(cfg);el.src=frames[0];return a;}
 function _spriteLoop(t){for(const a of animReg){if(!a.el||!a.el.isConnected)continue;if(t-a.last>=a.ms){a.last=t;
   if(a.once){ if(a.i>=a.frames.length-1){ if(a.then){a.frames=a.then.frames;a.ms=a.then.ms;a.i=0;a.once=false;a.then=null;a.el.src=a.frames[0];} continue; } a.i++; a.el.src=a.frames[a.i]; }
   else { a.i=(a.i+1)%a.frames.length; a.el.src=a.frames[a.i]; }
@@ -908,7 +913,7 @@ const CLASS_TREES={
     {id:'nS4',gx:0,gy:4,req:['nS3'],nm:'Moisson d’âmes',em:'🌾',max:6,ds:'Serviteur +12% de tes dégâts par rang.',ap:(e,l)=>e.minionPct+=0.12*l},
     {id:'nS5',gx:1,gy:5,req:['nS4'],cap:1,nm:'Horde hurlante',em:'💠',max:1,ds:'CAPSTONE : ton serviteur devient une HORDE — ses dégâts ×2, et chaque kill sans être touché nourrit ton Élan (+2% dégâts/palier).',ap:e=>{e.minionPct*=2;e.comboDmg+=0.02}},
     // ── Branche PESTE (poison) ──
-    {id:'nP1',gx:2,gy:1,req:['n0'],nm:'Souffle putride',em:'🫁',max:1,ds:'MÉCANIQUE : ouvre le POISON — 2% des PV max de l’ennemi par seconde.',ap:e=>e.poisonBase+=0.02},
+    {id:'nP1',gx:2,gy:1,req:['n0'],nm:'Souffle putride',em:'☠️',max:1,ds:'MÉCANIQUE : ouvre le POISON — 2% des PV max de l’ennemi par seconde.',ap:e=>e.poisonBase+=0.02},
     {id:'nP2',gx:2,gy:2,req:['nP1'],nm:'Virulence noire',em:'🧪',max:6,ds:'Poison ×1,6 par rang.',ap:(e,l)=>e.poisonMul*=P(1.6,l)},
     {id:'nP3',gx:2,gy:3,req:['nP2'],key:1,nm:'Peste critique',em:'☣️',max:1,ds:'★ KEYSTONE : ton poison profite de ta chance de critique.',ap:e=>e.dotCrit=1},
     {id:'nP4',gx:2,gy:4,req:['nP3'],nm:'Miasmes',em:'🌫️',max:6,ds:'Poison ×1,5 par rang.',ap:(e,l)=>e.poisonMul*=P(1.5,l)},
@@ -920,14 +925,14 @@ const CLASS_TREES={
     {id:'nD4',gx:4,gy:4,req:['nD3'],nm:'Avidité vampirique',em:'🦇',max:6,ds:'Dégâts ×1,24 par rang.',ap:(e,l)=>e.dmgMul*=P(1.24,l)},
     {id:'nD5',gx:4,gy:5,req:['nD4'],cap:1,nm:'Avatar de la mort',em:'💠',max:1,ds:'CAPSTONE : sous 50% PV, +130% dégâts, et bouclier +20% PV max.',ap:e=>{e.dmgLowHp+=1.3;e.shieldMax+=0.20}},
     // ── Branche MALÉDICTION (vulnérabilité & exécution) ──
-    {id:'nM1',gx:5,gy:1,req:['n0'],nm:'Marque funèbre',em:'🪦',max:1,ds:'MÉCANIQUE : ouvre la VULNÉRABILITÉ — l’ennemi subit +22% de TOUS tes dégâts.',ap:e=>e.vulnBase+=0.22},
+    {id:'nM1',gx:5,gy:1,req:['n0'],nm:'Marque funèbre',em:'⚰️',max:1,ds:'MÉCANIQUE : ouvre la VULNÉRABILITÉ — l’ennemi subit +22% de TOUS tes dégâts.',ap:e=>e.vulnBase+=0.22},
     {id:'nM2',gx:6,gy:2,req:['nM1'],nm:'Sceau d’agonie',em:'📿',max:6,ds:'Vulnérabilité ×1,38 par rang.',ap:(e,l)=>e.vulnMul*=P(1.38,l)},
     {id:'nM3',gx:5,gy:3,req:['nM2'],key:1,nm:'Glas final',em:'🔔',max:1,ds:'★ KEYSTONE : exécution — +200% dégâts contre un ennemi sous 30% PV.',ap:e=>{e.execThresh=Math.max(e.execThresh,0.30);e.execMul*=3}},
     {id:'nM4',gx:6,gy:4,req:['nM3'],nm:'Ténèbres voraces',em:'🕳️',max:6,ds:'+50% dégâts d’exécution par rang.',ap:(e,l)=>e.execMul+=0.5*l},
     {id:'nM5',gx:5,gy:5,req:['nM4'],cap:1,nm:'Faucheuse',em:'💠',max:1,ds:'CAPSTONE : seuil d’exécution à 45% PV et 60% du SURPLUS de dégâts déferle sur l’ennemi suivant (Surtue).',ap:e=>{e.execThresh=Math.max(e.execThresh,0.45);e.overkill+=0.6}},
     // ── Transcendances ──
     {id:'nS6',gx:1,gy:6,req:['nS5'],cap:1,nm:'Communion des âmes',em:'👻',max:1,ds:'TRANSCENDANCE : chaque kill lie une ÂME (max 50) — ton serviteur gagne +2% de dégâts par âme. Toutes perdues si tu tombes.',ap:e=>e.soulPct+=0.02},
-    {id:'nP6',gx:2,gy:6,req:['nP5'],cap:1,nm:'Charnier',em:'🪰',max:1,ds:'TRANSCENDANCE : à la mort d’un ennemi, la peste se répand — le suivant subit immédiatement 3 s de tes dégâts sur la durée.',ap:e=>e.dotExplode+=3},
+    {id:'nP6',gx:2,gy:6,req:['nP5'],cap:1,nm:'Charnier',em:'🕷️',max:1,ds:'TRANSCENDANCE : à la mort d’un ennemi, la peste se répand — le suivant subit immédiatement 3 s de tes dégâts sur la durée.',ap:e=>e.dotExplode+=3},
     {id:'nD6',gx:4,gy:6,req:['nD5'],cap:1,nm:'Siphon éternel',em:'🌀',max:1,ds:'TRANSCENDANCE : quand ton bouclier absorbe ENTIÈREMENT un coup, tu DRAINES le frappeur (120% de ton coup).',ap:e=>e.counterPct+=1.2},
     {id:'nM6',gx:5,gy:6,req:['nM5'],cap:1,nm:'Roi des tombes',em:'🏚️',max:1,ds:'TRANSCENDANCE : ton règne funèbre précède tes pas — chaque monstre apparaît déjà BLESSÉ (-12% PV).',ap:e=>e.dreadPct+=0.12},
   ]},
@@ -1384,17 +1389,19 @@ function renderDungeon(){
         <div class="fxbadges" id="fxbadges"></div>
         <div class="combobadge" id="combobadge" style="display:none"></div>
       </div>
-      <!-- Fenêtre de combat façon FF6 : ennemi à gauche, héros à droite -->
+      <!-- Fenêtre de combat façon FF6 : héros à gauche (sous lui), ennemi à droite -->
       <div class="ffwin">
         <div class="ffpanel">
-          <div class="ffnm" id="mobnm"></div>
-          <div class="ffrow"><span class="ffl">PV</span><div class="ffbar"><i id="mbar" style="background:${boss?'linear-gradient(90deg,var(--gold),var(--ember))':'var(--hp)'}"></i></div></div>
-          <div class="ffrow"><span class="ffl">ATB</span><div class="ffbar ffatb"><i id="mobatb"></i></div></div>
-        </div>
-        <div class="ffpanel">
           <div class="ffnm" id="ffheronm">${(CLASSES[S.cls]||CLASSES.guerrier).name}</div>
+          <div class="ffsub" id="ffherosub">Niv. ${S.level}</div>
           <div class="ffrow"><span class="ffl">PV</span><div class="ffbar"><i id="hbar" style="background:var(--regen)"></i></div><span class="ffhp" id="hlbl"></span></div>
           <div class="ffrow"><span class="ffl">ATB</span><div class="ffbar ffatb"><i id="heroatb"></i></div></div>
+        </div>
+        <div class="ffpanel">
+          <div class="ffnm" id="mobnm"></div>
+          <div class="ffsub" id="mobsub"></div>
+          <div class="ffrow"><span class="ffl">PV</span><div class="ffbar"><i id="mbar" style="background:${boss?'linear-gradient(90deg,var(--gold),var(--ember))':'var(--hp)'}"></i></div></div>
+          <div class="ffrow"><span class="ffl">ATB</span><div class="ffbar ffatb"><i id="mobatb"></i></div></div>
         </div>
       </div>
       <div class="comps" id="comps" style="margin-top:8px"></div>
@@ -1438,8 +1445,10 @@ function swapMob(noSlide){
   if(img){img.style.filter=elite?(mobFilter(S.floor)+' drop-shadow(0 0 8px #ffcc4d)'):mobFilter(S.floor);
     spriteFit(img,mobChar(S.floor,S.mi),boss?BOSS_Z:MOB_Z,false);} // FF6 : le monstre regarde à droite, non inversé
   const nm=document.getElementById('mobnm');
-  if(nm){nm.innerHTML=(elite?'★ ':'')+(boss&&!elite?'⚜ ':'')+mobName(S.floor,S.mi)+' <span class="sub2">Étage '+S.floor+' · '+(S.mi+1)+'/'+totalMobs(S.floor)+'</span>';
+  if(nm){nm.textContent=(elite?'★ ':'')+(boss&&!elite?'⚜ ':'')+mobName(S.floor,S.mi);
     nm.classList.toggle('bossnm',boss||elite);nm.classList.toggle('elitenm',elite);}
+  const ms=document.getElementById('mobsub');
+  if(ms)ms.textContent=(elite?'BOSS D’ÉLITE · ':boss?'BOSS · ':'')+'Étage '+S.floor+' · '+(S.mi+1)+'/'+totalMobs(S.floor);
   if(!noSlide){mo.classList.remove('slidein');void mo.offsetWidth;mo.classList.add('slidein');}
 }
 function renderComps(){
@@ -1497,7 +1506,7 @@ function updateDungeon(full){
   if(ha)ha.classList.toggle('full',heroATB>=.985);
   const mel=document.getElementById('mob'); if(mel)mel.classList.toggle('frozen',frozen);
   const shieldTxt=(S.shield||0)>=1?' · 🛡 '+fmt(Math.ceil(S.shield)):'';
-  set('hlbl',fmt(Math.max(0,Math.ceil(S.hp)))+'/'+fmt(Math.ceil(d.maxHp))+shieldTxt);
+  set('hlbl',fmt(Math.max(0,Math.ceil(S.hp)))+'/'+fmt(Math.ceil(d.maxHp))+shieldTxt); set('ffherosub','Niv. '+S.level+' · classe '+classLevelOf(S.classXp[S.cls||'guerrier']||0));
   // Badge d'élan de combat (dégâts cumulés en enchaînant les kills sans se faire toucher).
   syncPet(d); // serviteur squelette du Nécromancien
   const cb=document.getElementById('combobadge');
@@ -1549,7 +1558,7 @@ function mobAttack(){ // charge du monstre au corps-à-corps (vraie frame d'atta
 function slashMob(crit){
   const m=document.getElementById('mob'); if(!m)return;
   m.classList.remove('hit'); void m.offsetWidth; m.classList.add('hit');
-  mobPlay('hurt',70); // le monstre joue sa vraie frame de « touché »
+  mobPlay('hurt',70,true); // vraie frame de « touché » (n'interrompt pas son attaque)
   const s=document.createElement('div'); s.className='slash'; if(crit)s.style.borderColor='var(--gold) transparent transparent var(--gold)'; m.appendChild(s); setTimeout(()=>s.remove(),260);
   const im=document.createElement('div'); im.className='impact'; const sz=crit?46:30; im.style.cssText+=`left:${-4-(crit?8:0)}px;top:20%;width:${sz}px;height:${sz}px`; if(crit)im.style.background='radial-gradient(circle,#ffe08a 0%,transparent 62%)'; m.appendChild(im); setTimeout(()=>im.remove(),300);
   if(crit){const sc=document.querySelector('.scene'); if(sc){sc.classList.remove('shakeS');void sc.offsetWidth;sc.classList.add('shakeS');}}
@@ -1568,6 +1577,7 @@ function rollCritLayers(d){
 }
 function onTapMob(e){
   SND.unlock();
+  if(mobDying>0)return; // le monstre est déjà en train de tomber
   const d=D(); const layers=rollCritLayers(d); const crit=layers>0;
   const hits=1+rollLayers(d.multi); // multi-attaque : coups supplémentaires
   const mult=(crit?Math.pow(d.critMult,layers):1)*hits;
@@ -1586,8 +1596,9 @@ function onTapMob(e){
 }
 let killFx=0;
 function damageMonster(amount){
+  if(mobDying>0)return; // il est déjà en train de tomber
   S.mhp-=amount; S.totalDmg+=amount;
-  if(S.mhp<=0) killMonster();
+  if(S.mhp<=0) startMobDeath(); // agonie 0,5 s, puis killMonster() via la boucle
   else updateDungeon(false);
 }
 // Le monstre vaincu joue sa VRAIE animation de mort (frames Death du pack),
@@ -1614,7 +1625,7 @@ function killMonster(){
   if((d.ce.gemEvery||0)>0 && S.kills%d.ce.gemEvery===0){ S.gems+=1; spawnFloat('+1','var(--gem)',true,50,'gem'); }
   const nl=levelFromXp(S.xp); if(nl>oldLvl){S.gems+=(nl-oldLvl);S.level=nl;pushLog('⭐ Niveau '+nl+' atteint ! +'+(nl-oldLvl)+' 💎');}
   spawnFloat('+'+fmt(g),'var(--gold)',false,50,'coin');
-  if(tab==='dungeon'){ ghostMobDeath(deathFrames,boss); spawnSparks(boss?20:9,boss?'#ffcc4d':'#ff5d7a'); coinFly(boss?9:4); }
+  if(tab==='dungeon'){ ghostMobDeath(deathFrames.slice(-1),boss); spawnSparks(boss?20:9,boss?'#ffcc4d':'#ff5d7a'); coinFly(boss?9:4); }
   if(boss){
     let gem=1+Math.floor(S.floor/2); if(elite)gem*=3; S.gems+=gem;
     if(elite){ const bonusG=Math.round(g*4); S.gold+=bonusG; pushLog('★ BOSS D’ÉLITE étage '+S.floor+' terrassé ! +'+gem+' 💎 & butin ×5 !'); spawnFloat('BUTIN ×5','var(--gold)',true,50,'coin'); }
@@ -1880,7 +1891,7 @@ function renderHero(){
   const d=D(),cur=xpForLevel(S.level),nxt=xpForLevel(S.level+1);
   const UPG=[{k:'atk',em:'⚔️',nm:'Aiguiser la lame',ds:'+3 attaque',col:'var(--hp)'},{k:'power',em:'💪',nm:'Puissance',ds:'+6% dégâts',col:'var(--hp)'},{k:'critdmg',em:'💥',nm:'Cruauté',ds:'+10% dégâts critiques',col:'var(--ember)'},{k:'crit',em:'🎯',nm:"Œil du chasseur",ds:'+2% critique',col:'var(--gold)'},{k:'speed',em:'⚡',nm:'Célérité',ds:"+3% vitesse d'attaque",col:'var(--xp)'},{k:'multi',em:'🌀',nm:'Frappe multiple',ds:'+4% multi-attaque',col:'var(--gem)'},{k:'click',em:'🗡️',nm:'Dague affûtée',ds:'+3 dégâts de clic',col:'var(--xp)'},{k:'maxHp',em:'🛡️',nm:"Armure",ds:'+20 PV max',col:'var(--regen)'},{k:'regen',em:'🧪',nm:'Élixir de régén.',ds:'+2 régén./s',col:'var(--sommeil)'}];
   screen.innerHTML=`<div class="header"><h1>Héros</h1><div class="goldpill"><span style="color:var(--gold);display:inline-flex;vertical-align:middle">${ic('coin',15)}</span> ${fmt(S.gold)}</div></div>
-    <div class="card" style="text-align:center"><div style="display:flex;justify-content:center;height:72px;align-items:flex-end">${classImg(S.cls||'guerrier',74)}</div>
+    <div class="card" style="text-align:center"><div style="display:flex;justify-content:center;height:66px;align-items:flex-end;overflow:hidden">${classImg(S.cls||'guerrier',56)}</div>
       <div style="font-family:var(--serif);font-size:20px;font-weight:700;margin-top:4px">Niveau ${S.level} · ${d.c.name} <span style="color:var(--gem);font-size:14px">(classe niv. ${classLevelOf(S.classXp[S.cls||'guerrier']||0)})</span></div>
       <div class="sub num">${fmt(S.xp-cur)} / ${fmt(nxt-cur)} XP</div>
       <div class="bar" style="margin-top:7px;height:9px"><i style="background:var(--xp);width:${Math.min(100,(S.xp-cur)/(nxt-cur)*100)}%"></i></div></div>
@@ -2065,10 +2076,16 @@ function coffreOverlay(r){
 }
 
 // ============ Boucle idle (100ms) — combat ATB ============
-let floatAcc=0, heroATB=0, mobATB=0, heroHold=0, mobHold=0;
+let floatAcc=0, heroATB=0, mobATB=0, heroHold=0, mobHold=0, mobDying=0;
+// Le monstre vient de tomber : il joue son animation de MORT SUR PLACE pendant
+// ~0,5 s (tout se fige autour), puis le butin tombe et la course reprend.
+function startMobDeath(){
+  if(mobDying>0)return; mobDying=0.5;
+  if(tab==='dungeon'){ const el=document.getElementById('mobimg'); if(el)playOnce(el,mobAnim(S.floor,S.mi,'death'),90,null); SND.kill&&SND.kill(); }
+}
 function heroDies(){
   // Le héros tombe : il recommence l'étage depuis le premier monstre.
-  S.hp=D().maxHp; S.mi=0; S.mhp=monsterMaxHp(S.floor,0); S.rampStacks=0; mobATB=0; heroATB=0; heroHold=0; mobHold=0; S.combo=0; S.shield=0; S.frozen=0; S.souls=0;
+  S.hp=D().maxHp; S.mi=0; S.mhp=monsterMaxHp(S.floor,0); S.rampStacks=0; mobATB=0; heroATB=0; heroHold=0; mobHold=0; mobDying=0; S.combo=0; S.shield=0; S.frozen=0; S.souls=0;
   pushLog('💀 Héros terrassé à l’étage '+S.floor+' — il repart au début de l’étage.');
   if(tab==='dungeon'){heroPlay('death',110); const h=document.getElementById('hero');if(h){h.classList.remove('hurt');void h.offsetWidth;h.classList.add('hurt');} SND.boss&&SND.boss(); haptic([40,60,40]); if(typeof advanceScene==='function')advanceScene();}
   save();updateDungeon(true);
@@ -2122,14 +2139,15 @@ function flyProjectile(kind,rev,ms,onArrive){
   requestAnimationFrame(()=>requestAnimationFrame(()=>{img.style.left=rev?'24%':'64%';}));
   setTimeout(()=>{ if(iv)clearInterval(iv); img.remove(); onArrive&&onArrive(); },ms);
 }
-// Sort qui éclate SUR la cible (effet du pack joué une fois à sa position).
+// Sort qui éclate SUR la cible : l'effet est ANCRÉ au combattant lui-même
+// (il suit ses déplacements, disparaît avec lui — plus d'éclat dans le vide).
 function burstSpell(kind,onHero,onArrive){
-  const sc=document.querySelector('.scene'); if(!sc){onArrive&&onArrive();return;}
+  const host=document.getElementById(onHero?'hero':'mob');
+  if(!host || (!onHero&&mobDying>0)){ onArrive&&onArrive(); return; }
   const fr=sliceSheet(kind+'_fly')||[]; const m=SHEET_META[kind]||{h:20};
   const img=document.createElement('img'); img.className='pix spellfx';
   img.src=fr[0]||''; img.style.height=Math.round(m.h*2.1)+'px';
-  img.style[onHero?'left':'right']=onHero?'12%':'8%';
-  sc.appendChild(img);
+  host.appendChild(img);
   let i=0; const iv=setInterval(()=>{ i++; if(i>=fr.length){clearInterval(iv);img.remove();} else img.src=fr[i]; },70);
   setTimeout(()=>{ onArrive&&onArrive(); },150); // les dégâts tombent quand le sort éclate
   setTimeout(()=>{ clearInterval(iv); img.remove(); },70*Math.max(3,fr.length)+80);
@@ -2180,7 +2198,7 @@ function monsterTurn(d,animate){
 // (vraie frame Block) ; les autres classes encaissent sans broncher.
 function heroBlock(){
   const c=heroChar();
-  if(SHEETS[c+'_block']){ const el=document.getElementById('heroimg'); if(el)playOnce(el,sliceSheet(c+'_block'),80,heroFrames(false),200); }
+  if(SHEETS[c+'_block']){ const el=document.getElementById('heroimg'); if(el)playOnce(el,sliceSheet(c+'_block'),80,heroFrames(false),200,true); }
   const h=document.getElementById('hero'); if(h){h.classList.remove('flinch');void h.offsetWidth;h.classList.add('flinch');}
   haptic(3);
 }
@@ -2189,7 +2207,7 @@ function freezeFx(){ const m=document.getElementById('mob'); if(!m)return; const
 // Réaction du héros quand il encaisse (utilisé aussi à l'arrivée d'un projectile).
 function heroFlinch(){
   const h=document.getElementById('hero'); if(h){h.classList.remove('flinch');void h.offsetWidth;h.classList.add('flinch');}
-  heroPlay('hurt',70); // vraie frame de « touché » du héros
+  heroPlay('hurt',70,true); // vraie frame de « touché » (n'interrompt pas une attaque en cours)
   const sc=document.querySelector('.scene'); if(sc){const c=document.createElement('div');c.className='clash';sc.appendChild(c);setTimeout(()=>c.remove(),320);}
   haptic(4);
 }
@@ -2232,7 +2250,12 @@ setInterval(()=>{
   }
   if(floatAcc>=0.6){ if(tab==='dungeon'&&dot>0)spawnFloat(fmt(dot*0.6),'var(--ember)',false,66,'flame'); floatAcc=0; }
   if(S.hp<=0){ heroDies(); }
-  else if(S.mhp<=0){ killMonster(); mobATB=0; heroATB=0; heroHold=0; mobHold=0; } // nouveau monstre : jauges à zéro
+  else if(mobDying>0){ // agonie : le monstre joue sa mort, tout attend ~0,5 s
+    mobDying-=dt;
+    if(mobDying<=0){ mobDying=0;
+      if(S.mhp<=0){ killMonster(); mobATB=0; heroATB=0; heroHold=0; mobHold=0; } }
+  }
+  else if(S.mhp<=0){ startMobDeath(); }
   else if(tab==='dungeon') updateDungeon(false);
   checkAch();
   if(tab!=='dungeon')renderCur();
