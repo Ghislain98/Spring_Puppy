@@ -185,7 +185,7 @@
   .scene .mob.hit .pix:not(.spellfx) { animation:ffhitflash .3s steps(1), ffhitknock .3s cubic-bezier(.2,.8,.3,1); }
   @keyframes ffhitflash { 0%{filter:brightness(3.4) saturate(.15) drop-shadow(0 0 8px #fff)} 34%{filter:none} 55%{filter:brightness(3.2) saturate(.2) drop-shadow(0 0 6px #fff)} 78%,100%{filter:none} }
   @keyframes ffhitknock { 0%{transform:scaleX(-1) translateX(-3px) scaleY(.92)} 24%{transform:scaleX(-1) translateX(-10px) scaleY(.88)} 62%{transform:scaleX(-1) translateX(-3px) scaleY(1)} 100%{transform:scaleX(-1)} }
-  .scene .mob .slash { position:absolute; left:18%; top:26%; width:44px; height:44px; border:4px solid #fff; border-color:#fff transparent transparent #fff; border-radius:50%; pointer-events:none; opacity:0; animation:slashfx .24s ease-out forwards; z-index:6; filter:drop-shadow(0 0 5px #fff); }
+  .scene .mob .slash { position:absolute; left:50%; margin-left:-22px; top:26%; width:44px; height:44px; border:4px solid #fff; border-color:#fff transparent transparent #fff; border-radius:50%; pointer-events:none; opacity:0; animation:slashfx .24s ease-out forwards; z-index:6; filter:drop-shadow(0 0 5px #fff); }
   @keyframes slashfx { 0%{opacity:0;transform:rotate(8deg) scale(.3)} 40%{opacity:.95} 100%{opacity:0;transform:rotate(62deg) scale(1.15)} }
   /* Le héros encaisse : flash blanc sec + recul fluide avec écrasement. */
   .scene .hero.hurt .pix:not(.spellfx) { animation:ffhurtflash .32s steps(1), ffhurtknock .32s cubic-bezier(.2,.8,.3,1); }
@@ -1452,7 +1452,7 @@ function swapMob(noSlide){
   mo.classList.toggle('boss',boss); mo.classList.toggle('elite',elite);
   const img=document.getElementById('mobimg');regAnim(img,mobFrames(S.floor,S.mi),220);
   if(img){img.style.filter=elite?(mobFilter(S.floor)+' drop-shadow(0 0 8px #ffcc4d)'):mobFilter(S.floor);
-    spriteFit(img,mobChar(S.floor,S.mi),boss?BOSS_Z:MOB_Z,false);} // FF6 : le monstre regarde à droite, non inversé
+    spriteFit(img,mobChar(S.floor,S.mi),boss?BOSS_Z:MOB_Z,true);} // le CSS retourne le monstre (scaleX(-1)) : compense le recentrage du corps dans ce sens
   const nm=document.getElementById('mobnm');
   if(nm){nm.textContent=(elite?'★ ':'')+(boss&&!elite?'⚜ ':'')+mobName(S.floor,S.mi);
     nm.classList.toggle('bossnm',boss||elite);nm.classList.toggle('elitenm',elite);}
@@ -1570,7 +1570,7 @@ function slashMob(crit,spell){
   if(typeof hitStop==='function')hitStop(crit?115:65); // le coup PÈSE : la timeline se fige un instant
   // Un SORT montre sa propre explosion : pas d'arc d'épée ni de gros flash blanc par-dessus.
   if(!spell){ const s=document.createElement('div'); s.className='slash'; if(crit)s.style.borderColor='var(--gold) transparent transparent var(--gold)'; m.appendChild(s); setTimeout(()=>s.remove(),260); }
-  const im=document.createElement('div'); im.className='impact'; const sz=spell?(crit?34:22):(crit?60:40); im.style.cssText+=`left:${-8-(crit?10:0)}px;top:16%;width:${sz}px;height:${sz}px`; if(crit)im.style.background='radial-gradient(circle,#fff 0%,#ffe08a 34%,transparent 62%)'; m.appendChild(im); setTimeout(()=>im.remove(),300);
+  const im=document.createElement('div'); im.className='impact'; const sz=spell?(crit?34:22):(crit?60:40); im.style.cssText+=`left:50%;margin-left:${-Math.round(sz/2)-4}px;top:16%;width:${sz}px;height:${sz}px`; if(crit)im.style.background='radial-gradient(circle,#fff 0%,#ffe08a 34%,transparent 62%)'; m.appendChild(im); setTimeout(()=>im.remove(),300);
   if(crit){const sc=document.querySelector('.scene'); if(sc){sc.classList.remove('shakeS');void sc.offsetWidth;sc.classList.add('shakeS');}
     if(!spell)burstFrames(false,'fximpact',[5,6,7,8,9],42,0.72,'16%');} // éclat blanc qui gicle sur les critiques
 }
@@ -2096,6 +2096,10 @@ function clearActs(){AQ.forEach(killAct);if(curAct)killAct(curAct);AQ.length=0;c
 function dropMobActs(){AQ=AQ.filter(a=>{if(a.actor!=='mob')return true;killAct(a);return false;});
   if(curAct&&curAct.actor==='mob'){killAct(curAct);curAct=null;setFighterX('mob',0);}}
 const easeOut=t=>1-Math.pow(1-t,2), easeIn=t=>t*t;
+// Centre (px scène) d'un combattant — spriteFit centre le CORPS sur sa div.
+function fighterCx(id){const sc=document.getElementById('scene'),el=document.getElementById(id);
+  if(!sc||!el)return null;const r=el.getBoundingClientRect(),s=sc.getBoundingClientRect();
+  return r.left-s.left+r.width/2;}
 // Le dash s'arrête AU BORD de l'ennemi (pas à travers lui).
 function dashDist(){const sc=document.getElementById('scene');const w=(sc&&sc.clientWidth)||346;return Math.max(100,Math.round(w*0.74-86));}
 function sceneW(){const sc=document.getElementById('scene');return (sc&&sc.clientWidth)||346;}
@@ -2154,22 +2158,26 @@ function actHeroCast(strike){
   if(cls==='necromancien'){ actNecroCast(strike); return; }
   const mage=cls==='mage', kind=mage?'fxfire':'fxarrow';
   const TR=mage?[0,1,2,3]:[0]; // fxfire 0-3 = boule + traîne · 4-6 = explosion (gardées pour l'impact)
-  let proj=null, projFr=null, projI=0, projAcc=0;
+  let proj=null, projFr=null, projI=0, projAcc=0, pw=0, tip0=0, tip1=0;
   enqueueAct({actor:'hero',dur:760,
     events:[
       {at:0.04,fire:()=>heroPlay(CAST_ANIM[cls]||'atk1',60)},
       {at:0.38,fire:()=>{const sc=document.getElementById('scene');if(!sc)return;
-          projFr=sliceSheet(kind+'_fly')||[];const m=SHEET_META[kind]||{h:10};
+          projFr=sliceSheet(kind+'_fly')||[];const m=SHEET_META[kind]||{h:10,w:20};
+          const Z=mage?2.0:1.8; pw=Math.round((m.w||20)*Z);
+          // le projectile PART de la main/du bâton et son NEZ finit sur le corps de la cible
+          const hx=fighterCx('hero'), mx=fighterCx('mob');
+          tip0=(hx!=null?hx+26:w*0.26); tip1=(mx!=null?mx+4:w*0.84);
           proj=document.createElement('img');proj.className='pix projimg';proj.src=projFr[TR[0]]||'';
-          proj.style.height=Math.round(m.h*(mage?2.0:1.8))+'px';sc.appendChild(proj);}},
+          proj.style.height=Math.round(m.h*Z)+'px';proj.style.left=Math.round(tip0-pw)+'px';sc.appendChild(proj);}},
       {at:0.74,fire:()=>{if(proj){proj.remove();proj=null;}
           if(mage)burstFrames(false,'fxfire',[4,5,6],62,2.5,'26%');
           strike();}},
     ],
     update:p=>{
       setFighterX('hero',p<0.25?-8*Math.sin(p/0.25*Math.PI):0);
-      if(proj){const f=(p-0.38)/0.36, x0=w*0.20, x1=w*0.80;
-        proj.style.left=Math.round(x0+(x1-x0)*Math.min(1,Math.max(0,f)))+'px';
+      if(proj){const f=Math.min(1,Math.max(0,(p-0.38)/0.36));
+        proj.style.left=Math.round(tip0+(tip1-tip0)*f-pw)+'px';
         projAcc++; if(TR.length>1&&projAcc%3===0){projI=(projI+1)%TR.length;proj.src=projFr[TR[projI]];}}
     },
     clean:()=>{if(proj){proj.remove();proj=null;}},
@@ -2215,7 +2223,7 @@ function actMobMelee(strike){
 }
 function actMobCast(strike){
   const archer=mobChar(S.floor,S.mi)==='skeleton_archer', w=sceneW();
-  let proj=null, projFr=null, fxFr=null, fxImg=null;
+  let proj=null, projFr=null, fxFr=null, fxImg=null, tip0=0, tip1=0;
   // Pilier du sorcier : frames 0-1 = trait qui TÉLÉGRAPHIE le sort, la colonne de
   // flammes monte pile quand les dégâts tombent (frame 3), puis se dissipe.
   const PSCH=[[0.36,0],[0.42,1],[0.47,2],[0.53,3],[0.62,4],[0.70,5],[0.78,6],[0.86,7],[0.92,8]];
@@ -2224,8 +2232,10 @@ function actMobCast(strike){
       {at:0.04,fire:()=>mobPlay('atk1',60)},
       archer?{at:0.40,fire:()=>{const sc=document.getElementById('scene');if(!sc)return;
               projFr=sliceSheet('fxarrow_fly')||[];const m=SHEET_META.fxarrow||{h:7};
+              const hx=fighterCx('hero'), mx=fighterCx('mob');
+              tip0=(mx!=null?mx-26:w*0.78); tip1=(hx!=null?hx-4:w*0.20); // pointe (à gauche) : de l'arc au corps du héros
               proj=document.createElement('img');proj.className='pix projimg rev pixflip';proj.src=projFr[0]||'';
-              proj.style.height=Math.round(m.h*1.8)+'px';sc.appendChild(proj);}}
+              proj.style.height=Math.round(m.h*1.8)+'px';proj.style.left=Math.round(tip0)+'px';sc.appendChild(proj);}}
             :{at:0.36,fire:()=>{const host=document.getElementById('hero'); if(!host)return;
               fxFr=sliceSheet('fxwarlock_fly')||[]; const m=SHEET_META.fxwarlock||{h:55};
               fxImg=document.createElement('img'); fxImg.className='pix spellfx'; fxImg.src=fxFr[0]||'';
@@ -2233,8 +2243,8 @@ function actMobCast(strike){
       archer?{at:0.78,fire:()=>{if(proj){proj.remove();proj=null;}strike();}}:{at:0.53,fire:strike},
     ],
     update:p=>{
-      if(proj){const f=(p-0.40)/0.38, x0=w*0.82, x1=w*0.18;
-        proj.style.left=Math.round(x0+(x1-x0)*Math.min(1,Math.max(0,f)))+'px';}
+      if(proj){const f=Math.min(1,Math.max(0,(p-0.40)/0.38));
+        proj.style.left=Math.round(tip0+(tip1-tip0)*f)+'px';}
       if(fxImg&&fxFr){ let i=0; for(const s of PSCH){if(p>=s[0])i=s[1];}
         if(fxFr[i]&&fxImg.src!==fxFr[i])fxImg.src=fxFr[i]; }
     },
