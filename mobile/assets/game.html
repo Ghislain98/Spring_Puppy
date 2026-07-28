@@ -2100,8 +2100,12 @@ const easeOut=t=>1-Math.pow(1-t,2), easeIn=t=>t*t;
 function fighterCx(id){const sc=document.getElementById('scene'),el=document.getElementById(id);
   if(!sc||!el)return null;const r=el.getBoundingClientRect(),s=sc.getBoundingClientRect();
   return r.left-s.left+r.width/2;}
-// Le dash s'arrête AU BORD de l'ennemi (pas à travers lui).
-function dashDist(){const sc=document.getElementById('scene');const w=(sc&&sc.clientWidth)||346;return Math.max(100,Math.round(w*0.74-86));}
+// Le dash s'arrête AU CONTACT du corps de l'ennemi (calculé sur les vraies
+// positions des deux corps — à figer UNE FOIS au départ de l'action).
+function dashDist(){
+  const hx=fighterCx('hero'), mx=fighterCx('mob');
+  if(hx!=null&&mx!=null&&mx>hx) return Math.max(60,Math.round(mx-hx-62));
+  const sc=document.getElementById('scene');const w=(sc&&sc.clientWidth)||346;return Math.max(100,Math.round(w*0.74-120));}
 function sceneW(){const sc=document.getElementById('scene');return (sc&&sc.clientWidth)||346;}
 // Défilement du décor piloté par la timeline (murs en parallaxe lente, sol
 // rapide, torches qui suivent le mur) — zéro animation CSS.
@@ -2133,6 +2137,7 @@ requestAnimationFrame(battleLoop);
 // --- Attaque de MÊLÉE du héros : élan → course au bord de l'ennemi → frappe →
 // retour LISIBLE (~260 ms, en courant) ---
 function actHeroMelee(strike){
+  let dx=null; // distance figée au premier tick (les corps sont au repos)
   enqueueAct({actor:'hero',dur:640,
     events:[
       {at:0.06,fire:()=>heroRun(true)},
@@ -2141,7 +2146,7 @@ function actHeroMelee(strike){
       {at:0.60,fire:()=>heroRun(true)},
       {at:0.97,fire:()=>heroRun(false)},
     ],
-    update:p=>{const dx=dashDist();let x;
+    update:p=>{if(dx==null)dx=dashDist();let x;
       if(p<0.06)x=-10*(p/0.06);
       else if(p<0.32)x=-10+(dx+10)*easeOut((p-0.06)/0.26);
       else if(p<0.60)x=dx;
@@ -2169,9 +2174,11 @@ function actHeroCast(strike){
           const hx=fighterCx('hero'), mx=fighterCx('mob');
           tip0=(hx!=null?hx+26:w*0.26); tip1=(mx!=null?mx+4:w*0.84);
           proj=document.createElement('img');proj.className='pix projimg';proj.src=projFr[TR[0]]||'';
-          proj.style.height=Math.round(m.h*Z)+'px';proj.style.left=Math.round(tip0-pw)+'px';sc.appendChild(proj);}},
+          proj.style.height=Math.round(m.h*Z)+'px';proj.style.left=Math.round(tip0-pw)+'px';
+          proj.style.bottom=mage?'30px':'42px'; // au niveau du bâton tendu / de l'arc, pas de la tête
+          sc.appendChild(proj);}},
       {at:0.74,fire:()=>{if(proj){proj.remove();proj=null;}
-          if(mage)burstFrames(false,'fxfire',[4,5,6],62,2.5,'26%');
+          if(mage)burstFrames(false,'fxfire',[4,5,6],62,2.5,'14%');
           strike();}},
     ],
     update:p=>{
@@ -2208,12 +2215,13 @@ function actNecroCast(strike){
 }
 // --- Riposte du monstre : mêlée (course au contact) ou sort sur le héros ---
 function actMobMelee(strike){
+  let dx=null; // distance figée au premier tick (les corps sont au repos)
   enqueueAct({actor:'mob',dur:640,
     events:[
       {at:0.28,fire:()=>mobPlay('atk1',60)},
       {at:0.40,fire:strike},
     ],
-    update:p=>{const dx=dashDist();let x;
+    update:p=>{if(dx==null)dx=dashDist();let x;
       if(p<0.06)x=10*(p/0.06);
       else if(p<0.32)x=10-(dx+10)*easeOut((p-0.06)/0.26);
       else if(p<0.60)x=-dx;
@@ -2235,7 +2243,8 @@ function actMobCast(strike){
               const hx=fighterCx('hero'), mx=fighterCx('mob');
               tip0=(mx!=null?mx-26:w*0.78); tip1=(hx!=null?hx-4:w*0.20); // pointe (à gauche) : de l'arc au corps du héros
               proj=document.createElement('img');proj.className='pix projimg rev pixflip';proj.src=projFr[0]||'';
-              proj.style.height=Math.round(m.h*1.8)+'px';proj.style.left=Math.round(tip0)+'px';sc.appendChild(proj);}}
+              proj.style.height=Math.round(m.h*1.8)+'px';proj.style.left=Math.round(tip0)+'px';
+              proj.style.bottom='42px'; sc.appendChild(proj);}}
             :{at:0.36,fire:()=>{const host=document.getElementById('hero'); if(!host)return;
               fxFr=sliceSheet('fxwarlock_fly')||[]; const m=SHEET_META.fxwarlock||{h:55};
               fxImg=document.createElement('img'); fxImg.className='pix spellfx'; fxImg.src=fxFr[0]||'';
