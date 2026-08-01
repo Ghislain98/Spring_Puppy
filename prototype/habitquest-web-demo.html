@@ -366,9 +366,11 @@
   .switch i { position:absolute; top:2px; left:2px; width:20px; height:20px; border-radius:50%; background:var(--faint); transition:left .15s,background .15s; }
   .switch.on { background:linear-gradient(90deg,var(--goldDim),var(--gold)); border-color:var(--gold); }
   .switch.on i { left:22px; background:#2a1c00; }
-  .flt { position:absolute; font-weight:900; font-variant-numeric:tabular-nums; text-shadow:0 1px 4px #000; --dx:0px; --rot:0deg; animation:flt .85s cubic-bezier(.2,.7,.3,1) forwards; will-change:transform,opacity; z-index:5; }
-  .flt.crit { filter:drop-shadow(0 0 9px var(--gold)); }
-  @keyframes flt { 0%{opacity:0;transform:translate(-50%,0) scale(.5)} 14%{opacity:1;transform:translate(calc(-50% + var(--dx)*.3),-12px) scale(1.3) rotate(var(--rot))} 100%{opacity:0;transform:translate(calc(-50% + var(--dx)),-64px) scale(1) rotate(var(--rot))} }
+  .flt { position:absolute; font-weight:900; font-variant-numeric:tabular-nums; text-shadow:0 1px 4px #000, 0 0 12px rgba(0,0,0,.8); --dx:0px; --rot:0deg; animation:flt .9s cubic-bezier(.2,.7,.3,1) forwards; will-change:transform,opacity; z-index:5; }
+  .flt.crit { filter:drop-shadow(0 0 11px var(--gold)); animation:fltcrit 1s cubic-bezier(.2,.7,.3,1) forwards; }
+  @keyframes flt { 0%{opacity:0;transform:translate(-50%,4px) scale(.4)} 16%{opacity:1;transform:translate(calc(-50% + var(--dx)*.3),-14px) scale(1.42) rotate(var(--rot))} 34%{transform:translate(calc(-50% + var(--dx)*.5),-24px) scale(1.06) rotate(var(--rot))} 100%{opacity:0;transform:translate(calc(-50% + var(--dx)),-70px) scale(.94) rotate(var(--rot))} }
+  /* Critique : ÉNORME pop avec dépassement puis tassement — le chiffre claque. */
+  @keyframes fltcrit { 0%{opacity:0;transform:translate(-50%,8px) scale(.3)} 12%{opacity:1;transform:translate(calc(-50% + var(--dx)*.3),-14px) scale(1.9) rotate(var(--rot))} 30%{transform:translate(calc(-50% + var(--dx)*.5),-22px) scale(1.15) rotate(var(--rot))} 44%{transform:translate(calc(-50% + var(--dx)*.6),-30px) scale(1.32) rotate(var(--rot))} 100%{opacity:0;transform:translate(calc(-50% + var(--dx)),-80px) scale(1.05) rotate(var(--rot))} }
   .mob { position:relative; z-index:1; }
   @keyframes hit { 0%{transform:scale(1)} 30%{transform:scale(1.2,.8) rotate(-5deg)} 60%{transform:scale(.9,1.1) rotate(3deg)} 100%{transform:scale(1)} }
   .mobglow { position:absolute; left:50%; top:40%; width:150px; height:150px; margin:-75px 0 0 -75px; border-radius:50%; background:radial-gradient(circle,rgba(255,120,90,.25),transparent 66%); pointer-events:none; z-index:0; animation:glowpulse 2.3s ease-in-out infinite; }
@@ -586,11 +588,16 @@ const MOB_NAMES={slime:'Slime',bat:'Chauve-souris',skeleton:'Squelette',skeleton
  black_knight_c:'Chevalier du néant',demoness_a:'Reine démone',demon_d:'Seigneur démon',flamegolem:'Golem de lave'};
 const mobName=(f,i)=>MOB_NAMES[mobChar(f,i)]||'Monstre';
 // Image statique tintée du héros (pour les cartes de classe / écrans).
+// Certains sprites lisent « petit » à corps égal (silhouettes fines/sombres) :
+// boost de taille par classe pour équilibrer la perception.
+const PORTRAIT_BOOST={necromancien:1.4};
 function classImg(cls,h){
   // Portrait CADRÉ : fenêtre fixe autour du CORPS (pieds posés, centré),
   // les grandes armes/boîtes qui débordent sont rognées proprement.
   const key=heroChar(cls),m=SHEET_META[key]||{},fr=sliceSheet(key+'_idle');
-  const Z=h/(m.bh||m.h||h), W=Math.round(h*1.35), H=Math.round(h*1.12);
+  const W=Math.round(h*1.35), H=Math.round(h*1.12);
+  h=Math.round(h*(PORTRAIT_BOOST[cls]||1));
+  const Z=h/(m.bh||m.h||h);
   const imgH=Math.round((m.h||h)*Z), bx=(m.bx!=null?m.bx:(m.w||0)/2);
   const left=Math.round(W/2-bx*Z), bottom=Math.round(-(m.fo||0)*Z);
   return `<span style="display:inline-block;position:relative;width:${W}px;height:${H}px;overflow:hidden;vertical-align:bottom">`+
@@ -688,8 +695,8 @@ const isBoss=(f,i)=> i>=regularMobs(f);
 const isElite=(f,i)=> isBoss(f,i)&&f%5===0; // boss d'élite tous les 5 étages
 const xpForLevel=l=>Math.floor(50*(l-1)*l);
 const levelFromXp=xp=>{let l=1;while(xpForLevel(l+1)<=xp)l++;return l;};
-const monsterMaxHp=(f,i)=>Math.ceil(42*Math.pow(1.33,f-1)*(1+i*0.09)*(isBoss(f,i)?4.5:1)*(isElite(f,i)?2.2:1));
-const monsterAtk=(f,i)=>Math.ceil(2.4*Math.pow(1.24,f-1)*(isBoss(f,i)?1.8:1));
+const monsterMaxHp=(f,i)=>Math.ceil(42*Math.pow(1.385,f-1)*(1+i*0.09)*(isBoss(f,i)?4.5:1)*(isElite(f,i)?2.2:1)); // montée d'étage plus EXIGEANTE : chaque étage se mérite
+const monsterAtk=(f,i)=>Math.ceil(2.4*Math.pow(1.26,f-1)*(isBoss(f,i)?1.8:1));
 const goldPerKill=(f,i)=>Math.ceil(6*Math.pow(1.3,f-1)*(isBoss(f,i)?6:1));
 const xpPerKill=(f,i)=>Math.ceil(8*Math.pow(1.25,f-1)*(isBoss(f,i)?5:1));
 const compCost=(cp,count)=>Math.ceil(cp.base*Math.pow(1.15,count));
@@ -778,7 +785,7 @@ function save(){S.lastActive=Date.now();localStorage.setItem('habitquest-demo2',
 // Progression de classe VOLONTAIREMENT lente : 1 point de talent tous les 10
 // niveaux, l'arbre (~60 pts) se remplit sur des dizaines d'heures, puis c'est
 // du parangon infini. Courbe ~cubique pour que chaque niveau coûte bien plus.
-const classXpForLevel=l=>Math.floor(90*Math.pow(l,2.5));
+const classXpForLevel=l=>Math.floor(46*Math.pow(l,2.24)); // niveaux de classe plus fréquents → les talents avancent VRAIMENT
 const classLevelOf=xp=>{let l=1;while(classXpForLevel(l+1)<=xp)l++;return l;};
 // Chaque classe : 1 racine qui s'ouvre en 4 BRANCHES indépendantes qui ne se
 // rejoignent JAMAIS. Chaque branche = un chemin linéaire de 5 nœuds :
@@ -1024,13 +1031,28 @@ const biomeName=f=>BIOMES[Math.floor((f-1)/5)%BIOMES.length];
 // ============ Renaissance (prestige 1) & Ascension (prestige 2) ============
 const FRESH_UP=()=>({atk:0,maxHp:0,regen:0,crit:0,click:0,critdmg:0,speed:0,power:0,multi:0});
 const startFloor=()=>1+5*((S.ascUp&&S.ascUp.start)||0); // « Départ avancé »
-const reliquesGain=f=>Math.floor(Math.pow(Math.max(0,f)/5,1.5));
+const reliquesGain=f=>Math.floor(Math.pow(Math.max(0,f)/4,1.6)); // renaissance plus généreuse
 function doPrestige(){
   const gain=reliquesGain(S.floor); if(gain<=0)return 0;
   S.reliques=(S.reliques||0)+gain; S.gold=0; S.comp={}; S.up=FRESH_UP();
   const sf=startFloor(); S.floor=sf; S.mi=0; S.mhp=monsterMaxHp(sf,0); S.hp=1e9;
   pushLog('🌟 Renaissance ! +'+gain+' reliques. Ton héros repart plus fort.');
-  save(); return gain;
+  save();
+  // Célébration : la renaissance est un MOMENT — gros chiffres, bonus total affiché.
+  const tot=S.reliques, ov=document.createElement('div'); ov.className='overlay';
+  ov.innerHTML=`<div class="big" style="filter:drop-shadow(0 0 18px var(--gold))">🌟</div>
+    <h2>Renaissance !</h2>
+    <div class="celebRow">
+      <div><b style="color:var(--gold)">+${gain}</b><span>🏵️ reliques</span></div>
+      <div><b style="color:var(--ember)">+${5*tot}%</b><span>dégâts</span></div>
+      <div><b style="color:var(--gold)">+${5*tot}%</b><span>or</span></div>
+    </div>
+    <div class="sub" style="margin-bottom:16px">${tot} reliques au total — bonus permanent, à jamais.</div>
+    <button class="btn-gold" style="max-width:260px" id="prok">Repartir plus fort ⚔️</button>`;
+  document.querySelector('.phone').appendChild(ov);
+  SND.level&&SND.level(); haptic&&haptic([20,40,20,40,60]);
+  ov.querySelector('#prok').onclick=()=>{ov.remove();go('dungeon');};
+  return gain;
 }
 // Ascension : 2e couche. On sacrifie ses reliques + la run pour des Astres,
 // dépensés dans un tableau de bonus PERMANENTS et infinis (paragon astral).
@@ -1263,7 +1285,7 @@ function spawnSparks(n,color){
   const layer=document.getElementById('mob')||document.getElementById('floats'); if(!layer)return;
   for(let i=0;i<n;i++){ const s=document.createElement('div'); s.className='spark'; const a=Math.random()*6.283,r=28+Math.random()*46;
     s.style.setProperty('--sx',(Math.cos(a)*r).toFixed(1)+'px'); s.style.setProperty('--sy',(Math.sin(a)*r).toFixed(1)+'px');
-    s.style.left='50%'; s.style.top='36%'; s.style.color=color; s.style.background=color; layer.appendChild(s); setTimeout(()=>s.remove(),520); }
+    s.style.left='50%'; s.style.top='36%'; s.style.color=color; s.style.background=color; layer.appendChild(s); FX.add(s,700); setTimeout(()=>s.remove(),520); }
 }
 function tapRing(x){ const layer=document.getElementById('floats'); if(!layer)return; const r=document.createElement('div'); r.className='ring'; r.style.left=(x!=null?x:50)+'%'; r.style.top='40%'; layer.appendChild(r); setTimeout(()=>r.remove(),430); }
 function ghostMob(key){ const ar=document.querySelector('.mobcol')||document.querySelector('.arena'); if(!ar)return; const g=document.createElement('div'); g.className='ghost'; g.innerHTML=spr(key,82)||mobEmoji(1,0); ar.appendChild(g); setTimeout(()=>g.remove(),500); }
@@ -1291,7 +1313,7 @@ function D(){
   if(voie==='agilite'){vDmg=1+0.02*ch; vCrit=Math.min(15,ch); vClick=1.4;}
   else if(voie==='force'){vHp=1+0.05*ch; vDmg=1+0.03*ch;}
   else if(voie==='equilibre'){vGold=1+0.04*ch; vDmg=1+0.01*ch;}
-  const pres=1+0.04*(S.reliques||0);
+  const pres=1+0.05*(S.reliques||0); // chaque relique : +5% dégâts ET or — la renaissance se SENT
   const achMult=1+ACH_BONUS*((S.unlocked||[]).length); // chaque succès = bonus permanent
   const pe=parEff(S.cls||'guerrier'); // parangon (bonus génériques infinis)
   const vuln=1+ce.vulnBase*ce.vulnMul; // givre/faiblesse (base × multiplicateurs)
@@ -1554,12 +1576,13 @@ function pushLog(s){S.log.unshift(s);if(S.log.length>26)S.log.pop();}
 function spawnFloat(text,color,crit,x,icon){
   const layer=document.getElementById('floats'); if(!layer)return;
   const s=document.createElement('div'); s.className='flt'+(crit?' crit':'');
-  s.innerHTML=(icon?ic(icon,crit?18:13)+' ':'')+'<span>'+text+'</span>'; s.style.color=color;
+  s.innerHTML=(icon?ic(icon,crit?20:14)+' ':'')+'<span>'+text+'</span>'; s.style.color=color;
   s.style.left=(x!=null?x:38+Math.random()*24)+'%'; s.style.top=(22+Math.random()*14)+'%';
-  s.style.fontSize=(crit?28:16)+'px';
+  s.style.fontSize=(crit?34:20)+'px'; // les chiffres CLAQUENT (critique = énorme)
+  if(crit)s.style.webkitTextStroke='1px rgba(0,0,0,.65)';
   s.style.setProperty('--dx',(Math.random()*44-22).toFixed(0)+'px');
   s.style.setProperty('--rot',(Math.random()*16-8).toFixed(0)+'deg');
-  layer.appendChild(s); setTimeout(()=>s.remove(),860);
+  layer.appendChild(s); FX.add(s,1300); setTimeout(()=>s.remove(),1020);
 }
 // FF6 : les frames d'attaque portent déjà l'arme — pas d'overlay superposé.
 function heroSwing(){
@@ -1588,8 +1611,8 @@ function slashMob(crit,spell){
     const s=document.createElement('div'); s.className=thrust?'pierce':'slash';
     if(crit&&!thrust)s.style.borderColor='var(--gold) transparent transparent var(--gold)';
     if(crit&&thrust)s.style.background='linear-gradient(90deg,transparent,var(--gold) 60%,#fff2c2)';
-    m.appendChild(s); setTimeout(()=>s.remove(),260); }
-  const im=document.createElement('div'); im.className='impact'; const sz=spell?(crit?34:22):(crit?60:40); im.style.cssText+=`left:50%;margin-left:${-Math.round(sz/2)-4}px;top:16%;width:${sz}px;height:${sz}px`; if(crit)im.style.background='radial-gradient(circle,#fff 0%,#ffe08a 34%,transparent 62%)'; m.appendChild(im); setTimeout(()=>im.remove(),300);
+    m.appendChild(s); FX.add(s,420); setTimeout(()=>s.remove(),260); }
+  const im=document.createElement('div'); im.className='impact'; const sz=spell?(crit?34:22):(crit?60:40); im.style.cssText+=`left:50%;margin-left:${-Math.round(sz/2)-4}px;top:16%;width:${sz}px;height:${sz}px`; if(crit)im.style.background='radial-gradient(circle,#fff 0%,#ffe08a 34%,transparent 62%)'; m.appendChild(im); FX.add(im,460); setTimeout(()=>im.remove(),300);
   if(crit){const sc=document.querySelector('.scene'); if(sc){sc.classList.remove('shakeS');void sc.offsetWidth;sc.classList.add('shakeS');}
     if(!spell)burstFrames(false,'fximpact',[5,6,7,8,9],42,0.72,'16%');} // éclat blanc qui gicle sur les critiques
 }
@@ -2111,6 +2134,7 @@ function setFighterX(id,x){const el=document.getElementById(id);if(el)el.style.t
 // son hook clean() est appelé quand elle est jetée sans finir sa timeline.
 function killAct(a){try{a.clean&&a.clean();}catch(e){}}
 function clearActs(){AQ.forEach(killAct);if(curAct)killAct(curAct);AQ.length=0;curAct=null;setFighterX('hero',0);setFighterX('mob',0);
+  FX.purge(); // un re-render repart d'une scène VIERGE : aucun effet fantôme possible
   const sc=document.getElementById('scene'); if(sc)sc.classList.remove('adv');}
 function dropMobActs(){AQ=AQ.filter(a=>{if(a.actor!=='mob')return true;killAct(a);return false;});
   if(curAct&&curAct.actor==='mob'){killAct(curAct);curAct=null;setFighterX('mob',0);}}
@@ -2136,16 +2160,38 @@ function setBgScroll(px){
   const sc=document.getElementById('scene'); if(!sc)return; const W=sc.clientWidth||346;
   sc.querySelectorAll('.torch').forEach((t,i)=>{const base=W*(i===0?0.27:0.67);const x=(((base-px*0.55)%W)+W)%W;t.style.left=Math.round(x)+'px';});
 }
+// VITESSE DE SCÈNE : l'économie tourne à x1/x2/x4, mais les ANIMATIONS sont
+// plafonnées à x2 — en x4 le combat reste lisible au lieu de devenir frénétique.
+const animSpeed=()=>Math.min(gameSpeed(),2);
+// ============ REGISTRE CENTRAL D'EFFETS (structure anti-bugs) ============
+// TOUT effet volatil (slash, impact, explosion, projectile, étincelle…) est
+// enregistré ici avec une durée de vie MAXIMALE. Le faucheur tourne à chaque
+// frame : un nœud expiré ou orphelin est retiré, QUOI QU'IL ARRIVE — un effet
+// abandonné par un timer perdu ou une action interrompue ne peut plus rester
+// à l'écran. C'est une garantie structurelle, pas une convention.
+const FX={list:[],
+  add(node,ttl){ node.__fxUntil=performance.now()+(ttl||1500); this.list.push(node); return node; },
+  reap(){ const now=performance.now();
+    for(let i=this.list.length-1;i>=0;i--){ const n=this.list[i];
+      if(!n.isConnected){ this.list.splice(i,1); continue; }
+      if(now>n.__fxUntil){ n.remove(); this.list.splice(i,1); } } },
+  purge(){ this.list.forEach(n=>n.remove()); this.list.length=0; }
+};
 // HIT-STOP : au moment d'un impact, la timeline se FIGE quelques dizaines de ms
-// (comme FF6 / les jeux de combat) — le coup « pèse ». Raccourci aux vitesses x2/x4.
-let hitStopT=0, blLast=0;
-function hitStop(ms){hitStopT=Math.max(hitStopT,ms/Math.max(1,gameSpeed()*0.75));}
+// (comme FF6 / les jeux de combat) — le coup « pèse ». Raccourci en x2/x4.
+let hitStopT=0, blLast=0, idleFixT=0;
+function hitStop(ms){hitStopT=Math.max(hitStopT,ms/animSpeed());}
 function battleLoop(ts){
   const dt=blLast?Math.min(80,ts-blLast):16; blLast=ts;
+  FX.reap();
   if(hitStopT>0){ hitStopT-=dt; if(curAct)curAct.t0+=dt; }
+  // AUTO-RÉPARATION : scène au repos → les combattants DOIVENT être à leur
+  // place. Toute dérive (action avortée, re-render au mauvais moment) est
+  // corrigée en douceur au lieu de persister.
+  if(!curAct&&AQ.length===0&&ts-idleFixT>600){ idleFixT=ts; setFighterX('hero',0); if(!mobDying)setFighterX('mob',0); }
   if(!curAct&&AQ.length){curAct=AQ.shift();curAct.t0=ts;curAct.fired={};}
   if(curAct){
-    const p=Math.min(1,(ts-curAct.t0)*gameSpeed()/curAct.dur);
+    const p=Math.min(1,(ts-curAct.t0)*animSpeed()/curAct.dur);
     (curAct.events||[]).forEach((ev,i)=>{if(!curAct.fired[i]&&p>=ev.at){curAct.fired[i]=1;try{ev.fire();}catch(e){}}});
     try{curAct.update&&curAct.update(p);}catch(e){}
     if(p>=1){const d=curAct.done;curAct=null;try{d&&d();}catch(e){}}
@@ -2195,7 +2241,7 @@ function actHeroCast(strike){
           proj=document.createElement('img');proj.className='pix projimg';proj.src=projFr[TR[0]]||'';
           proj.style.height=Math.round(m.h*Z)+'px';proj.style.left=Math.round(tip0-pw)+'px';
           proj.style.bottom=mage?'30px':'42px'; // au niveau du bâton tendu / de l'arc, pas de la tête
-          sc.appendChild(proj);}},
+          sc.appendChild(proj); FX.add(proj,2400);}},
       {at:0.74,fire:()=>{if(proj){proj.remove();proj=null;}
           if(mage)burstFrames(false,'fxfire',[4,5,6],62,2.5,'14%');
           strike();}},
@@ -2219,7 +2265,7 @@ function actNecroCast(strike){
       {at:0.34,fire:()=>{const host=document.getElementById('mob'); if(!host||mobDying)return;
           fr=sliceSheet('fxnecro_fly')||[]; const m=SHEET_META.fxnecro||{h:52};
           img=document.createElement('img'); img.className='pix spellfx'; img.src=fr[0]||'';
-          img.style.height=Math.round(m.h*2.1)+'px'; host.appendChild(img);}},
+          img.style.height=Math.round(m.h*2.1)+'px'; host.appendChild(img); FX.add(img,2400);}},
       {at:0.58,fire:strike},
     ],
     update:p=>{
@@ -2263,11 +2309,11 @@ function actMobCast(strike){
               tip0=(mx!=null?mx-26:w*0.78); tip1=(hx!=null?hx-4:w*0.20); // pointe (à gauche) : de l'arc au corps du héros
               proj=document.createElement('img');proj.className='pix projimg rev pixflip';proj.src=projFr[0]||'';
               proj.style.height=Math.round(m.h*1.8)+'px';proj.style.left=Math.round(tip0)+'px';
-              proj.style.bottom='42px'; sc.appendChild(proj);}}
+              proj.style.bottom='42px'; sc.appendChild(proj); FX.add(proj,2400);}}
             :{at:0.36,fire:()=>{const host=document.getElementById('hero'); if(!host)return;
               fxFr=sliceSheet('fxwarlock_fly')||[]; const m=SHEET_META.fxwarlock||{h:55};
               fxImg=document.createElement('img'); fxImg.className='pix spellfx'; fxImg.src=fxFr[0]||'';
-              fxImg.style.height=Math.round(m.h*1.75)+'px'; host.appendChild(fxImg);}},
+              fxImg.style.height=Math.round(m.h*1.75)+'px'; host.appendChild(fxImg); FX.add(fxImg,2400);}},
       archer?{at:0.78,fire:()=>{if(proj){proj.remove();proj=null;}strike();}}:{at:0.53,fire:strike},
     ],
     update:p=>{
@@ -2370,8 +2416,8 @@ function burstFrames(onHero,key,idx,ms,scale,bottom){
   const img=document.createElement('img'); img.className='pix spellfx';
   img.style.height=Math.round(m.h*(scale||2.1))+'px';
   if(bottom)img.style.bottom=bottom;
-  img.src=use[0]; host.appendChild(img);
-  const step=Math.max(24,Math.round((ms||65)/Math.max(1,gameSpeed()))); // suit la vitesse x2/x4
+  img.src=use[0]; host.appendChild(img); FX.add(img,(ms||65)*use.length+700);
+  const step=Math.max(24,Math.round((ms||65)/animSpeed())); // suit la vitesse x2/x4
   let i=0; const iv=setInterval(()=>{ i++; if(i>=use.length){clearInterval(iv);img.remove();} else img.src=use[i]; },step);
 }
 // ---- Serviteur squelette (pet du Nécromancien) ----
@@ -2421,7 +2467,7 @@ function heroFlinch(){
   const h=document.getElementById('hero'); if(h){h.classList.remove('flinch');h.classList.remove('hurt');void h.offsetWidth;h.classList.add('hurt');}
   heroPlay('hurt',70,true); // vraie frame de « touché » (n'interrompt pas une attaque en cours)
   if(typeof hitStop==='function')hitStop(60);
-  const host=document.getElementById('hero'); if(host){const c=document.createElement('div');c.className='clash';host.appendChild(c);setTimeout(()=>c.remove(),320);}
+  const host=document.getElementById('hero'); if(host){const c=document.createElement('div');c.className='clash';host.appendChild(c);FX.add(c,520);setTimeout(()=>c.remove(),320);}
   haptic(4);
 }
 setInterval(()=>{
@@ -2555,7 +2601,7 @@ const I18N={};
 (function(){
 const P=[
 // --- Navigation & chrome ---
-["(infini). Respec gratuit.","(infinite). Free respec."],["(infini). Respec gratuit","(infinite). Free respec"],["Respec gratuit.","Free respec."],["Niveau # · Guerrier","Level # · Warrior"],["Niveau # · Mage","Level # · Mage"],["Niveau # · Rôdeur","Level # · Ranger"],["Niveau # · Paladin","Level # · Paladin"],["léger","light"],["modéré","moderate"],["intense","intense"],["Personal goal: léger","Personal goal: light"],["Donjon","Dungeon"],["Check-in","Check-in"],["Objectif","Goal"],["Talents","Talents"],["Héros","Hero"],
+["(infini). Respec gratuit.","(infinite). Free respec."],["(infini). Respec gratuit","(infinite). Free respec"],["Respec gratuit.","Free respec."],["Niveau # · Guerrier","Level # · Warrior"],["Niveau # · Mage","Level # · Mage"],["Niveau # · Rôdeur","Level # · Ranger"],["Niveau # · Paladin","Level # · Paladin"],["léger","light"],["modéré","moderate"],["intense","intense"],["Personal goal: léger","Personal goal: light"],["Renaissance !","Rebirth!"],["🏵️ reliques","🏵️ relics"],["dégâts","damage"],["or","gold"],["# reliques au total — bonus permanent, à jamais.","# relics total — a permanent bonus, forever."],["Repartir plus fort ⚔️","Set out stronger ⚔️"],["Palier franchi !","Tier reached!"],["Coffre de la Constance","Chest of Consistency"],["Foncer au donjon ⚔️","Rush to the dungeon ⚔️"],["Donjon","Dungeon"],["Check-in","Check-in"],["Objectif","Goal"],["Talents","Talents"],["Héros","Hero"],
 ["Niv. # · classe #","Lv. # · class #"],["Niv. # · Étage # · #","Lv. # · Floor # · #"],["Niv. #","Lv. #"],["niv.#","lv.#"],["(classe niv. #)","(class lv. #)"],
 ["Étage # · #/#","Floor # · #/#"],["BOSS · Étage # · #/#","BOSS · Floor # · #/#"],["Étage #","Floor #"],
 ["⚙️ Réglages","⚙️ Settings"],["🔥 Série #","🔥 Streak #"],["· +# aujourd’hui","· +# today"],
