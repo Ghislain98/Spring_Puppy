@@ -187,6 +187,9 @@
   @keyframes ffhitknock { 0%{transform:scaleX(-1) translateX(-3px) scaleY(.92)} 24%{transform:scaleX(-1) translateX(-10px) scaleY(.88)} 62%{transform:scaleX(-1) translateX(-3px) scaleY(1)} 100%{transform:scaleX(-1)} }
   .scene .mob .slash { position:absolute; left:50%; margin-left:-22px; top:26%; width:44px; height:44px; border:4px solid #fff; border-color:#fff transparent transparent #fff; border-radius:50%; pointer-events:none; opacity:0; animation:slashfx .24s ease-out forwards; z-index:6; filter:drop-shadow(0 0 5px #fff); }
   @keyframes slashfx { 0%{opacity:0;transform:rotate(8deg) scale(.3)} 40%{opacity:.95} 100%{opacity:0;transform:rotate(62deg) scale(1.15)} }
+  /* Impact de LANCE (paladin) : trait perçant horizontal, pas d'arc d'épée. */
+  .scene .mob .pierce { position:absolute; left:50%; top:40%; width:58px; height:7px; margin-left:-46px; background:linear-gradient(90deg,transparent,#fff 60%,#cfe8ff); border-radius:4px; transform:skewX(-14deg); opacity:0; animation:piercefx .22s ease-out forwards; z-index:6; filter:drop-shadow(0 0 6px #fff); pointer-events:none; }
+  @keyframes piercefx { 0%{opacity:0;transform:translateX(-28px) skewX(-14deg) scaleX(.4)} 35%{opacity:1;transform:translateX(-6px) skewX(-14deg) scaleX(1)} 100%{opacity:0;transform:translateX(10px) skewX(-14deg) scaleX(1.08)} }
   /* Le héros encaisse : flash blanc sec + recul fluide avec écrasement. */
   .scene .hero.hurt .pix:not(.spellfx) { animation:ffhurtflash .32s steps(1), ffhurtknock .32s cubic-bezier(.2,.8,.3,1); }
   @keyframes ffhurtflash { 0%{filter:brightness(3) saturate(.2)} 40%{filter:none} 60%{filter:brightness(3) saturate(.2)} 80%,100%{filter:none} }
@@ -583,9 +586,15 @@ const MOB_NAMES={slime:'Slime',bat:'Chauve-souris',skeleton:'Squelette',skeleton
  black_knight_c:'Chevalier du néant',demoness_a:'Reine démone',demon_d:'Seigneur démon',flamegolem:'Golem de lave'};
 const mobName=(f,i)=>MOB_NAMES[mobChar(f,i)]||'Monstre';
 // Image statique tintée du héros (pour les cartes de classe / écrans).
-function classImg(cls,h){const key=heroChar(cls),m=SHEET_META[key]||{},fr=sliceSheet(key+'_idle');
-  const hh=Math.round((m.h||h)*(h/(m.bh||m.h||h))); // h = hauteur du CORPS voulue
-  return `<img class="pix" src="${(fr&&fr[0])||''}" style="height:${hh}px;filter:${heroFilter(cls)}">`;}
+function classImg(cls,h){
+  // Portrait CADRÉ : fenêtre fixe autour du CORPS (pieds posés, centré),
+  // les grandes armes/boîtes qui débordent sont rognées proprement.
+  const key=heroChar(cls),m=SHEET_META[key]||{},fr=sliceSheet(key+'_idle');
+  const Z=h/(m.bh||m.h||h), W=Math.round(h*1.35), H=Math.round(h*1.12);
+  const imgH=Math.round((m.h||h)*Z), bx=(m.bx!=null?m.bx:(m.w||0)/2);
+  const left=Math.round(W/2-bx*Z), bottom=Math.round(-(m.fo||0)*Z);
+  return `<span style="display:inline-block;position:relative;width:${W}px;height:${H}px;overflow:hidden;vertical-align:bottom">`+
+    `<img class="pix" src="${(fr&&fr[0])||''}" style="position:absolute;left:${left}px;bottom:${bottom}px;height:${imgH}px;filter:${heroFilter(cls)}"></span>`;}
 // Joue une animation « une fois » sur le sprite du héros / du monstre, puis repos.
 function heroPlay(name,ms,soft){const el=document.getElementById('heroimg');if(el)playOnce(el,heroAnim(name),ms||70,heroFrames(false),200,soft);}
 function mobPlay(name,ms,soft){const el=document.getElementById('mobimg');if(el)playOnce(el,mobAnim(S.floor,S.mi,name),ms||70,mobFrames(S.floor,S.mi),220,soft);}
@@ -1114,6 +1123,10 @@ function openSettings(){
   const R=S.reminder||{enabled:false,h:20,m:0}; const hh=String(R.h||0).padStart(2,'0'), mm=String(R.m||0).padStart(2,'0');
   const ov=sheet(`
     <div class="shhead"><div style="font-family:var(--serif);font-size:18px;font-weight:700">⚙️ Réglages</div><button class="link" id="sclose" style="font-size:20px">✕</button></div>
+    <div class="section"><span>🌐 Langue / Language</span></div>
+    <div class="card"><div style="display:flex;gap:8px">
+      <button class="buy ${LANG==='fr'?'can':''}" data-lang="fr" style="flex:1;justify-content:center"><span class="nm">Français</span></button>
+      <button class="buy ${LANG==='en'?'can':''}" data-lang="en" style="flex:1;justify-content:center"><span class="nm">English</span></button></div></div>
     <div class="section"><span>🔔 Rappel quotidien</span></div>
     <div class="card"><div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
       <div style="flex:1"><div class="nm">Me rappeler mon check-in</div><div class="ds">Une notification chaque jour à l'heure choisie (app installée).</div></div>
@@ -1129,6 +1142,7 @@ function openSettings(){
     <div style="height:8px"></div>`);
   const close=()=>ov.remove();
   ov.querySelector('#sclose').onclick=close;
+  ov.querySelectorAll('[data-lang]').forEach(b=>b.onclick=()=>{ if(b.dataset.lang!==LANG)setLang(b.dataset.lang); });
   const tog=ov.querySelector('#remtoggle');
   tog.onclick=()=>{ S.reminder.enabled=!S.reminder.enabled; save(); syncReminder(); close(); openSettings(); if(S.reminder.enabled)nativePost({type:'reqPerm'}); };
   const remt=ov.querySelector('#remt'); if(remt)remt.onchange=()=>{ const p=remt.value.split(':'); S.reminder.h=+p[0]||0; S.reminder.m=+p[1]||0; save(); syncReminder(); uiToast('Rappel réglé à '+remt.value); };
@@ -1569,7 +1583,12 @@ function slashMob(crit,spell){
   mobPlay('hurt',70,true); // vraie frame de « touché » (n'interrompt pas son attaque)
   if(typeof hitStop==='function')hitStop(crit?115:65); // le coup PÈSE : la timeline se fige un instant
   // Un SORT montre sa propre explosion : pas d'arc d'épée ni de gros flash blanc par-dessus.
-  if(!spell){ const s=document.createElement('div'); s.className='slash'; if(crit)s.style.borderColor='var(--gold) transparent transparent var(--gold)'; m.appendChild(s); setTimeout(()=>s.remove(),260); }
+  // La LANCE du paladin PERFORE (trait droit) au lieu de trancher (arc).
+  if(!spell){ const thrust=S.cls==='paladin';
+    const s=document.createElement('div'); s.className=thrust?'pierce':'slash';
+    if(crit&&!thrust)s.style.borderColor='var(--gold) transparent transparent var(--gold)';
+    if(crit&&thrust)s.style.background='linear-gradient(90deg,transparent,var(--gold) 60%,#fff2c2)';
+    m.appendChild(s); setTimeout(()=>s.remove(),260); }
   const im=document.createElement('div'); im.className='impact'; const sz=spell?(crit?34:22):(crit?60:40); im.style.cssText+=`left:50%;margin-left:${-Math.round(sz/2)-4}px;top:16%;width:${sz}px;height:${sz}px`; if(crit)im.style.background='radial-gradient(circle,#fff 0%,#ffe08a 34%,transparent 62%)'; m.appendChild(im); setTimeout(()=>im.remove(),300);
   if(crit){const sc=document.querySelector('.scene'); if(sc){sc.classList.remove('shakeS');void sc.offsetWidth;sc.classList.add('shakeS');}
     if(!spell)burstFrames(false,'fximpact',[5,6,7,8,9],42,0.72,'16%');} // éclat blanc qui gicle sur les critiques
@@ -2470,7 +2489,10 @@ function drawOnboard(ov){
   if(obStep===0){
     big=`<div style="color:var(--gold);filter:drop-shadow(0 0 14px rgba(244,185,66,.6))">${ic('sword',60)}</div>`;
     title='Bienvenue, aventurier';
-    body=`<p class="obp">HabitQuest transforme tes <b style="color:var(--gold)">bonnes habitudes de santé</b> en puissance de jeu.</p>
+    body=`<div style="display:flex;gap:6px;justify-content:center;margin-bottom:10px">
+        <button class="link" data-lang="fr" style="padding:4px 12px;border:1px solid var(--border);border-radius:99px;${LANG==='fr'?'color:var(--gold);border-color:var(--gold)':''}">Français</button>
+        <button class="link" data-lang="en" style="padding:4px 12px;border:1px solid var(--border);border-radius:99px;${LANG==='en'?'color:var(--gold);border-color:var(--gold)':''}">English</button></div>
+      <p class="obp">HabitQuest transforme tes <b style="color:var(--gold)">bonnes habitudes de santé</b> en puissance de jeu.</p>
       <p class="obp">Chaque jour où tu accomplis tes objectifs, tu déclenches un <b style="color:var(--ember)">shot de dopamine</b> — récompense instantanée — et ton héros en sort <b>renforcé</b>. 🔥</p>`;
   } else if(obStep===1){
     big='<div class="big">🎁</div>'; title='La boucle addictive';
@@ -2512,6 +2534,7 @@ function drawOnboard(ov){
   }
   const nx=document.getElementById('obNext'); if(nx)nx.onclick=()=>{ if(obStep===3&&!obCls)return; obStep++; SND.kill&&SND.kill(); haptic(6); drawOnboard(ov); };
   const bk=document.getElementById('obBack'); if(bk)bk.onclick=()=>{ obStep--; drawOnboard(ov); };
+  ov.querySelectorAll('[data-lang]').forEach(b=>b.onclick=()=>{ if(b.dataset.lang!==LANG)setLang(b.dataset.lang); });
   const ron=document.getElementById('obRemOn'); if(ron)ron.onclick=()=>{ S.reminder={enabled:true,h:20,m:0}; nativePost({type:'reqPerm'}); finishOnboarding(ov); };
   const roff=document.getElementById('obRemOff'); if(roff)roff.onclick=()=>{ finishOnboarding(ov); };
 }
@@ -2521,6 +2544,352 @@ function finishOnboarding(ov){
   ov.remove(); tab='checkin'; render();
   uiToast&&uiToast('Ta quête commence — fais ton premier check-in ! 🎁');
 }
+
+// ============ LANGUE / LANGUAGE ============
+// Le français est la langue source. L'anglais est appliqué par TRADUCTION DU
+// DOM : dictionnaire exact (nombres normalisés en «#», réinjectés dans l'ordre)
+// + un MutationObserver qui traduit chaque nouveau rendu. Une chaîne absente du
+// dictionnaire reste en français plutôt que de casser l'interface.
+let LANG=localStorage.getItem('hq-lang')||(((navigator.language||'fr')+'').toLowerCase().indexOf('fr')===0?'fr':'en');
+const I18N={};
+(function(){
+const P=[
+// --- Navigation & chrome ---
+["(infini). Respec gratuit.","(infinite). Free respec."],["(infini). Respec gratuit","(infinite). Free respec"],["Respec gratuit.","Free respec."],["Niveau # · Guerrier","Level # · Warrior"],["Niveau # · Mage","Level # · Mage"],["Niveau # · Rôdeur","Level # · Ranger"],["Niveau # · Paladin","Level # · Paladin"],["léger","light"],["modéré","moderate"],["intense","intense"],["Personal goal: léger","Personal goal: light"],["Donjon","Dungeon"],["Check-in","Check-in"],["Objectif","Goal"],["Talents","Talents"],["Héros","Hero"],
+["Niv. # · classe #","Lv. # · class #"],["Niv. # · Étage # · #","Lv. # · Floor # · #"],["Niv. #","Lv. #"],["niv.#","lv.#"],["(classe niv. #)","(class lv. #)"],
+["Étage # · #/#","Floor # · #/#"],["BOSS · Étage # · #/#","BOSS · Floor # · #/#"],["Étage #","Floor #"],
+["⚙️ Réglages","⚙️ Settings"],["🔥 Série #","🔥 Streak #"],["· +# aujourd’hui","· +# today"],
+// --- Onboarding ---
+["Bienvenue, aventurier","Welcome, adventurer"],
+["HabitQuest transforme tes","HabitQuest turns your"],["bonnes habitudes de santé","healthy habits"],["en puissance de jeu.","into in-game power."],
+["Chaque jour où tu accomplis tes objectifs, tu déclenches un","Every day you hit your goals, you trigger a"],
+["shot de dopamine","dopamine hit"],["— récompense instantanée — et ton héros en sort","— an instant reward — and your hero comes out"],["renforcé","stronger"],
+["La boucle addictive","The addictive loop"],
+["1. Check-in du jour","1. Daily check-in"],["Coche tes objectifs santé en 20 secondes.","Tick your health goals in 20 seconds."],
+["2. Récompense immédiate","2. Instant reward"],["Coffre surprise, or, XP, gemmes — le shot de dopamine.","Surprise chest, gold, XP, gems — the dopamine hit."],
+["3. Ton héros progresse","3. Your hero grows"],["Il combat tout seul dans le donjon, même app fermée.","He fights on his own in the dungeon, even with the app closed."],
+["Reviens","Come back"],["chaque jour","every day"],["pour garder ta série 🔥 et empiler les récompenses.","to keep your streak 🔥 and stack rewards."],
+["4 piliers, 4 forces","4 pillars, 4 strengths"],
+["Chaque catégorie santé renforce une partie précise de ton héros :","Each health category powers up a specific part of your hero:"],
+["Journée complète 4/4 = récompenses ×2 !","Perfect day 4/4 = rewards ×2!"],
+["Choisis ton héros","Choose your hero"],
+["Tu pourras en changer plus tard (5","You can change later (5"],["). Chaque classe a son style — et son propre arbre de talents.","). Each class has its own style — and its own talent tree."],
+["Un rappel pour ta série","A reminder for your streak"],
+["Une notification chaque jour à l'heure choisie (app installée).","A daily notification at the time you pick (installed app)."],
+["Tu peux le régler ou le couper à tout moment dans ⚙️ Réglages.","You can adjust or turn it off anytime in ⚙️ Settings."],
+["Activer le rappel · #:#","Enable reminder · #:#"],["Plus tard","Later"],["Précédent","Back"],["Suivant →","Next →"],
+["Commencer l'aventure 🎯","Start the adventure 🎯"],["Commencer l’aventure ⚔️","Start the adventure ⚔️"],
+["Ton héros pénètre dans le donjon…","Your hero enters the dungeon…"],
+["Ta quête commence — fais ton premier check-in ! 🎁","Your quest begins — do your first check-in! 🎁"],
+// --- Catégories santé ---
+["Sport","Exercise"],["Nutrition","Nutrition"],["Sommeil","Sleep"],["Hydratation","Hydration"],
+["L'effort forge tes dégâts","Effort forges your damage"],["Bien manger renforce ta vitalité","Eating well builds your vitality"],
+["Un bon repos accélère ta régénération","Good rest speeds up your regen"],["Bien s’hydrater aiguise tes réflexes","Staying hydrated sharpens your reflexes"],
+["+dégâts","+damage"],["+PV max","+max HP"],["+régén/s","+regen/s"],["+% critique","+% crit"],
+["Tu t'es entraîné ?","Did you train?"],["Léger","Light"],["Modéré","Moderate"],["Intense","Intense"],["Non","No"],
+["Combien de sommeil ?","How much sleep?"],["Assez de protéines ?","Enough protein?"],["Fruits ?","Fruit?"],
+["Légumes / fibres ?","Veggies / fiber?"],["Objectif calories ?","Calorie goal?"],
+["#Check-in du jour","#Daily check-in"],["Check-in du jour","Daily check-in"],
+["＋ Ajouter une habitude « Sport »","＋ Add an “Exercise” habit"],
+["Donne un nom à ton habitude.","Give your habit a name."],["Habitude ajoutée !","Habit added!"],["ex. 20","e.g. 20"],
+["#/# catégories","#/# categories"],["Journée complète #/# = récompenses ×# !","Perfect day #/# = rewards ×#!"],
+// --- Donjon ---
+["DPS","DPS"],["Effets/s","Effects/s"],["Or/sec","Gold/sec"],["Dégâts/clic","Dmg/click"],["Reste","Left"],
+["Tape le monstre pour frapper plus fort","Tap the monster to hit harder"],
+["Journal","Log"],["ATB","ATB"],["PV","HP"],
+["Compagnons · or/sec","Companions · gold/sec"],["Recrute des compagnons ↓","Recruit companions ↓"],
+["Bonus de troupe","Troop bonus"],["Bonus troupe","Troop bonus"],["produit #/s","produces #/s"],
+["#compagnons · encore","#companions · next in"],["pour +#% (palier #)","for +#% (tier #)"],
+["#/s ch.","#/s ea."],["#K/s ch.","#K/s ea."],["#dispo","#avail."],
+// --- Héros / Forge / Stats ---
+["Forge · dépense ton or","Forge · spend your gold"],["Armure","Armor"],["Puissance","Power"],
+["Aiguiser la lame","Hone the Blade"],["Dague affûtée","Whetted Dagger"],["Élixir de régén.","Regen Elixir"],
+["Frappe multiple","Multistrike"],["Précision fatale","Fatal Precision"],["Morsure du gel","Frostbite"],
+["Chance crit","Crit chance"],["Dégâts crit","Crit damage"],["Multi-attaque","Multi-attack"],["Vit. attaque","Atk speed"],
+["Régén/s","Regen/s"],["PV max","Max HP"],["Vitalité","Vitality"],["Force","Strength"],["Récupération","Recovery"],["Vivacité","Quickness"],
+["Statistiques","Statistics"],["Dégâts cumulés","Total damage"],["Ascensions","Ascensions"],["Reliques","Relics"],["Succès","Achievements"],
+["Voir les succès","View achievements"],["🏆 Succès · #/#","🏆 Achievements · #/#"],["Succès débloqué · +#💎","Achievement unlocked · +#💎"],
+["total +#% crit","total +#% crit"],["total +#% dégâts","total +#% damage"],["total +#% dégâts crit","total +#% crit damage"],
+["total +#% multi","total +#% multi"],["total +#% vitesse","total +#% speed"],["total +#/s régén","total +#/s regen"],
+["total +#ATK","total +#ATK"],["total +#PV max","total +#max HP"],["total +#dégâts/clic","total +#click dmg"],
+["actuel +#","current +#"],["actuel +#% crit","current +#% crit"],["actuel +#pts talent","current +#talent pts"],
+["actuel +#étages","current +#floors"],["actuel ×#","current ×#"],["×#","×#"],["×max","×max"],
+// --- Talents ---
+["🎓 #pt","🎓 #pt"],["points utilisés ·","points spent ·"],["#branches","#branches"],["#niveaux","#levels"],
+["👆 Touche un nœud pour voir son effet et l'allouer.","👆 Tap a node to see its effect and spend points."],
+["Réinitialiser l'arbre (gratuit)","Reset tree (free)"],["Rang #","Rank #"],["Verrouillé.","Locked."],
+["Aucun point disponible (1 tous les 10 niveaux de classe).","No points available (1 every 10 class levels)."],
+["🔒 Termine d’abord ton arbre de talents — un talent est toujours plus fort.","🔒 Finish your talent tree first — a talent is always stronger."],
+["Un talent de l’arbre est TOUJOURS plus fort qu’un rang de parangon — termine d’abord ton arbre (","A tree talent is ALWAYS stronger than a paragon rank — finish your tree first ("],
+["pts (fini) → au-delà, verse tes points dans le","pts (finite) → beyond that, pour your points into the"],
+["). Le parangon est le déversoir infini de fin de progression.","). Paragon is the endless late-game sink."],
+["qui ne se rejoignent jamais : chaque nœud AJOUTE ou fait","that never merge: every node ADDS or makes"],
+["interagir","interact"],["une mécanique. Arbre","a mechanic. Tree"],["de classe. Arbre à","per class. Tree of"],
+["♾️ Parangon · dépense infinie","♾️ Paragon · endless spending"],
+["#point tous les","#point every"],["#niveaux de talents","#talent levels"],
+["🎯 Objectif perso :","🎯 Personal goal:"],
+// --- Voie / Objectif corporel ---
+["Voie","Path"],["Choisis ta","Choose your"],
+[": elle relie ton objectif corporel réel à la puissance de ton héros. Changeable quand tu veux.",": it links your real body goal to your hero's power. Change it anytime."],
+["Voie de la Force","Path of Strength"],["Voie de l'Agilité","Path of Agility"],["Voie de l'Équilibre","Path of Balance"],
+["Prise de masse — chaque palier : +PV & dégâts","Muscle gain — each tier: +HP & damage"],
+["Perte de poids — chaque palier : +crit & clic","Weight loss — each tier: +crit & click"],
+["Maintien — chaque palier : +or","Maintain — each tier: +gold"],
+["Ton poids actuel (kg) :","Your current weight (kg):"],["Ton point de départ","Your starting point"],
+["Entre un poids valide en kg.","Enter a valid weight in kg."],
+["Changer de Voie ? Tu gardes tes paliers déjà franchis.","Change Path? You keep the tiers you've already reached."],
+["Changer de Voie","Change Path"],["Choisis une Voie.","Choose a Path."],
+[", jamais la vitesse. Aucune punition si ça bouge dans l'autre sens.",", never speed. No punishment if it moves the other way."],
+["💚 On récompense la","💚 We reward"],["régularité","consistency"],
+["Actuel :","Current:"],["en vrai : 1×/semaine","for real: 1×/week"],["#pilliers, #forces","#pillars, #strengths"],
+["Franchir # palier d’objectif","Reach # goal tier"],["Franchir # paliers d’objectif","Reach # goal tiers"],["Enregistrer # pesées","Log # weigh-ins"],
+// --- Ascension / Renaissance / Parangon ---
+["✦ Ascension","✦ Ascension"],["Renaissance","Rebirth"],["Renaître (+#🏵️)","Be reborn (+#🏵️)"],
+["Atteins l'étage # pour renaître","Reach floor # to be reborn"],["Atteins # reliques pour ascensionner","Reach # relics to ascend"],
+["Recommence la run (or, compagnons, forge, étage) contre des","Restart the run (gold, companions, forge, floor) in exchange for"],
+["chacune. Tu gardes gemmes, talents, classe, objectif et streak.","each. You keep gems, talents, class, goal and streak."],
+["Si tu renais","If you are reborn"],["reliques pour ascensionner.","relics to ascend."],
+[": sacrifie tes reliques + ta run pour des",": sacrifice your relics + your run for"],
+["permanentes :","permanent:"],["permanents et infinis","permanent and endless"],[", dépensés dans des bonus",", spent on bonuses"],
+["Astres","Stars"],["Astres ✦","Stars ✦"],["#ᵉ couche","#th layer"],
+["Puissance astrale","Astral Power"],["Fortune astrale","Astral Fortune"],["Sagesse astrale","Astral Wisdom"],["Départ avancé","Head Start"],
+["Dégâts globaux ×#par niveau","Global damage ×#per level"],["Or global ×#par niveau","Global gold ×#per level"],
+["+#points de talent max par niv","+#max talent points per lv"],["Commence #étages plus haut/niv","Start #floors higher per lv"],
+["gemmes","gems"],["Pas assez de gemmes (5 requises).","Not enough gems (5 required)."],
+// --- Réglages / Sauvegarde ---
+["🔔 Rappel quotidien","🔔 Daily reminder"],["Me rappeler mon check-in","Remind me to check in"],
+["Heure :","Time:"],["Rappel réglé à","Reminder set to"],["rappel quotidien","daily reminder"],
+["t'aide à ne jamais casser ta série et à revenir chercher ta dose.","helps you never break your streak and come back for your fix."],
+["Un petit","A little"],["💾 Sauvegarde","💾 Save"],
+["Ta progression est stockée sur cet appareil.","Your progress is stored on this device."],
+["Exporte un code","Export a code"],["pour la sauvegarder ou la transférer.","to back it up or transfer it."],
+["Exporter ma sauvegarde","Export my save"],["Importer une sauvegarde","Import a save"],["💾 Ta sauvegarde","💾 Your save"],
+["Code copié !","Code copied!"],["Code invalide.","Invalid code."],["Colle un code d’abord.","Paste a code first."],
+["Sauvegarde restaurée !","Save restored!"],["Remplacer ta progression par cette sauvegarde ?","Replace your progress with this save?"],
+["🔊 Son","🔊 Sound"],["Effets sonores","Sound effects"],["Réinitialiser (démo)","Reset (demo)"],
+["Effacer <b>toute</b> la progression ? Action irréversible.","Erase <b>all</b> progress? This cannot be undone."],
+["Personnages : « Tiny RPG Character Asset Pack » — zerie.itch.io · Décor : « DungeonTileset II » par 0x72 (CC BY 4) · Icônes : game-icons.net (CC BY 3)","Characters: “Tiny RPG Character Asset Pack” — zerie.itch.io · Tileset: “DungeonTileset II” by 0x72 (CC BY 4) · Icons: game-icons.net (CC BY 3)"],
+// --- Classes ---
+["Guerrier","Warrior"],["Mage","Mage"],["Rôdeur","Ranger"],["Paladin","Paladin"],["Nécromancien","Necromancer"],
+["Robuste. +#% PV, +#% dégâts.","Sturdy. +#% HP, +#% damage."],
+["Fragile mais foudroyant. Clic ×#+#% crit.","Fragile but devastating. Click ×#+#% crit."],
+["Cupide et précis. +#% or, +#% crit.","Greedy and precise. +#% gold, +#% crit."],
+["Increvable. +#% PV, régén ×#","Unkillable. +#% HP, regen ×#"],
+["Maître des morts. Invoque un serviteur squelette.","Master of the dead. Summons a skeleton minion."],
+["Guerrier · Niv. #","Warrior · Lv. #"],["Mage · Niv. #","Mage · Lv. #"],["Rôdeur · Niv. #","Ranger · Lv. #"],
+["Paladin · Niv. #","Paladin · Lv. #"],["Nécromancien · Niv. #","Necromancer · Lv. #"],["Niveau # · Nécromancien","Level # · Necromancer"],
+["Classe","Class"],
+// --- Monstres ---
+["Slime","Slime"],["Chauve-souris","Bat"],["Squelette","Skeleton"],["Archer squelette","Skeleton Archer"],
+["Slime de lave","Lava Slime"],["Molosse infernal","Hellhound"],["Chauve-souris démone","Demon Bat"],["Feu follet","Ghostfire"],
+["Orc","Orc"],["Orc d’élite","Elite Orc"],["Loup-garou","Werewolf"],["Cavalier orc","Orc Rider"],
+["Squelette cuirassé","Armored Skeleton"],["Ours-garou","Werebear"],["Orc blindé","Plated Orc"],
+["Chevalier noir","Black Knight"],["Chevalier déchu","Fallen Knight"],["Démoniste","Warlock"],
+["Monstre de sang","Blood Monster"],["Horreur de sang","Blood Horror"],["Œil monstrueux","Monstrous Eye"],
+["Squelette à espadon","Greatsword Skeleton"],["Démon","Demon"],["Démon cendré","Ash Demon"],["Démon rampant","Crawling Demon"],
+["Démon royal","Royal Demon"],["Démone","Demoness"],["Minotaure","Minotaur"],["Lancier renégat","Renegade Lancer"],
+["Chevalier du néant","Void Knight"],["Reine démone","Demon Queen"],["Seigneur démon","Demon Lord"],
+// --- Biomes ---
+["Cryptes moisies","Moldy Crypts"],["Caverne des Braises","Ember Cavern"],["Forêt Hantée","Haunted Forest"],
+["Cavernes de Glace","Ice Caverns"],["Ruines Maudites","Cursed Ruins"],["Marais des Ombres","Shadow Marsh"],
+["Nécropole","Necropolis"],["Antre du Dragon","Dragon's Lair"],
+["Niv. # · Étage # · Cryptes moisies","Lv. # · Floor # · Moldy Crypts"],["Niv. # · Étage # · Caverne des Braises","Lv. # · Floor # · Ember Cavern"],
+["Niv. # · Étage # · Forêt Hantée","Lv. # · Floor # · Haunted Forest"],["Niv. # · Étage # · Cavernes de Glace","Lv. # · Floor # · Ice Caverns"],
+["Niv. # · Étage # · Ruines Maudites","Lv. # · Floor # · Cursed Ruins"],["Niv. # · Étage # · Marais des Ombres","Lv. # · Floor # · Shadow Marsh"],
+["Niv. # · Étage # · Nécropole","Lv. # · Floor # · Necropolis"],["Niv. # · Étage # · Antre du Dragon","Lv. # · Floor # · Dragon's Lair"],
+// --- Compagnons ---
+["Soldat de fortune","Soldier of Fortune"],["Bretteur errant","Wandering Blade"],["Lancier vétéran","Veteran Lancer"],
+["Prêtresse","Priestess"],["Cogneur cuirassé","Armored Bruiser"],["Golem de lave","Lava Golem"],
+// --- Succès ---
+["Premiers pas","First Steps"],["En chemin","On the Way"],["Une semaine !","One Week!"],["On s’y tient","Sticking With It"],
+["Discipline de fer","Iron Discipline"],["Éveil","Awakening"],["Aguerri","Seasoned"],["Vétéran","Veteran"],
+["Aventurier","Adventurer"],["Explorateur","Explorer"],["Conquérant","Conqueror"],["Fléau du donjon","Dungeon Scourge"],
+["Nettoyeur","Cleaner"],["Petite troupe","Small Company"],["Transformation","Transformation"],["Suivi régulier","Steady Tracking"],
+["#jours de check-in d’affilée","#check-in days in a row"],["#jours d’affilée","#days in a row"],
+["Héros niveau #","Hero level #"],["Atteindre l’étage #","Reach floor #"],["Vaincre # monstres","Defeat # monsters"],
+["Obtenir ta #ère relique","Get your #st relic"],["Posséder # compagnons","Own # companions"],
+["#séances de sport","#workout sessions"],["#nuits de #h ou +","#nights of #h or more"],["#jours à # L ou +","#days at # L or more"],
+["#journées complètes (# catégories)","#perfect days (# categories)"],
+// --- Quêtes hebdo ---
+["📅 Quêtes de la semaine","📅 Weekly quests"],["Assiduité","Diligence"],["Fais # check-ins cette semaine","Do # check-ins this week"],
+// --- Noms de talents ---
+["Assassin","Assassin"],["Aumône","Almsgiving"],["Avatar de la mort","Avatar of Death"],["Avidité vampirique","Vampiric Greed"],
+["Barrage","Barrage"],["Berserker","Berserker"],["Bien hydraté","Well Hydrated"],["Bouclier de foi","Shield of Faith"],
+["Bouclier de mana","Mana Shield"],["Bourreau","Executioner"],["Broyer","Crush"],["Bûcher purificateur","Cleansing Pyre"],
+["Cataclysme ardent","Blazing Cataclysm"],["Charnier","Charnel Pit"],["Charogne","Carrion"],["Chasseur de primes","Bounty Hunter"],
+["Colère du titan","Titan's Wrath"],["Combustion","Combustion"],["Communion des âmes","Soul Communion"],["Condamnation","Condemnation"],
+["Conflagration","Conflagration"],["Corps actif","Active Body"],["Coup de grâce","Coup de Grâce"],["Croisade","Crusade"],
+["Cruauté","Cruelty"],["Cupidité","Greed"],["Célérité","Celerity"],["Damnation","Damnation"],["Danse macabre","Danse Macabre"],
+["Décapitation","Decapitation"],["Décharge","Discharge"],["Dévotion","Devotion"],["Dîme","Tithe"],["Dîme du royaume","Kingdom's Tithe"],
+["Empoisonner","Poison"],["Enflammer","Ignite"],["Exécution","Execution"],["Faiblesse","Weakness"],["Faille béante","Gaping Rift"],
+["Faucheur","Reaper"],["Faucheuse","The Reaper"],["Ferveur","Fervor"],["Festin de sang","Blood Feast"],
+["Feu purificateur","Purifying Fire"],["Feu sacré","Sacred Fire"],["Fléau","Scourge"],["Fléau grouillant","Crawling Plague"],
+["Force brute","Brute Force"],["Fortune divine","Divine Fortune"],["Fortune mortelle","Deadly Fortune"],["Fournaise","Furnace"],
+["Frappe véloce","Swift Strike"],["Frénésie","Frenzy"],["Fureur montante","Rising Fury"],["Gardien immortel","Immortal Guardian"],
+["Gel profond","Deep Freeze"],["Givrer","Frost"],["Glas final","Final Knell"],["Haute tension","High Voltage"],
+["Horde hurlante","Howling Horde"],["Hémoglobine","Hemoglobin"],["Hémorragie","Hemorrhage"],["Immolation","Immolation"],
+["Instinct du chasseur","Hunter's Instinct"],["Jugement","Judgment"],["Lacération","Laceration"],["Loi des tempêtes","Law of Storms"],
+["Lumière punitive","Punishing Light"],["Marque funèbre","Funeral Mark"],["Marteau de justice","Hammer of Justice"],
+["Meute fantôme","Phantom Pack"],["Miasmes","Miasma"],["Missiles arcaniques","Arcane Missiles"],["Moisson","Harvest"],
+["Moisson d’âmes","Soul Harvest"],["Offrande","Offering"],["Ossements renforcés","Hardened Bones"],["Pacte sombre","Dark Pact"],
+["Pandémie","Pandemic"],["Peste","Plague"],["Peste critique","Critical Plague"],["Plaies profondes","Deep Wounds"],
+["Point faible","Weak Point"],["Prospérité sacrée","Sacred Prosperity"],["Provocation","Taunt"],["Précision","Precision"],
+["Prédateur","Predator"],["Puissance brute","Raw Power"],["Rage indomptable","Untamed Rage"],["Rançon du roi","King's Ransom"],
+["Rapine","Plunder"],["Relever un squelette","Raise Skeleton"],["Rempart","Bulwark"],["Rente","Income"],
+["Riposte sacrée","Sacred Riposte"],["Roi des tombes","King of Tombs"],["Saigner","Bleed"],["Saignée furieuse","Furious Bloodletting"],
+["Salve","Volley"],["Sanctuaire","Sanctuary"],["Sang-froid","Cold Blood"],["Sangsue","Leech"],["Sceau d’agonie","Seal of Agony"],
+["Second souffle","Second Wind"],["Serment sacré","Sacred Oath"],["Singularité","Singularity"],["Siphon éternel","Eternal Siphon"],
+["Soif de sang","Bloodthirst"],["Sommeil réparateur","Restful Sleep"],["Souffle putride","Putrid Breath"],["Surcharge","Overload"],
+["Tempête","Tempest"],["Terreur régnante","Reigning Terror"],["Tir en rafale","Rapid Fire"],["Titan","Titan"],
+["Traque","Stalking"],["Trésor de guerre","War Chest"],["Trésorier","Treasurer"],["Ténèbres voraces","Devouring Darkness"],
+["Venin fielleux","Vile Venom"],["Verdict","Verdict"],["Virulence","Virulence"],["Virulence noire","Black Virulence"],
+["Visée","Aim"],["Vélocité foudroyante","Lightning Velocity"],["Zèle","Zeal"],["Zéro absolu","Absolute Zero"],
+["Ère glaciaire","Ice Age"],["Écho arcanique","Arcane Echo"],["Éclatement glacial","Glacial Burst"],["Éclats de glace","Ice Shards"],
+["Écrasement","Smash"],["Égide","Aegis"],["Élan mortel","Deadly Momentum"],["Équilibre parfait","Perfect Balance"],
+["Étreinte des ombres","Shadow Embrace"],["Éveil arcanique","Arcane Awakening"],["Œil de la mort","Eye of Death"],
+["Œil du faucon","Hawk Eye"],["Œil du chasseur","Hunter's Eye"],["Armée de l’ombre","Army of Shadow"],
+// --- Descriptions de talents (variantes numériques fusionnées par la normalisation) ---
+["+#% dégâts par palier d’élan, par rang","+#% damage per momentum tier, per rank"],
+["+#% dégâts critiques","+#% crit damage"],["+#% dégâts de clic / niv","+#% click damage / lv"],
+["+#points de talent max par niv","+#max talent points per lv"],["+#régén./s","+#regen/s"],["+#% critique","+#% crit"],
+["+#PV max","+#max HP"],["+#% or/sec / niv","+#% gold/sec / lv"],["+#% dégâts / niv","+#% damage / lv"],
+["+#% or / niv","+#% gold / lv"],["+#h de gains hors-ligne / niv","+#h of offline gains / lv"],
+["+#attaque","+#attack"],["+#dégâts de clic","+#click damage"],["+#% multi-attaque par rang.","+#% multi-attack per rank."],
+["+#% critique par rang (peut surcritiquer)","+#% crit per rank (can overcrit)"],
+["+#% chance de geler par rang","+#% freeze chance per rank"],["+#% critique / niv","+#% crit / lv"],
+["+#% de bouclier (PV max) par rang","+#% shield (max HP) per rank"],
+["+#% dégâts d’exécution par rang.","+#% execution damage per rank."],
+["+#% de vol de vie par rang.","+#% lifesteal per rank."],["+#% dégâts","+#% damage"],["+#% dégâts & or","+#% damage & gold"],
+["+#% crit par rang (peut surcritiquer au-delà de #%).","+#% crit per rank (can overcrit past #%)."],
+["+#% crit par rang (peut surcritiquer).","+#% crit per rank (can overcrit)."],
+["+#% vol de vie par rang.","+#% lifesteal per rank."],["+#% multi-attaque","+#% multi-attack"],
+["+#% vitesse d'attaque","+#% attack speed"],
+["Brûlure ×#par rang.","Burn ×#per rank."],["Poison ×#par rang.","Poison ×#per rank."],["Saignement ×#par rang.","Bleed ×#per rank."],
+["Dégâts directs ×#par rang.","Direct damage ×#per rank."],["Dégâts ×#par rang.","Damage ×#per rank."],["Dégâts ×#par rang","Damage ×#per rank"],
+["Or ×#par rang.","Gold ×#per rank."],["Or ×#par rang","Gold ×#per rank"],["Or/sec ×#par rang","Gold/sec ×#per rank"],
+["Or/sec ×#par rang.","Gold/sec ×#per rank."],["PV max ×#par rang","Max HP ×#per rank"],
+["Vitesse d’attaque ×#par rang","Attack speed ×#per rank"],["Vulnérabilité ×#par rang.","Vulnerability ×#per rank."],
+["Saignement / brûlure / poison ×#par rang","Bleed / burn / poison ×#per rank"],
+["Serviteur +#% de tes dégâts par rang.","Minion +#% of your damage per rank."],
+["Par rang : +#% dégâts par palier de fureur.","Per rank: +#% damage per fury tier."],
+["Par rang : +#% dégâts ET +#% vitesse par palier de fureur.","Per rank: +#% damage AND +#% speed per fury tier."],
+["Par rang : PV max ×#et +#régén/s.","Per rank: max HP ×#and +#regen/s."],
+["Ouvre l’arbre. +#% dégâts et +#% de chance de critique.","Opens the tree. +#% damage and +#% crit chance."],
+["Ouvre l’arbre. +#% dégâts et tu VOLES #% de tes dégâts en PV.","Opens the tree. +#% damage and you LEECH #% of your damage as HP."],
+["Ouvre l’arbre. +#% dégâts et +#régén/s.","Opens the tree. +#% damage and +#regen/s."],
+["MÉCANIQUE : +#% crit et +#% dégâts critiques.","MECHANIC: +#% crit and +#% crit damage."],
+["MÉCANIQUE : +#% multi-attaque (chance de frapper #×).","MECHANIC: +#% multi-attack (chance to strike #×)."],
+["MÉCANIQUE : +#% multi-attaque.","MECHANIC: +#% multi-attack."],
+["MÉCANIQUE : PV max ×#et tu voles #% de tes dégâts en PV.","MECHANIC: max HP ×#and you leech #% of your damage as HP."],
+["MÉCANIQUE : frappe fatale — +#% dégâts contre un ennemi sous #% PV.","MECHANIC: killing blow — +#% damage against an enemy below #% HP."],
+["MÉCANIQUE : invoque un SERVITEUR squelette qui frappe avec toi (+#% de tes dégâts).","MECHANIC: summons a skeleton MINION that strikes with you (+#% of your damage)."],
+["MÉCANIQUE : or ×#et or/sec ×#","MECHANIC: gold ×#and gold/sec ×#"],
+["MÉCANIQUE : ouvre la BRÛLURE sacrée — #% de ton ATK sur la durée.","MECHANIC: unlocks sacred BURN — #% of your ATK over time."],
+["MÉCANIQUE : ouvre la BRÛLURE — #% de ton ATK sur la durée.","MECHANIC: unlocks BURN — #% of your ATK over time."],
+["MÉCANIQUE : ouvre la VULNÉRABILITÉ — l’ennemi subit +#% de tes dégâts.","MECHANIC: unlocks VULNERABILITY — the enemy takes +#% of your damage."],
+["MÉCANIQUE : ouvre la VULNÉRABILITÉ — l’ennemi subit +#% de TOUS tes dégâts.","MECHANIC: unlocks VULNERABILITY — the enemy takes +#% of ALL your damage."],
+["MÉCANIQUE : ouvre le POISON — #% des PV max de l’ennemi par seconde.","MECHANIC: unlocks POISON — #% of the enemy's max HP per second."],
+["MÉCANIQUE : ouvre le SAIGNEMENT — #% de ton ATK infligés sur la durée.","MECHANIC: unlocks BLEED — #% of your ATK dealt over time."],
+["MÉCANIQUE : tu voles #% de tes dégâts en PV.","MECHANIC: you leech #% of your damage as HP."],
+["MÉCANIQUE : à force de frapper le même ennemi, tes dégâts montent (+#% par palier, max #).","MECHANIC: hitting the same enemy ramps your damage up (+#% per tier, max #)."],
+["CAPSTONE : +#% multi-attaque, vol de vie #%, et chaque kill sans être touché empile un ÉLAN (+#% dégâts/palier).","CAPSTONE: +#% multi-attack, #% lifesteal, and every untouched kill stacks MOMENTUM (+#% damage/tier)."],
+["CAPSTONE : +#% vulnérabilité ET ta vulnérabilité amplifie ton poison.","CAPSTONE: +#% vulnerability AND your vulnerability amplifies your poison."],
+["CAPSTONE : crit au-delà de #% → multi-attaque (+#% multi), et tes coups critiques GÈLENT parfois l’ennemi.","CAPSTONE: crit past #% → multi-attack (+#% multi), and your crits sometimes FREEZE the enemy."],
+["CAPSTONE : gros BOUCLIER régénérant (#% PV max) qui absorbe les coups sans casser ton élan, et sous #% PV +#% dégâts.","CAPSTONE: big regenerating SHIELD (#% max HP) that soaks hits without breaking your momentum, and below #% HP +#% damage."],
+["CAPSTONE : multi-attaque au-delà de #% = coups GARANTIS, +#% multi.","CAPSTONE: multi-attack past #% = GUARANTEED extra hits, +#% multi."],
+["CAPSTONE : seuil d’exécution à #% PV et #% du SURPLUS de dégâts déferle sur l’ennemi suivant (Surtue).","CAPSTONE: execute threshold at #% HP and #% of OVERKILL damage spills onto the next enemy."],
+["CAPSTONE : seuil d’exécution à #% PV, +#% dégâts d’exécution, et #% du SURPLUS de dégâts déferle sur l’ennemi suivant (Surtue).","CAPSTONE: execute threshold at #% HP, +#% execution damage, and #% of OVERKILL damage spills onto the next enemy."],
+["CAPSTONE : sous #% PV, +#% dégâts, et bouclier +#% PV max.","CAPSTONE: below #% HP, +#% damage, and shield +#% max HP."],
+["CAPSTONE : sous #% PV, +#% dégâts. Chaque kill SANS te faire toucher empile un ÉLAN (+#% dégâts/palier, max #).","CAPSTONE: below #% HP, +#% damage. Every kill WITHOUT taking a hit stacks MOMENTUM (+#% damage/tier, max #)."],
+["CAPSTONE : ta chance de crit AU-DELÀ de #% se convertit en multi-attaque, +#% multi.","CAPSTONE: your crit chance PAST #% converts into multi-attack, +#% multi."],
+["CAPSTONE : ta cupidité (or ×) augmente AUSSI tes dégâts.","CAPSTONE: your greed (gold ×) ALSO boosts your damage."],
+["CAPSTONE : ta vulnérabilité amplifie AUSSI tes dégâts directs.","CAPSTONE: your vulnerability ALSO amplifies your direct damage."],
+["CAPSTONE : tes coups critiques GÈLENT l’ennemi (jauge ATB figée) et un ennemi gelé subit +#% de dégâts. Ta vulnérabilité amplifie aussi tes dégâts directs.","CAPSTONE: your crits FREEZE the enemy (ATB gauge frozen) and a frozen enemy takes +#% damage. Your vulnerability also amplifies your direct damage."],
+["CAPSTONE : tes dégâts directs amplifient encore ta brûlure.","CAPSTONE: your direct damage further amplifies your burn."],
+["CAPSTONE : ton or/sec augmente AUSSI tes dégâts.","CAPSTONE: your gold/sec ALSO boosts your damage."],
+["CAPSTONE : ton saignement DÉCHIRE l’ennemi et le rend vulnérable — amplifie TOUS tes dégâts.","CAPSTONE: your bleed TEARS the enemy open and makes it vulnerable — amplifying ALL your damage."],
+["CAPSTONE : ton serviteur devient une HORDE — ses dégâts ×#, et chaque kill sans être touché nourrit ton Élan (+#% dégâts/palier).","CAPSTONE: your minion becomes a HORDE — its damage ×#, and every untouched kill feeds your Momentum (+#% damage/tier)."],
+["CAPSTONE : tu voles #% de tes dégâts en PV et +#% crit.","CAPSTONE: you leech #% of your damage as HP and +#% crit."],
+["CAPSTONE : ×#la puissance du poison — il ronge tout.","CAPSTONE: ×#poison power — it devours everything."],
+["TRANSCENDANCE : GELER un ennemi lui inflige instantanément #× ton coup.","TRANSCENDENCE: FREEZING an enemy instantly deals #× your hit."],
+["TRANSCENDANCE : chaque kill lie une ÂME (max #) — ton serviteur gagne +#% de dégâts par âme. Toutes perdues si tu tombes.","TRANSCENDENCE: every kill binds a SOUL (max #) — your minion gains +#% damage per soul. All lost if you fall."],
+["TRANSCENDANCE : chaque tour d’attaque a #% de chance de se REJOUER entièrement.","TRANSCENDENCE: every attack turn has a #% chance to fully REPLAY itself."],
+["TRANSCENDANCE : la foudre obéit — un CRITIQUE garanti tous les #coups.","TRANSCENDENCE: lightning obeys — a GUARANTEED crit every #hits."],
+["TRANSCENDANCE : le jugement tombe — un CRITIQUE garanti tous les #coups.","TRANSCENDENCE: judgment falls — a GUARANTEED crit every #hits."],
+["TRANSCENDANCE : quand ton bouclier absorbe ENTIÈREMENT un coup, tu DRAINES le frappeur (#% de ton coup).","TRANSCENDENCE: when your shield FULLY absorbs a hit, you DRAIN the attacker (#% of your hit)."],
+["TRANSCENDANCE : quand ton bouclier absorbe ENTIÈREMENT un coup, tu RIPOSTES (#% de ton coup).","TRANSCENDENCE: when your shield FULLY absorbs a hit, you COUNTER (#% of your hit)."],
+["TRANSCENDANCE : ta fureur garantit un CRITIQUE tous les #coups.","TRANSCENDENCE: your fury guarantees a CRIT every #hits."],
+["TRANSCENDANCE : ta réputation te précède — chaque monstre apparaît déjà BLESSÉ (-#% PV).","TRANSCENDENCE: your reputation precedes you — every monster spawns already WOUNDED (-#% HP)."],
+["TRANSCENDANCE : ta stature intimide — la jauge ATB ennemie se remplit #% plus LENTEMENT.","TRANSCENDENCE: your stature intimidates — the enemy ATB gauge fills #% SLOWER."],
+["TRANSCENDANCE : ta visée est infaillible — un CRITIQUE garanti tous les #coups.","TRANSCENDENCE: your aim is infallible — a GUARANTEED crit every #hits."],
+["TRANSCENDANCE : ton règne funèbre précède tes pas — chaque monstre apparaît déjà BLESSÉ (-#% PV).","TRANSCENDENCE: your funeral reign precedes you — every monster spawns already WOUNDED (-#% HP)."],
+["TRANSCENDANCE : tous les #monstres abattus, le royaume te verse une GEMME 💎.","TRANSCENDENCE: every #monsters slain, the kingdom pays you a GEM 💎."],
+["TRANSCENDANCE : tous les #monstres abattus, tu arraches une GEMME 💎.","TRANSCENDENCE: every #monsters slain, you rip out a GEM 💎."],
+["TRANSCENDANCE : un tir fantôme suit chacun de tes tours — #% de chance de le REJOUER entièrement.","TRANSCENDENCE: a phantom shot follows each of your turns — #% chance to fully REPLAY it."],
+["TRANSCENDANCE : à la mort d’un ennemi, la peste se répand — le suivant subit immédiatement #s de tes dégâts sur la durée.","TRANSCENDENCE: when an enemy dies, the plague spreads — the next one instantly takes #s of your damage over time."],
+["TRANSCENDANCE : à la mort d’un ennemi, ta brûlure EXPLOSE — le suivant subit immédiatement #s de tes dégâts sur la durée.","TRANSCENDENCE: when an enemy dies, your burn EXPLODES — the next one instantly takes #s of your damage over time."],
+["TRANSCENDANCE : à la mort d’un ennemi, ta brûlure sacrée le CONSUME — le suivant subit immédiatement #s de tes dégâts sur la durée.","TRANSCENDENCE: when an enemy dies, your sacred burn CONSUMES it — the next one instantly takes #s of your damage over time."],
+["TRANSCENDANCE : à la mort d’un ennemi, ton poison se répand — le suivant subit immédiatement #s de tes dégâts sur la durée.","TRANSCENDENCE: when an enemy dies, your poison spreads — the next one instantly takes #s of your damage over time."],
+["TRANSCENDANCE : à la mort d’un ennemi, ton saignement DÉFERLE — le suivant subit immédiatement #s de tes dégâts sur la durée.","TRANSCENDENCE: when an enemy dies, your bleed SURGES — the next one instantly takes #s of your damage over time."],
+["★ KEYSTONE : PV max ×#et un BOUCLIER régénérant (#% PV max).","★ KEYSTONE: max HP ×#and a regenerating SHIELD (#% max HP)."],
+["★ KEYSTONE : PV max ×#et tu voles #% de tes dégâts en PV.","★ KEYSTONE: max HP ×#and you leech #% of your damage as HP."],
+["★ KEYSTONE : PV max ×#et +#régén/s.","★ KEYSTONE: max HP ×#and +#regen/s."],
+["★ KEYSTONE : PV max ×#, +#régén/s et un BOUCLIER régénérant (#% PV max) qui absorbe les coups.","★ KEYSTONE: max HP ×#, +#regen/s and a regenerating SHIELD (#% max HP) that soaks hits."],
+["★ KEYSTONE : brûlure ×#, mais dégâts directs ×#(build DoT pur).","★ KEYSTONE: burn ×#, but direct damage ×#(pure DoT build)."],
+["★ KEYSTONE : exécution — +#% dégâts contre un ennemi sous #% PV.","★ KEYSTONE: execute — +#% damage against an enemy below #% HP."],
+["★ KEYSTONE : exécution — +#% dégâts sous #% PV ennemi.","★ KEYSTONE: execute — +#% damage below #% enemy HP."],
+["★ KEYSTONE : la fureur monte #× plus fort (dégâts ET vitesse par palier doublés).","★ KEYSTONE: fury ramps #× harder (damage AND speed per tier doubled)."],
+["★ KEYSTONE : le seuil d’exécution passe à #% PV.","★ KEYSTONE: execute threshold rises to #% HP."],
+["★ KEYSTONE : ton poison profite de ta chance de critique.","★ KEYSTONE: your poison benefits from your crit chance."],
+["★ KEYSTONE : ton poison profite désormais de ta chance de critique.","★ KEYSTONE: your poison now benefits from your crit chance."],
+["★ KEYSTONE : ton serviteur frappe DEUX fois (ses dégâts ×#) et sa présence t’insuffle +#% vitesse d’attaque.","★ KEYSTONE: your minion strikes TWICE (its damage ×#) and its presence grants you +#% attack speed."],
+["★ SYNERGIE : ta chance de crit accélère tes attaques.","★ SYNERGY: your crit chance speeds up your attacks."],
+["★ SYNERGIE : ta cupidité (or ×) augmente tes dégâts.","★ SYNERGY: your greed (gold ×) boosts your damage."],
+["★ SYNERGIE : ta vulnérabilité amplifie ta brûlure.","★ SYNERGY: your vulnerability amplifies your burn."],
+["★ SYNERGIE : tes dégâts amplifient ta brûlure sacrée.","★ SYNERGY: your damage amplifies your sacred burn."],
+["★ SYNERGIE : ton or/sec augmente tes dégâts.","★ SYNERGY: your gold/sec boosts your damage."],
+["★ SYNERGIE : ton saignement accélère tes attaques (jusqu’à ×#vitesse).","★ SYNERGY: your bleed speeds up your attacks (up to ×#speed)."],
+// --- Journal / divers combat ---
+["⭐ Niveau","⭐ Level"],["👑 Boss étage","👑 Boss floor"],["★ BOSS D’ÉLITE étage","★ ELITE BOSS floor"],
+["💀 Héros terrassé à l’étage","💀 Hero slain on floor"],["— il repart au début de l’étage.","— he restarts at the beginning of the floor."],
+["🌟 Renaissance ! +","🌟 Rebirth! +"],["✦ ASCENSION ! +","✦ ASCENSION! +"],
+["#/ # XP","#/ # XP"],["+#/s","+#/s"],["Bonus","Bonus"],["Bonus permanent :","Permanent bonus:"],["Parangon","Paragon"],
+["#jours de check-in d'affilée","#check-in days in a row"],["Un petit","A little"],
+["10 niveaux de talents","10 talent levels"],["#point tous les","#point every"],
+["· fantasy","· fantasy"],["Habit","Habit"],["Quest","Quest"],
+];
+const norm=s=>s.replace(/\d[\d\s.,]*/g,'#').replace(/#\s+/g,'#').replace(/\s+/g,' ').trim();
+P.forEach(p=>{I18N[norm(p[0])]=p[1];});
+})();
+function trText(s){
+  if(LANG!=='en')return null;
+  const lead=(s.match(/^\s*/)||[''])[0], trail=(s.match(/\s*$/)||[''])[0];
+  const core=s.replace(/\s+/g,' ').trim(); if(!core||core.length<2)return null;
+  const key=core.replace(/\d[\d\s.,]*/g,'#').replace(/#\s+/g,'#').replace(/\s+/g,' ').trim();
+  let t=I18N[key], suf='';
+  if(t===undefined&&key.length>2&&key.charAt(key.length-1)==='·'){ t=I18N[key.slice(0,-1).trim()]; suf=' ·'; }
+  if(t===undefined)return null; t+=suf;
+  const nums=core.match(/\d[\d\s.,]*/g)||[]; let i=0;
+  return lead+t.replace(/#/g,()=>{const v=nums[i++];return v===undefined?'':v;}).replace(/ {2,}/g,' ')+trail;
+}
+function translateDom(root){
+  if(LANG!=='en'||!root)return;
+  if(root.nodeType===3){const t=trText(root.textContent);if(t!==null&&t!==root.textContent)root.textContent=t;return;}
+  if(root.nodeType!==1&&root.nodeType!==11)return;
+  const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT); let n; const jobs=[];
+  while(n=w.nextNode()){const t=trText(n.textContent); if(t!==null&&t!==n.textContent)jobs.push([n,t]);}
+  jobs.forEach(j=>{j[0].textContent=j[1];});
+  if(root.querySelectorAll)[root,...root.querySelectorAll('[placeholder],[title]')].forEach(e=>{
+    if(e.getAttribute&&e.getAttribute('placeholder')){const t=trText(e.getAttribute('placeholder'));if(t!==null)e.setAttribute('placeholder',t);}
+    if(e.getAttribute&&e.getAttribute('title')){const t=trText(e.getAttribute('title'));if(t!==null)e.setAttribute('title',t);}
+  });
+}
+new MutationObserver(ms=>{ if(LANG!=='en')return;
+  ms.forEach(m=>{ if(m.type==='characterData')translateDom(m.target);
+    else if(m.addedNodes)m.addedNodes.forEach(nd=>translateDom(nd)); });
+}).observe(document.documentElement,{subtree:true,childList:true,characterData:true});
+function setLang(l){ localStorage.setItem('hq-lang',l); location.reload(); }
+if(LANG==='en')translateDom(document.body);
 
 // ============ Démarrage ============
 render();
