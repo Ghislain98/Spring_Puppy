@@ -420,11 +420,11 @@ const ICON={"boss":"data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.o
 const CRIT_MULT=2;
 // Combat ATB (façon FF pixel) : chaque combattant remplit une jauge, puis agit.
 // Le héros la remplit à la vitesse d'attaque ; le monstre à cadence fixe.
-// Rythme volontairement posé et lisible ; le mode ×2/×4 accélère tout.
-const HERO_ATB=2.0; // secondes pour remplir la jauge du héros à vitesse ×1
+// Rythme volontairement posé et lisible — vitesse unique, pas de ×2/×4.
+const HERO_ATB=2.0; // secondes pour remplir la jauge du héros
 const MOB_ATB=2.6;  // secondes pour remplir la jauge du monstre
-const SPEEDS=[1,2,4];
-function gameSpeed(){return SPEEDS.includes(S.gameSpeed)?S.gameSpeed:1;}
+const SPEEDS=[1];
+function gameSpeed(){return 1;}
 // Paliers de compagnons : +5% dégâts par tranche de 10 compagnons recrutés.
 const COMP_TIER_SIZE=10, COMP_TIER_BONUS=0.05;
 // Un étage = 10 à 30 monstres (ça monte avec l'étage) + 1 boss à la fin.
@@ -1447,7 +1447,7 @@ function renderDungeon(){
         </div>
       </div>
       <div class="comps" id="comps" style="margin-top:8px"></div>
-      <div class="spdrow"><span class="tapipill">Tape le monstre pour frapper plus fort</span><div class="spdsel" id="spdsel"></div></div>
+      <div class="spdrow"><span class="tapipill">Tape le monstre pour frapper plus fort</span></div>
       <div class="cstats">
         <div class="cstat"><b id="c-dps" style="color:var(--hp)"></b><span>DPS</span></div>
         <div class="cstat"><b id="c-click" style="color:var(--xp)"></b><span>Dégâts/clic</span></div>
@@ -1474,11 +1474,7 @@ function renderDungeon(){
   renderAmt(); renderCompanions(); renderComps(); renderSpeedSel();
   updateDungeon(true);
 }
-function renderSpeedSel(){
-  const el=document.getElementById('spdsel'); if(!el)return;
-  el.innerHTML=SPEEDS.map(s=>`<button class="${gameSpeed()===s?'on':''}" data-spd="${s}">×${s}</button>`).join('');
-  el.querySelectorAll('button').forEach(b=>b.onclick=()=>{S.gameSpeed=+b.dataset.spd;save();renderSpeedSel();SND.buy&&SND.buy();haptic(6);});
-}
+function renderSpeedSel(){} // vitesse unique : plus de sélecteur ×2/×4
 let advT=null;
 let mobInT=null;
 function advanceScene(){const sc=document.getElementById('scene');if(!sc)return;sc.classList.add('adv');heroRun(true);clearTimeout(advT);advT=setTimeout(()=>{sc.classList.remove('adv');heroRun(false);},640);}
